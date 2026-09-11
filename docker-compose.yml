@@ -1,0 +1,57 @@
+# ------------------------------------------------------------------
+# Project 117 — Phase 1 compose stack
+# Phase 1 runs the backend locally. Ollama is optional (profile "ollama").
+# OpenSandbox joins the stack in Phase 9 (sandbox integration).
+# ------------------------------------------------------------------
+name: project117
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend.Dockerfile
+    command: uvicorn backend.api.src.main:create_app --factory --host 0.0.0.0 --port 8000
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      P117_API_HOST: 0.0.0.0
+      P117_API_PORT: 8000
+      P117_DATABASE_URL: sqlite:////data/project117.db
+      P117_UPLOADS_DIR: /data/uploads
+      P117_LLM_BASE_URL: http://ollama:11434/v1
+    ports:
+      - "8000:8000"
+    volumes:
+      - project117-data:/data
+    depends_on:
+      ollama:
+        condition: service_healthy
+        required: false
+    restart: unless-stopped
+
+  # Local model serving for the core inference path. Optional in Phase 1
+  # (the backend health check degrades gracefully without it).
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # NOTE(phase 9): OpenSandbox server (isolated code execution) will be added
+  # here once the sandbox adapter lands. Its control plane talks to the Docker
+  # socket and must run with a restricted user + default-deny egress policy.
+  # opensandbox:
+  #   image: ...   # pinned by digest
+  #   ports: ["8080:8080"]
+
+volumes:
+  project117-data:
+  ollama-models:

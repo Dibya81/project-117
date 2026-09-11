@@ -1,0 +1,82 @@
+# ============================================================================
+# Project 117 — repository-wide .gitignore
+#
+# Scope: the whole monorepo (Python backend, Next.js console, Vite workbench,
+# data package). Patterns without a leading slash match at any depth, so they
+# apply to nested apps as well as the root. Anything a clean checkout needs to
+# build and run — lockfiles, docs/, project-117-simulation/, workflows/,
+# data/knowledge/, data/demo/, data/simulation/ — is deliberately NOT listed
+# here and must stay tracked.
+# ============================================================================
+
+# --- Python: bytecode, virtualenvs, caches, packaging metadata --------------
+# Regenerated on import/install/test; machine-specific and not reproducible.
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+
+# --- Node / Next.js: installed deps and build output ------------------------
+# Reinstallable from the committed lockfiles; build output is generated.
+node_modules/
+.next/
+out/
+dist/
+.turbo/
+*.tsbuildinfo
+.pnpm-store/
+
+# --- Vite workbench build output -------------------------------------------
+# frontend/ is a standalone Vite app (not in the pnpm workspace); its bundle
+# is rebuilt with `npm run build`, so never commit it. (Also matched by `dist/`
+# above; kept explicit so the intent is obvious.)
+frontend/dist/
+
+# --- Secrets / local environment -------------------------------------------
+# Never commit real credentials. Examples ARE tracked so a new engineer knows
+# which variables to set: root .env.example (backend — the only .env the
+# backend reads, since it resolves .env from the repo-root CWD),
+# frontend/.env.example (Vite), apps/web/.env.example (Next.js console).
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# --- Runtime data: uploads, databases, logs, vector indexes -----------------
+# Created or mutated while the service runs. The committed demo corpora live in
+# data/knowledge/, data/demo/, data/simulation/ and data/fixtures/ — only the
+# runtime stores below are excluded.
+data/uploads/
+data/*.db
+data/*.sqlite*
+data/*.db-wal
+data/*.db-shm
+data/*.db-journal
+data/lancedb/
+data/artifacts/
+logs/
+*.log
+index_store/
+lancedb/
+shared_uploads/
+
+# --- Local tooling state (present in this checkout, not a deliverable) -------
+# graphify code-graph output, its private virtualenv, the audit scratch dir and
+# vendored-tool working dirs are local artifacts. They must not be published.
+graphify-out/
+*/graphify-out/
+.graphify-venv/
+.lancedb/
+.p117-audit/
+*/WORKING_DIR/
+.claude/settings.local.json
+
+# --- OS / editor -------------------------------------------------------------
+.DS_Store
+.idea/
+.vscode/

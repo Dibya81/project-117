@@ -1,0 +1,62 @@
+name: equipment-investigation
+description: >-
+  Cross-discipline investigation of one asset: operations reads the condition,
+  maintenance recommends, safety reviews. Each stage is gated on the previous
+  one having been grounded, so a thin-evidence run stops early instead of
+  producing three layers of speculation.
+version: "1"
+agent: operations
+inputs:
+  - equipment_tag
+steps:
+  - id: retrieve
+    kind: retrieve
+    name: retrieval
+    description: All evidence held on this asset
+    arguments:
+      query: "{{inputs.equipment_tag}} condition history alarms readings"
+      top_k: 12
+    timeout_seconds: 120
+
+  - id: condition
+    kind: agent
+    name: operations
+    description: Current condition against baseline
+    depends_on:
+      - retrieve
+    arguments:
+      task: "Describe the current condition of {{inputs.equipment_tag}}"
+      equipment_tag: "{{inputs.equipment_tag}}"
+    timeout_seconds: 300
+    when: "steps.retrieve.output.evidence > 0"
+
+  - id: recommend
+    kind: agent
+    name: maintenance
+    description: Recommended intervention
+    depends_on:
+      - condition
+    arguments:
+      task: "Recommend intervention for {{inputs.equipment_tag}}"
+      equipment_tag: "{{inputs.equipment_tag}}"
+    timeout_seconds: 300
+    when: "steps.condition.output.grounded"
+
+  - id: safety_review
+    kind: agent
+    name: safety
+    description: Safety review of the recommendation
+    depends_on:
+      - recommend
+    arguments:
+      task: "Safety review for work on {{inputs.equipment_tag}}"
+      equipment_tag: "{{inputs.equipment_tag}}"
+    timeout_seconds: 300
+    when: "steps.recommend.output.grounded"
+
+  - id: verify
+    kind: verify
+    name: verifier
+    description: Check the chain of reasoning against the evidence
+    depends_on:
+      - condition

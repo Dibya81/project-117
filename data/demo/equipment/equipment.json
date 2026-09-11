@@ -1,0 +1,212 @@
+[
+  {
+    "id": "C-3",
+    "name": "Recycle Gas Compressor",
+    "type": "centrifugal_compressor",
+    "unit": "Hydrotreater U-200",
+    "area": "Process Area 2",
+    "criticality": "high",
+    "status": "warning",
+    "manufacturer": "Elliott",
+    "model": "29M9-6",
+    "installedYear": 2011,
+    "lastInspection": "2026-09-06",
+    "nextInspection": "2026-12-06",
+    "sopId": "d-2",
+    "manualId": "d-3",
+    "tags": [
+      "rotating",
+      "critical-path",
+      "vibration-watch"
+    ],
+    "keySignals": [
+      {
+        "signal": "vibration_overall",
+        "value": 6.8,
+        "unit": "mm/s",
+        "baseline": 5.8,
+        "limit": 7.1,
+        "deltaPercent": 18,
+        "state": "warning"
+      },
+      {
+        "signal": "bearing_temp_de",
+        "value": 79.0,
+        "unit": "degC",
+        "baseline": 68.0,
+        "limit": 85.0,
+        "deltaPercent": 16,
+        "state": "warning"
+      },
+      {
+        "signal": "discharge_pressure",
+        "value": 42.1,
+        "unit": "bar",
+        "baseline": 42.0,
+        "limit": 46.0,
+        "deltaPercent": 0,
+        "state": "normal"
+      }
+    ],
+    "summary": "Overall vibration has risen 18% above the 90-day baseline over eight days, concentrated at 1x running speed on the drive-end bearing."
+  },
+  {
+    "id": "P-1042",
+    "name": "Feed Charge Pump",
+    "type": "centrifugal_pump",
+    "unit": "Hydrotreater U-200",
+    "area": "Process Area 2",
+    "criticality": "medium",
+    "status": "warning",
+    "manufacturer": "Flowserve",
+    "model": "HPX 4x6-13",
+    "installedYear": 2015,
+    "lastInspection": "2026-08-28",
+    "nextInspection": "2026-11-28",
+    "sopId": "d-7",
+    "manualId": null,
+    "tags": [
+      "rotating",
+      "pressure-excursion"
+    ],
+    "keySignals": [
+      {
+        "signal": "discharge_pressure",
+        "value": 18.5,
+        "unit": "bar",
+        "baseline": 16.2,
+        "limit": 17.0,
+        "deltaPercent": 14,
+        "state": "exceeded"
+      }
+    ],
+    "summary": "Discharge pressure 18.5 bar is above the 17.0 bar operating limit."
+  },
+  {
+    "id": "V-2210",
+    "name": "Product Separator Vessel",
+    "type": "pressure_vessel",
+    "unit": "Hydrotreater U-200",
+    "area": "Process Area 3",
+    "criticality": "high",
+    "status": "critical",
+    "manufacturer": "L&T",
+    "model": "SV-2210",
+    "installedYear": 2009,
+    "lastInspection": "2026-07-19",
+    "nextInspection": "2026-10-19",
+    "sopId": "d-7",
+    "manualId": null,
+    "tags": [
+      "static",
+      "level-high"
+    ],
+    "keySignals": [
+      {
+        "signal": "level",
+        "value": 87.0,
+        "unit": "%",
+        "baseline": 68.0,
+        "limit": 80.0,
+        "deltaPercent": 28,
+        "state": "exceeded"
+      }
+    ],
+    "summary": "Level at 87% exceeds the 80% high-level alarm setpoint."
+  },
+  {
+    "id": "T-118",
+    "name": "Intermediate Storage Tank",
+    "type": "storage_tank",
+    "unit": "Tank Farm",
+    "area": "Storage",
+    "criticality": "low",
+    "status": "healthy",
+    "manufacturer": "BHEL",
+    "model": "FRT-118",
+    "installedYear": 2013,
+    "lastInspection": "2026-08-02",
+    "nextInspection": "2027-02-02",
+    "sopId": null,
+    "manualId": null,
+    "tags": [
+      "static"
+    ],
+    "keySignals": [
+      {
+        "signal": "level",
+        "value": 54.0,
+        "unit": "%",
+        "baseline": 55.0,
+        "limit": 90.0,
+        "deltaPercent": -2,
+        "state": "normal"
+      }
+    ],
+    "summary": "Operating normally; no open findings."
+  },
+  {
+    "id": "E-340",
+    "name": "Feed/Effluent Heat Exchanger",
+    "type": "shell_and_tube_exchanger",
+    "unit": "Hydrotreater U-200",
+    "area": "Process Area 2",
+    "criticality": "medium",
+    "status": "healthy",
+    "manufacturer": "Alfa Laval",
+    "model": "ST-340",
+    "installedYear": 2016,
+    "lastInspection": "2026-08-21",
+    "nextInspection": "2027-02-21",
+    "sopId": null,
+    "manualId": null,
+    "tags": [
+      "static",
+      "fouling-watch"
+    ],
+    "keySignals": [
+      {
+        "signal": "delta_p",
+        "value": 0.42,
+        "unit": "bar",
+        "baseline": 0.4,
+        "limit": 0.75,
+        "deltaPercent": 5,
+        "state": "normal"
+      }
+    ],
+    "summary": "Fouling trend within limits."
+  },
+  {
+    "id": "P-2051",
+    "name": "Product Transfer Pump",
+    "type": "centrifugal_pump",
+    "unit": "Tank Farm",
+    "area": "Storage",
+    "criticality": "low",
+    "status": "maintenance",
+    "manufacturer": "KSB",
+    "model": "Etanorm 80-200",
+    "installedYear": 2018,
+    "lastInspection": "2026-09-01",
+    "nextInspection": "2026-12-01",
+    "sopId": "d-7",
+    "manualId": null,
+    "tags": [
+      "rotating",
+      "planned-outage"
+    ],
+    "keySignals": [
+      {
+        "signal": "vibration_overall",
+        "value": 0.0,
+        "unit": "mm/s",
+        "baseline": 3.1,
+        "limit": 6.0,
+        "deltaPercent": -100,
+        "state": "offline"
+      }
+    ],
+    "summary": "Out of service for planned seal replacement (WO-8790)."
+  }
+]

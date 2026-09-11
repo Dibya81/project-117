@@ -1,0 +1,14 @@
+{
+  "query": "Analyze Compressor C-3 and tell me why vibration increased.",
+  "expectedEvidenceDocuments": [
+    "d-1",
+    "d-2",
+    "d-4"
+  ],
+  "expectedEquipment": "C-3",
+  "expectedSignals": [
+    "vibration_overall",
+    "bearing_temp_de"
+  ],
+  "expectedArtifactType": "pdf"
+}

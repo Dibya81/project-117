@@ -1,0 +1,134 @@
+[
+  {
+    "id": "sensor_failure",
+    "name": "Sensor failure",
+    "applies_to": [
+      "pressure"
+    ],
+    "mechanism": "sensor",
+    "magnitude": 1.0,
+    "description": "Primary measurement element fails; quality goes BAD."
+  },
+  {
+    "id": "instrument_drift",
+    "name": "Instrument drift",
+    "applies_to": [
+      "temperature",
+      "pressure",
+      "flow"
+    ],
+    "mechanism": "drift",
+    "magnitude": 1.0,
+    "description": "Transmitter reading drifts away from true value."
+  },
+  {
+    "id": "bearing_wear",
+    "name": "Bearing wear",
+    "applies_to": [
+      "pump",
+      "compressor",
+      "motor"
+    ],
+    "mechanism": "degrade",
+    "magnitude": 0.25,
+    "description": "Vibration signature rises; capacity degrades."
+  },
+  {
+    "id": "cavitation",
+    "name": "Pump cavitation",
+    "applies_to": [
+      "pump"
+    ],
+    "mechanism": "degrade",
+    "magnitude": 0.4,
+    "description": "Net positive suction head lost; flow and pressure become unstable."
+  },
+  {
+    "id": "bearing_overheat",
+    "name": "Bearing overheating",
+    "applies_to": [
+      "pump",
+      "motor",
+      "compressor"
+    ],
+    "mechanism": "drift",
+    "magnitude": 1.0,
+    "description": "Bearing temperature climbs toward trip."
+  },
+  {
+    "id": "valve_stuck",
+    "name": "Valve failure (stuck)",
+    "applies_to": [
+      "valve"
+    ],
+    "mechanism": "degrade",
+    "magnitude": 0.6,
+    "description": "Valve stops responding; flow restricted."
+  },
+  {
+    "id": "seal_leak",
+    "name": "Seal failure / oil leak",
+    "applies_to": [
+      "pump",
+      "vessel"
+    ],
+    "mechanism": "leak",
+    "magnitude": 0.45,
+    "description": "Mechanical seal failure; medium escapes, detectors trip."
+  },
+  {
+    "id": "pressure_surge",
+    "name": "Pressure surge",
+    "applies_to": [
+      "vessel",
+      "column",
+      "exchanger"
+    ],
+    "mechanism": "surge",
+    "magnitude": 0.35,
+    "description": "Upstream excursion drives pressures over envelope."
+  },
+  {
+    "id": "trip",
+    "name": "Equipment trip",
+    "applies_to": [
+      "compressor",
+      "pump",
+      "motor"
+    ],
+    "mechanism": "stop",
+    "magnitude": 1.0,
+    "description": "Machine trips offline; dependent flow collapses."
+  },
+  {
+    "id": "fouling",
+    "name": "Heat exchanger fouling",
+    "applies_to": [
+      "exchanger"
+    ],
+    "mechanism": "degrade",
+    "magnitude": 0.3,
+    "description": "Fouling factor rises; duty and outlet temperature sag."
+  },
+  {
+    "id": "overload",
+    "name": "Motor overload",
+    "applies_to": [
+      "motor",
+      "conveyor"
+    ],
+    "mechanism": "degrade",
+    "magnitude": 0.5,
+    "description": "Current draw exceeds rated; thermal protection near."
+  },
+  {
+    "id": "esd",
+    "name": "Emergency shutdown",
+    "applies_to": [
+      "safety"
+    ],
+    "mechanism": "stop",
+    "magnitude": 1.0,
+    "description": "Safety system initiates a controlled area shutdown."
+  }
+]

@@ -1,0 +1,38 @@
+name: document-analysis
+description: >-
+  Read one document and answer a question about it, refusing to answer if the
+  document could not be read.
+version: "1"
+agent: documentation
+inputs:
+  - document_id
+  - question
+steps:
+  - id: read
+    kind: tool
+    name: read_document
+    description: Load the document text
+    arguments:
+      document_id: "{{inputs.document_id}}"
+    timeout_seconds: 120
+    retry:
+      max_attempts: 2
+      backoff_seconds: 1.0
+
+  - id: answer
+    kind: agent
+    name: documentation
+    description: Answer the question from the document text
+    depends_on:
+      - read
+    arguments:
+      task: "{{inputs.question}}"
+      document_id: "{{inputs.document_id}}"
+    timeout_seconds: 300
+
+  - id: verify
+    kind: verify
+    name: verifier
+    description: Check the answer cites the document it claims to use
+    depends_on:
+      - answer

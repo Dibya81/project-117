@@ -1,0 +1,4479 @@
+{
+  "plant_id": "iron_steel",
+  "plant_name": "Iron and steel plant",
+  "zones": [
+    {
+      "id": "iron_steel-zone0",
+      "name": "Raw material handling",
+      "sequence": 0
+    },
+    {
+      "id": "iron_steel-zone1",
+      "name": "Sinter plant",
+      "sequence": 1
+    },
+    {
+      "id": "iron_steel-zone2",
+      "name": "Blast furnace",
+      "sequence": 2
+    },
+    {
+      "id": "iron_steel-zone3",
+      "name": "Basic oxygen furnace",
+      "sequence": 3
+    },
+    {
+      "id": "iron_steel-zone4",
+      "name": "Continuous casting",
+      "sequence": 4
+    },
+    {
+      "id": "iron_steel-zone5",
+      "name": "Hot and cold rolling mill",
+      "sequence": 5
+    }
+  ],
+  "equipment": [
+    {
+      "id": "iron_steel-CV-201",
+      "tag": "CV-201",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2016-02-04",
+      "expected_lifespan_years": 20,
+      "age_years": 10.6,
+      "last_inspection": "2026-07-10",
+      "status": "normal",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-CV-202",
+      "tag": "CV-202",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2021-08-31",
+      "expected_lifespan_years": 10,
+      "age_years": 5.0,
+      "last_inspection": "2026-08-10",
+      "status": "normal",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-CV-203",
+      "tag": "CV-203",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2017-09-09",
+      "expected_lifespan_years": 18,
+      "age_years": 9.0,
+      "last_inspection": "2026-03-11",
+      "status": "normal",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-CV-204",
+      "tag": "CV-204",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2023-06-21",
+      "expected_lifespan_years": 25,
+      "age_years": 3.2,
+      "last_inspection": "2026-03-25",
+      "status": "normal",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-CV-205",
+      "tag": "CV-205",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2021-04-07",
+      "expected_lifespan_years": 10,
+      "age_years": 5.4,
+      "last_inspection": "2026-04-27",
+      "status": "normal",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-CV-206",
+      "tag": "CV-206",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2018-09-02",
+      "expected_lifespan_years": 15,
+      "age_years": 8.0,
+      "last_inspection": "2026-06-28",
+      "status": "normal",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-CV-207",
+      "tag": "CV-207",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2011-12-04",
+      "expected_lifespan_years": 12,
+      "age_years": 14.8,
+      "last_inspection": "2026-03-20",
+      "status": "critical",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-CV-208",
+      "tag": "CV-208",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2022-04-23",
+      "expected_lifespan_years": 15,
+      "age_years": 4.4,
+      "last_inspection": "2026-08-09",
+      "status": "normal",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-CV-209",
+      "tag": "CV-209",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2013-06-04",
+      "expected_lifespan_years": 10,
+      "age_years": 13.3,
+      "last_inspection": "2026-02-09",
+      "status": "critical",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-CV-210",
+      "tag": "CV-210",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2019-01-15",
+      "expected_lifespan_years": 10,
+      "age_years": 7.7,
+      "last_inspection": "2026-02-24",
+      "status": "normal",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-M-201",
+      "tag": "M-201",
+      "type": "motor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2009-02-15",
+      "expected_lifespan_years": 25,
+      "age_years": 17.6,
+      "last_inspection": "2026-04-08",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-202",
+      "tag": "M-202",
+      "type": "motor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2018-06-24",
+      "expected_lifespan_years": 12,
+      "age_years": 8.2,
+      "last_inspection": "2026-03-03",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-203",
+      "tag": "M-203",
+      "type": "motor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2014-05-18",
+      "expected_lifespan_years": 15,
+      "age_years": 12.3,
+      "last_inspection": "2026-06-02",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-204",
+      "tag": "M-204",
+      "type": "motor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2018-08-24",
+      "expected_lifespan_years": 12,
+      "age_years": 8.1,
+      "last_inspection": "2026-02-09",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-205",
+      "tag": "M-205",
+      "type": "motor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2012-04-16",
+      "expected_lifespan_years": 20,
+      "age_years": 14.4,
+      "last_inspection": "2026-04-02",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-206",
+      "tag": "M-206",
+      "type": "motor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2016-07-09",
+      "expected_lifespan_years": 25,
+      "age_years": 10.2,
+      "last_inspection": "2026-05-09",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-207",
+      "tag": "M-207",
+      "type": "motor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2020-04-09",
+      "expected_lifespan_years": 18,
+      "age_years": 6.4,
+      "last_inspection": "2026-06-28",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-208",
+      "tag": "M-208",
+      "type": "motor",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2019-12-05",
+      "expected_lifespan_years": 10,
+      "age_years": 6.8,
+      "last_inspection": "2026-05-25",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-V-201",
+      "tag": "V-201",
+      "type": "valve",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2013-03-27",
+      "expected_lifespan_years": 20,
+      "age_years": 13.5,
+      "last_inspection": "2026-07-23",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-V-202",
+      "tag": "V-202",
+      "type": "valve",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2010-06-02",
+      "expected_lifespan_years": 20,
+      "age_years": 16.3,
+      "last_inspection": "2026-06-29",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-V-203",
+      "tag": "V-203",
+      "type": "valve",
+      "zone_id": "iron_steel-zone0",
+      "install_date": "2005-05-27",
+      "expected_lifespan_years": 18,
+      "age_years": 21.3,
+      "last_inspection": "2026-09-02",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-F-201",
+      "tag": "F-201",
+      "type": "furnace",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2012-06-05",
+      "expected_lifespan_years": 10,
+      "age_years": 14.3,
+      "last_inspection": "2026-09-02",
+      "status": "critical",
+      "failure_modes": [
+        "refractory wear",
+        "burner failure",
+        "tuyere blockage"
+      ]
+    },
+    {
+      "id": "iron_steel-F-202",
+      "tag": "F-202",
+      "type": "furnace",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2019-04-27",
+      "expected_lifespan_years": 25,
+      "age_years": 7.4,
+      "last_inspection": "2026-06-24",
+      "status": "normal",
+      "failure_modes": [
+        "refractory wear",
+        "burner failure",
+        "tuyere blockage"
+      ]
+    },
+    {
+      "id": "iron_steel-CV-211",
+      "tag": "CV-211",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2010-07-29",
+      "expected_lifespan_years": 20,
+      "age_years": 16.1,
+      "last_inspection": "2026-07-06",
+      "status": "normal",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-CV-212",
+      "tag": "CV-212",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2020-04-01",
+      "expected_lifespan_years": 12,
+      "age_years": 6.4,
+      "last_inspection": "2026-06-01",
+      "status": "normal",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-CV-213",
+      "tag": "CV-213",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2024-05-22",
+      "expected_lifespan_years": 12,
+      "age_years": 2.3,
+      "last_inspection": "2026-03-14",
+      "status": "normal",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-CV-214",
+      "tag": "CV-214",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2005-03-20",
+      "expected_lifespan_years": 12,
+      "age_years": 21.5,
+      "last_inspection": "2026-02-27",
+      "status": "critical",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-CV-215",
+      "tag": "CV-215",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2019-07-14",
+      "expected_lifespan_years": 12,
+      "age_years": 7.2,
+      "last_inspection": "2026-06-10",
+      "status": "normal",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-CV-216",
+      "tag": "CV-216",
+      "type": "conveyor",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2021-05-31",
+      "expected_lifespan_years": 12,
+      "age_years": 5.3,
+      "last_inspection": "2026-08-10",
+      "status": "normal",
+      "failure_modes": [
+        "belt slip",
+        "motor overheat",
+        "idler bearing failure"
+      ]
+    },
+    {
+      "id": "iron_steel-M-209",
+      "tag": "M-209",
+      "type": "motor",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2014-09-03",
+      "expected_lifespan_years": 25,
+      "age_years": 12.0,
+      "last_inspection": "2026-02-15",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-210",
+      "tag": "M-210",
+      "type": "motor",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2005-11-13",
+      "expected_lifespan_years": 20,
+      "age_years": 20.8,
+      "last_inspection": "2026-02-19",
+      "status": "warning",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-211",
+      "tag": "M-211",
+      "type": "motor",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2008-05-05",
+      "expected_lifespan_years": 20,
+      "age_years": 18.4,
+      "last_inspection": "2026-08-02",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-212",
+      "tag": "M-212",
+      "type": "motor",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2010-08-24",
+      "expected_lifespan_years": 18,
+      "age_years": 16.1,
+      "last_inspection": "2026-04-23",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-213",
+      "tag": "M-213",
+      "type": "motor",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2018-07-11",
+      "expected_lifespan_years": 12,
+      "age_years": 8.2,
+      "last_inspection": "2026-08-12",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-214",
+      "tag": "M-214",
+      "type": "motor",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2014-06-27",
+      "expected_lifespan_years": 20,
+      "age_years": 12.2,
+      "last_inspection": "2026-06-16",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-V-204",
+      "tag": "V-204",
+      "type": "valve",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2008-10-07",
+      "expected_lifespan_years": 12,
+      "age_years": 17.9,
+      "last_inspection": "2026-07-23",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-V-205",
+      "tag": "V-205",
+      "type": "valve",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2014-12-06",
+      "expected_lifespan_years": 20,
+      "age_years": 11.8,
+      "last_inspection": "2026-08-20",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-V-206",
+      "tag": "V-206",
+      "type": "valve",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2011-12-14",
+      "expected_lifespan_years": 25,
+      "age_years": 14.8,
+      "last_inspection": "2026-04-09",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-V-207",
+      "tag": "V-207",
+      "type": "valve",
+      "zone_id": "iron_steel-zone1",
+      "install_date": "2006-08-19",
+      "expected_lifespan_years": 15,
+      "age_years": 20.1,
+      "last_inspection": "2026-07-22",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-F-203",
+      "tag": "F-203",
+      "type": "furnace",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2012-03-28",
+      "expected_lifespan_years": 10,
+      "age_years": 14.5,
+      "last_inspection": "2026-05-20",
+      "status": "critical",
+      "failure_modes": [
+        "refractory wear",
+        "burner failure",
+        "tuyere blockage"
+      ]
+    },
+    {
+      "id": "iron_steel-F-204",
+      "tag": "F-204",
+      "type": "furnace",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2013-07-28",
+      "expected_lifespan_years": 20,
+      "age_years": 13.1,
+      "last_inspection": "2026-04-03",
+      "status": "normal",
+      "failure_modes": [
+        "refractory wear",
+        "burner failure",
+        "tuyere blockage"
+      ]
+    },
+    {
+      "id": "iron_steel-B-201",
+      "tag": "B-201",
+      "type": "compressor_blower",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2011-02-11",
+      "expected_lifespan_years": 15,
+      "age_years": 15.6,
+      "last_inspection": "2026-09-04",
+      "status": "warning",
+      "failure_modes": [
+        "bearing wear",
+        "impeller imbalance"
+      ]
+    },
+    {
+      "id": "iron_steel-B-202",
+      "tag": "B-202",
+      "type": "compressor_blower",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2023-08-04",
+      "expected_lifespan_years": 12,
+      "age_years": 3.1,
+      "last_inspection": "2026-02-09",
+      "status": "normal",
+      "failure_modes": [
+        "bearing wear",
+        "impeller imbalance"
+      ]
+    },
+    {
+      "id": "iron_steel-B-203",
+      "tag": "B-203",
+      "type": "compressor_blower",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2007-05-05",
+      "expected_lifespan_years": 12,
+      "age_years": 19.4,
+      "last_inspection": "2026-05-22",
+      "status": "critical",
+      "failure_modes": [
+        "bearing wear",
+        "impeller imbalance"
+      ]
+    },
+    {
+      "id": "iron_steel-B-204",
+      "tag": "B-204",
+      "type": "compressor_blower",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2020-11-21",
+      "expected_lifespan_years": 25,
+      "age_years": 5.8,
+      "last_inspection": "2026-06-13",
+      "status": "normal",
+      "failure_modes": [
+        "bearing wear",
+        "impeller imbalance"
+      ]
+    },
+    {
+      "id": "iron_steel-P-201",
+      "tag": "P-201",
+      "type": "pump",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2005-04-27",
+      "expected_lifespan_years": 12,
+      "age_years": 21.4,
+      "last_inspection": "2026-05-27",
+      "status": "critical",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "iron_steel-P-202",
+      "tag": "P-202",
+      "type": "pump",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2021-04-28",
+      "expected_lifespan_years": 15,
+      "age_years": 5.4,
+      "last_inspection": "2026-07-26",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "iron_steel-P-203",
+      "tag": "P-203",
+      "type": "pump",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2017-09-26",
+      "expected_lifespan_years": 10,
+      "age_years": 9.0,
+      "last_inspection": "2026-06-20",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "iron_steel-P-204",
+      "tag": "P-204",
+      "type": "pump",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2020-04-25",
+      "expected_lifespan_years": 20,
+      "age_years": 6.4,
+      "last_inspection": "2026-08-06",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "iron_steel-P-205",
+      "tag": "P-205",
+      "type": "pump",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2015-08-18",
+      "expected_lifespan_years": 25,
+      "age_years": 11.1,
+      "last_inspection": "2026-07-05",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "iron_steel-V-208",
+      "tag": "V-208",
+      "type": "valve",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2013-08-25",
+      "expected_lifespan_years": 18,
+      "age_years": 13.1,
+      "last_inspection": "2026-05-30",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-V-209",
+      "tag": "V-209",
+      "type": "valve",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2015-07-25",
+      "expected_lifespan_years": 10,
+      "age_years": 11.1,
+      "last_inspection": "2026-03-22",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-V-210",
+      "tag": "V-210",
+      "type": "valve",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2023-04-10",
+      "expected_lifespan_years": 20,
+      "age_years": 3.4,
+      "last_inspection": "2026-07-17",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-V-211",
+      "tag": "V-211",
+      "type": "valve",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2009-08-31",
+      "expected_lifespan_years": 20,
+      "age_years": 17.0,
+      "last_inspection": "2026-08-28",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-V-212",
+      "tag": "V-212",
+      "type": "valve",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2022-10-11",
+      "expected_lifespan_years": 10,
+      "age_years": 3.9,
+      "last_inspection": "2026-06-23",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-V-213",
+      "tag": "V-213",
+      "type": "valve",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2019-07-07",
+      "expected_lifespan_years": 10,
+      "age_years": 7.2,
+      "last_inspection": "2026-05-13",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-V-214",
+      "tag": "V-214",
+      "type": "valve",
+      "zone_id": "iron_steel-zone2",
+      "install_date": "2004-11-12",
+      "expected_lifespan_years": 15,
+      "age_years": 21.8,
+      "last_inspection": "2026-07-25",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-F-205",
+      "tag": "F-205",
+      "type": "furnace",
+      "zone_id": "iron_steel-zone3",
+      "install_date": "2022-03-01",
+      "expected_lifespan_years": 20,
+      "age_years": 4.5,
+      "last_inspection": "2026-02-03",
+      "status": "normal",
+      "failure_modes": [
+        "refractory wear",
+        "burner failure",
+        "tuyere blockage"
+      ]
+    },
+    {
+      "id": "iron_steel-F-206",
+      "tag": "F-206",
+      "type": "furnace",
+      "zone_id": "iron_steel-zone3",
+      "install_date": "2019-02-03",
+      "expected_lifespan_years": 25,
+      "age_years": 7.6,
+      "last_inspection": "2026-05-05",
+      "status": "normal",
+      "failure_modes": [
+        "refractory wear",
+        "burner failure",
+        "tuyere blockage"
+      ]
+    },
+    {
+      "id": "iron_steel-C-201",
+      "tag": "C-201",
+      "type": "compressor",
+      "zone_id": "iron_steel-zone3",
+      "install_date": "2022-02-10",
+      "expected_lifespan_years": 12,
+      "age_years": 4.6,
+      "last_inspection": "2026-08-12",
+      "status": "normal",
+      "failure_modes": [
+        "surge",
+        "bearing wear",
+        "valve plate fracture"
+      ]
+    },
+    {
+      "id": "iron_steel-C-202",
+      "tag": "C-202",
+      "type": "compressor",
+      "zone_id": "iron_steel-zone3",
+      "install_date": "2011-01-30",
+      "expected_lifespan_years": 18,
+      "age_years": 15.6,
+      "last_inspection": "2026-05-22",
+      "status": "normal",
+      "failure_modes": [
+        "surge",
+        "bearing wear",
+        "valve plate fracture"
+      ]
+    },
+    {
+      "id": "iron_steel-C-203",
+      "tag": "C-203",
+      "type": "compressor",
+      "zone_id": "iron_steel-zone3",
+      "install_date": "2011-07-23",
+      "expected_lifespan_years": 25,
+      "age_years": 15.1,
+      "last_inspection": "2026-02-25",
+      "status": "normal",
+      "failure_modes": [
+        "surge",
+        "bearing wear",
+        "valve plate fracture"
+      ]
+    },
+    {
+      "id": "iron_steel-V-215",
+      "tag": "V-215",
+      "type": "valve",
+      "zone_id": "iron_steel-zone3",
+      "install_date": "2008-03-27",
+      "expected_lifespan_years": 20,
+      "age_years": 18.5,
+      "last_inspection": "2026-09-04",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-V-216",
+      "tag": "V-216",
+      "type": "valve",
+      "zone_id": "iron_steel-zone3",
+      "install_date": "2014-04-24",
+      "expected_lifespan_years": 15,
+      "age_years": 12.4,
+      "last_inspection": "2026-03-12",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-V-217",
+      "tag": "V-217",
+      "type": "valve",
+      "zone_id": "iron_steel-zone3",
+      "install_date": "2023-06-27",
+      "expected_lifespan_years": 25,
+      "age_years": 3.2,
+      "last_inspection": "2026-02-23",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-V-218",
+      "tag": "V-218",
+      "type": "valve",
+      "zone_id": "iron_steel-zone3",
+      "install_date": "2010-06-20",
+      "expected_lifespan_years": 12,
+      "age_years": 16.2,
+      "last_inspection": "2026-07-02",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-V-219",
+      "tag": "V-219",
+      "type": "valve",
+      "zone_id": "iron_steel-zone3",
+      "install_date": "2022-06-19",
+      "expected_lifespan_years": 20,
+      "age_years": 4.2,
+      "last_inspection": "2026-06-30",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "iron_steel-CST-201",
+      "tag": "CST-201",
+      "type": "caster",
+      "zone_id": "iron_steel-zone4",
+      "install_date": "2022-09-18",
+      "expected_lifespan_years": 20,
+      "age_years": 4.0,
+      "last_inspection": "2026-07-02",
+      "status": "normal",
+      "failure_modes": [
+        "mould wear",
+        "roll misalignment",
+        "spray nozzle blockage"
+      ]
+    },
+    {
+      "id": "iron_steel-CST-202",
+      "tag": "CST-202",
+      "type": "caster",
+      "zone_id": "iron_steel-zone4",
+      "install_date": "2006-12-06",
+      "expected_lifespan_years": 25,
+      "age_years": 19.8,
+      "last_inspection": "2026-06-09",
+      "status": "normal",
+      "failure_modes": [
+        "mould wear",
+        "roll misalignment",
+        "spray nozzle blockage"
+      ]
+    },
+    {
+      "id": "iron_steel-CST-203",
+      "tag": "CST-203",
+      "type": "caster",
+      "zone_id": "iron_steel-zone4",
+      "install_date": "2008-08-22",
+      "expected_lifespan_years": 25,
+      "age_years": 18.1,
+      "last_inspection": "2026-07-25",
+      "status": "normal",
+      "failure_modes": [
+        "mould wear",
+        "roll misalignment",
+        "spray nozzle blockage"
+      ]
+    },
+    {
+      "id": "iron_steel-CST-204",
+      "tag": "CST-204",
+      "type": "caster",
+      "zone_id": "iron_steel-zone4",
+      "install_date": "2018-02-24",
+      "expected_lifespan_years": 18,
+      "age_years": 8.5,
+      "last_inspection": "2026-05-26",
+      "status": "normal",
+      "failure_modes": [
+        "mould wear",
+        "roll misalignment",
+        "spray nozzle blockage"
+      ]
+    },
+    {
+      "id": "iron_steel-P-206",
+      "tag": "P-206",
+      "type": "pump",
+      "zone_id": "iron_steel-zone4",
+      "install_date": "2008-05-25",
+      "expected_lifespan_years": 25,
+      "age_years": 18.3,
+      "last_inspection": "2026-02-18",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "iron_steel-P-207",
+      "tag": "P-207",
+      "type": "pump",
+      "zone_id": "iron_steel-zone4",
+      "install_date": "2008-06-02",
+      "expected_lifespan_years": 12,
+      "age_years": 18.3,
+      "last_inspection": "2026-04-28",
+      "status": "critical",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "iron_steel-P-208",
+      "tag": "P-208",
+      "type": "pump",
+      "zone_id": "iron_steel-zone4",
+      "install_date": "2017-10-08",
+      "expected_lifespan_years": 25,
+      "age_years": 8.9,
+      "last_inspection": "2026-02-14",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "iron_steel-P-209",
+      "tag": "P-209",
+      "type": "pump",
+      "zone_id": "iron_steel-zone4",
+      "install_date": "2016-05-05",
+      "expected_lifespan_years": 12,
+      "age_years": 10.4,
+      "last_inspection": "2026-03-24",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "iron_steel-P-210",
+      "tag": "P-210",
+      "type": "pump",
+      "zone_id": "iron_steel-zone4",
+      "install_date": "2011-12-27",
+      "expected_lifespan_years": 12,
+      "age_years": 14.7,
+      "last_inspection": "2026-05-18",
+      "status": "critical",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "iron_steel-M-215",
+      "tag": "M-215",
+      "type": "motor",
+      "zone_id": "iron_steel-zone4",
+      "install_date": "2006-07-04",
+      "expected_lifespan_years": 25,
+      "age_years": 20.2,
+      "last_inspection": "2026-05-25",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-216",
+      "tag": "M-216",
+      "type": "motor",
+      "zone_id": "iron_steel-zone4",
+      "install_date": "2018-01-16",
+      "expected_lifespan_years": 15,
+      "age_years": 8.7,
+      "last_inspection": "2026-02-06",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-217",
+      "tag": "M-217",
+      "type": "motor",
+      "zone_id": "iron_steel-zone4",
+      "install_date": "2017-07-06",
+      "expected_lifespan_years": 20,
+      "age_years": 9.2,
+      "last_inspection": "2026-05-29",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-218",
+      "tag": "M-218",
+      "type": "motor",
+      "zone_id": "iron_steel-zone4",
+      "install_date": "2016-12-27",
+      "expected_lifespan_years": 15,
+      "age_years": 9.7,
+      "last_inspection": "2026-03-22",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-219",
+      "tag": "M-219",
+      "type": "motor",
+      "zone_id": "iron_steel-zone4",
+      "install_date": "2020-10-08",
+      "expected_lifespan_years": 18,
+      "age_years": 5.9,
+      "last_inspection": "2026-03-12",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-MS-201",
+      "tag": "MS-201",
+      "type": "mill_stand",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2010-08-01",
+      "expected_lifespan_years": 18,
+      "age_years": 16.1,
+      "last_inspection": "2026-03-05",
+      "status": "normal",
+      "failure_modes": [
+        "roll wear",
+        "bearing failure",
+        "hydraulic leak"
+      ]
+    },
+    {
+      "id": "iron_steel-MS-202",
+      "tag": "MS-202",
+      "type": "mill_stand",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2019-06-10",
+      "expected_lifespan_years": 18,
+      "age_years": 7.3,
+      "last_inspection": "2026-02-22",
+      "status": "normal",
+      "failure_modes": [
+        "roll wear",
+        "bearing failure",
+        "hydraulic leak"
+      ]
+    },
+    {
+      "id": "iron_steel-MS-203",
+      "tag": "MS-203",
+      "type": "mill_stand",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2008-06-23",
+      "expected_lifespan_years": 20,
+      "age_years": 18.2,
+      "last_inspection": "2026-06-10",
+      "status": "normal",
+      "failure_modes": [
+        "roll wear",
+        "bearing failure",
+        "hydraulic leak"
+      ]
+    },
+    {
+      "id": "iron_steel-MS-204",
+      "tag": "MS-204",
+      "type": "mill_stand",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2010-04-29",
+      "expected_lifespan_years": 25,
+      "age_years": 16.4,
+      "last_inspection": "2026-08-31",
+      "status": "normal",
+      "failure_modes": [
+        "roll wear",
+        "bearing failure",
+        "hydraulic leak"
+      ]
+    },
+    {
+      "id": "iron_steel-MS-205",
+      "tag": "MS-205",
+      "type": "mill_stand",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2023-10-06",
+      "expected_lifespan_years": 15,
+      "age_years": 2.9,
+      "last_inspection": "2026-06-27",
+      "status": "normal",
+      "failure_modes": [
+        "roll wear",
+        "bearing failure",
+        "hydraulic leak"
+      ]
+    },
+    {
+      "id": "iron_steel-MS-206",
+      "tag": "MS-206",
+      "type": "mill_stand",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2019-05-25",
+      "expected_lifespan_years": 25,
+      "age_years": 7.3,
+      "last_inspection": "2026-08-26",
+      "status": "normal",
+      "failure_modes": [
+        "roll wear",
+        "bearing failure",
+        "hydraulic leak"
+      ]
+    },
+    {
+      "id": "iron_steel-MS-207",
+      "tag": "MS-207",
+      "type": "mill_stand",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2023-04-03",
+      "expected_lifespan_years": 20,
+      "age_years": 3.4,
+      "last_inspection": "2026-08-26",
+      "status": "normal",
+      "failure_modes": [
+        "roll wear",
+        "bearing failure",
+        "hydraulic leak"
+      ]
+    },
+    {
+      "id": "iron_steel-MS-208",
+      "tag": "MS-208",
+      "type": "mill_stand",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2010-11-05",
+      "expected_lifespan_years": 18,
+      "age_years": 15.9,
+      "last_inspection": "2026-04-05",
+      "status": "normal",
+      "failure_modes": [
+        "roll wear",
+        "bearing failure",
+        "hydraulic leak"
+      ]
+    },
+    {
+      "id": "iron_steel-M-220",
+      "tag": "M-220",
+      "type": "motor",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2009-02-06",
+      "expected_lifespan_years": 18,
+      "age_years": 17.6,
+      "last_inspection": "2026-06-22",
+      "status": "warning",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-221",
+      "tag": "M-221",
+      "type": "motor",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2013-02-12",
+      "expected_lifespan_years": 15,
+      "age_years": 13.6,
+      "last_inspection": "2026-06-21",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-222",
+      "tag": "M-222",
+      "type": "motor",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2012-01-31",
+      "expected_lifespan_years": 20,
+      "age_years": 14.6,
+      "last_inspection": "2026-03-15",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-223",
+      "tag": "M-223",
+      "type": "motor",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2018-10-08",
+      "expected_lifespan_years": 20,
+      "age_years": 7.9,
+      "last_inspection": "2026-04-07",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-224",
+      "tag": "M-224",
+      "type": "motor",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2011-11-03",
+      "expected_lifespan_years": 25,
+      "age_years": 14.9,
+      "last_inspection": "2026-05-21",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-225",
+      "tag": "M-225",
+      "type": "motor",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2012-10-19",
+      "expected_lifespan_years": 12,
+      "age_years": 13.9,
+      "last_inspection": "2026-03-24",
+      "status": "critical",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-226",
+      "tag": "M-226",
+      "type": "motor",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2004-10-19",
+      "expected_lifespan_years": 15,
+      "age_years": 21.9,
+      "last_inspection": "2026-03-08",
+      "status": "critical",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-227",
+      "tag": "M-227",
+      "type": "motor",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2019-10-25",
+      "expected_lifespan_years": 12,
+      "age_years": 6.9,
+      "last_inspection": "2026-05-25",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-228",
+      "tag": "M-228",
+      "type": "motor",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2011-07-18",
+      "expected_lifespan_years": 12,
+      "age_years": 15.2,
+      "last_inspection": "2026-02-20",
+      "status": "critical",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-M-229",
+      "tag": "M-229",
+      "type": "motor",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2010-04-21",
+      "expected_lifespan_years": 25,
+      "age_years": 16.4,
+      "last_inspection": "2026-03-06",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "iron_steel-P-211",
+      "tag": "P-211",
+      "type": "pump",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2014-11-16",
+      "expected_lifespan_years": 25,
+      "age_years": 11.8,
+      "last_inspection": "2026-06-21",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "iron_steel-P-212",
+      "tag": "P-212",
+      "type": "pump",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2006-05-24",
+      "expected_lifespan_years": 20,
+      "age_years": 20.3,
+      "last_inspection": "2026-02-26",
+      "status": "warning",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "iron_steel-P-213",
+      "tag": "P-213",
+      "type": "pump",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2010-02-24",
+      "expected_lifespan_years": 18,
+      "age_years": 16.6,
+      "last_inspection": "2026-06-22",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "iron_steel-P-214",
+      "tag": "P-214",
+      "type": "pump",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2009-04-07",
+      "expected_lifespan_years": 18,
+      "age_years": 17.4,
+      "last_inspection": "2026-04-02",
+      "status": "warning",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "iron_steel-P-215",
+      "tag": "P-215",
+      "type": "pump",
+      "zone_id": "iron_steel-zone5",
+      "install_date": "2006-03-09",
+      "expected_lifespan_years": 10,
+      "age_years": 20.5,
+      "last_inspection": "2026-08-11",
+      "status": "critical",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    }
+  ],
+  "sensors": [
+    {
+      "id": "iron_steel-CV-201-SEN1",
+      "equipment_id": "iron_steel-CV-201",
+      "tag": "VT-CV-2011",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 1.8
+    },
+    {
+      "id": "iron_steel-CV-202-SEN1",
+      "equipment_id": "iron_steel-CV-202",
+      "tag": "LT-CV-2021",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 85.6
+    },
+    {
+      "id": "iron_steel-CV-203-SEN1",
+      "equipment_id": "iron_steel-CV-203",
+      "tag": "TT-CV-2031",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 463.5
+    },
+    {
+      "id": "iron_steel-CV-204-SEN1",
+      "equipment_id": "iron_steel-CV-204",
+      "tag": "PT-CV-2041",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 14.2
+    },
+    {
+      "id": "iron_steel-CV-205-SEN1",
+      "equipment_id": "iron_steel-CV-205",
+      "tag": "FT-CV-2051",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 500.7
+    },
+    {
+      "id": "iron_steel-CV-206-SEN1",
+      "equipment_id": "iron_steel-CV-206",
+      "tag": "TT-CV-2061",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 154.7
+    },
+    {
+      "id": "iron_steel-CV-207-SEN1",
+      "equipment_id": "iron_steel-CV-207",
+      "tag": "PT-CV-2071",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 11.1
+    },
+    {
+      "id": "iron_steel-CV-208-SEN1",
+      "equipment_id": "iron_steel-CV-208",
+      "tag": "TT-CV-2081",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 56.5
+    },
+    {
+      "id": "iron_steel-CV-209-SEN1",
+      "equipment_id": "iron_steel-CV-209",
+      "tag": "LT-CV-2091",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 92.7
+    },
+    {
+      "id": "iron_steel-CV-210-SEN1",
+      "equipment_id": "iron_steel-CV-210",
+      "tag": "FT-CV-2101",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 178.7
+    },
+    {
+      "id": "iron_steel-M-201-SEN1",
+      "equipment_id": "iron_steel-M-201",
+      "tag": "FT-M-2011",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 136.5
+    },
+    {
+      "id": "iron_steel-M-202-SEN1",
+      "equipment_id": "iron_steel-M-202",
+      "tag": "LT-M-2021",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 14.8
+    },
+    {
+      "id": "iron_steel-M-203-SEN1",
+      "equipment_id": "iron_steel-M-203",
+      "tag": "FT-M-2031",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 85.4
+    },
+    {
+      "id": "iron_steel-M-204-SEN1",
+      "equipment_id": "iron_steel-M-204",
+      "tag": "VT-M-2041",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 1.0
+    },
+    {
+      "id": "iron_steel-M-205-SEN1",
+      "equipment_id": "iron_steel-M-205",
+      "tag": "LT-M-2051",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 87.5
+    },
+    {
+      "id": "iron_steel-M-206-SEN1",
+      "equipment_id": "iron_steel-M-206",
+      "tag": "FT-M-2061",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 34.6
+    },
+    {
+      "id": "iron_steel-M-207-SEN1",
+      "equipment_id": "iron_steel-M-207",
+      "tag": "VT-M-2071",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 1.0
+    },
+    {
+      "id": "iron_steel-M-208-SEN1",
+      "equipment_id": "iron_steel-M-208",
+      "tag": "TT-M-2081",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 183.5
+    },
+    {
+      "id": "iron_steel-V-201-SEN1",
+      "equipment_id": "iron_steel-V-201",
+      "tag": "FT-V-2011",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 54.6
+    },
+    {
+      "id": "iron_steel-V-202-SEN1",
+      "equipment_id": "iron_steel-V-202",
+      "tag": "VT-V-2021",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 4.1
+    },
+    {
+      "id": "iron_steel-V-203-SEN1",
+      "equipment_id": "iron_steel-V-203",
+      "tag": "TT-V-2031",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 467.9
+    },
+    {
+      "id": "iron_steel-F-201-SEN1",
+      "equipment_id": "iron_steel-F-201",
+      "tag": "PT-F-2011",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 15.5
+    },
+    {
+      "id": "iron_steel-F-201-SEN2",
+      "equipment_id": "iron_steel-F-201",
+      "tag": "FT-F-2012",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 533.9
+    },
+    {
+      "id": "iron_steel-F-202-SEN1",
+      "equipment_id": "iron_steel-F-202",
+      "tag": "LT-F-2021",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 46.4
+    },
+    {
+      "id": "iron_steel-CV-211-SEN1",
+      "equipment_id": "iron_steel-CV-211",
+      "tag": "FT-CV-2111",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 541.5
+    },
+    {
+      "id": "iron_steel-CV-212-SEN1",
+      "equipment_id": "iron_steel-CV-212",
+      "tag": "FT-CV-2121",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 114.1
+    },
+    {
+      "id": "iron_steel-CV-213-SEN1",
+      "equipment_id": "iron_steel-CV-213",
+      "tag": "LT-CV-2131",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 41.5
+    },
+    {
+      "id": "iron_steel-CV-214-SEN1",
+      "equipment_id": "iron_steel-CV-214",
+      "tag": "TT-CV-2141",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 422.4
+    },
+    {
+      "id": "iron_steel-CV-215-SEN1",
+      "equipment_id": "iron_steel-CV-215",
+      "tag": "PT-CV-2151",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 18.3
+    },
+    {
+      "id": "iron_steel-CV-216-SEN1",
+      "equipment_id": "iron_steel-CV-216",
+      "tag": "FT-CV-2161",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 559.5
+    },
+    {
+      "id": "iron_steel-M-209-SEN1",
+      "equipment_id": "iron_steel-M-209",
+      "tag": "VT-M-2091",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 1.7
+    },
+    {
+      "id": "iron_steel-M-210-SEN1",
+      "equipment_id": "iron_steel-M-210",
+      "tag": "TT-M-2101",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 124.8
+    },
+    {
+      "id": "iron_steel-M-211-SEN1",
+      "equipment_id": "iron_steel-M-211",
+      "tag": "TT-M-2111",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 472.7
+    },
+    {
+      "id": "iron_steel-M-212-SEN1",
+      "equipment_id": "iron_steel-M-212",
+      "tag": "FT-M-2121",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 446.9
+    },
+    {
+      "id": "iron_steel-M-213-SEN1",
+      "equipment_id": "iron_steel-M-213",
+      "tag": "VT-M-2131",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 6.1
+    },
+    {
+      "id": "iron_steel-M-214-SEN1",
+      "equipment_id": "iron_steel-M-214",
+      "tag": "FT-M-2141",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 230.5
+    },
+    {
+      "id": "iron_steel-V-204-SEN1",
+      "equipment_id": "iron_steel-V-204",
+      "tag": "VT-V-2041",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 5.4
+    },
+    {
+      "id": "iron_steel-V-205-SEN1",
+      "equipment_id": "iron_steel-V-205",
+      "tag": "LT-V-2051",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 85.3
+    },
+    {
+      "id": "iron_steel-V-206-SEN1",
+      "equipment_id": "iron_steel-V-206",
+      "tag": "TT-V-2061",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 155.0
+    },
+    {
+      "id": "iron_steel-V-207-SEN1",
+      "equipment_id": "iron_steel-V-207",
+      "tag": "FT-V-2071",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 403.7
+    },
+    {
+      "id": "iron_steel-F-203-SEN1",
+      "equipment_id": "iron_steel-F-203",
+      "tag": "LT-F-2031",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 82.3
+    },
+    {
+      "id": "iron_steel-F-204-SEN1",
+      "equipment_id": "iron_steel-F-204",
+      "tag": "TT-F-2041",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 466.6
+    },
+    {
+      "id": "iron_steel-B-201-SEN1",
+      "equipment_id": "iron_steel-B-201",
+      "tag": "TT-B-2011",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 146.3
+    },
+    {
+      "id": "iron_steel-B-201-SEN2",
+      "equipment_id": "iron_steel-B-201",
+      "tag": "VT-B-2012",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 3.6
+    },
+    {
+      "id": "iron_steel-B-202-SEN1",
+      "equipment_id": "iron_steel-B-202",
+      "tag": "TT-B-2021",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 308.3
+    },
+    {
+      "id": "iron_steel-B-202-SEN2",
+      "equipment_id": "iron_steel-B-202",
+      "tag": "TT-B-2022",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 354.8
+    },
+    {
+      "id": "iron_steel-B-203-SEN1",
+      "equipment_id": "iron_steel-B-203",
+      "tag": "TT-B-2031",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 62.5
+    },
+    {
+      "id": "iron_steel-B-204-SEN1",
+      "equipment_id": "iron_steel-B-204",
+      "tag": "TT-B-2041",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 118.8
+    },
+    {
+      "id": "iron_steel-B-204-SEN2",
+      "equipment_id": "iron_steel-B-204",
+      "tag": "TT-B-2042",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 368.8
+    },
+    {
+      "id": "iron_steel-P-201-SEN1",
+      "equipment_id": "iron_steel-P-201",
+      "tag": "TT-P-2011",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 401.2
+    },
+    {
+      "id": "iron_steel-P-202-SEN1",
+      "equipment_id": "iron_steel-P-202",
+      "tag": "LT-P-2021",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 91.5
+    },
+    {
+      "id": "iron_steel-P-203-SEN1",
+      "equipment_id": "iron_steel-P-203",
+      "tag": "VT-P-2031",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 4.7
+    },
+    {
+      "id": "iron_steel-P-203-SEN2",
+      "equipment_id": "iron_steel-P-203",
+      "tag": "FT-P-2032",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 581.2
+    },
+    {
+      "id": "iron_steel-P-204-SEN1",
+      "equipment_id": "iron_steel-P-204",
+      "tag": "TT-P-2041",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 468.2
+    },
+    {
+      "id": "iron_steel-P-204-SEN2",
+      "equipment_id": "iron_steel-P-204",
+      "tag": "VT-P-2042",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 5.0
+    },
+    {
+      "id": "iron_steel-P-205-SEN1",
+      "equipment_id": "iron_steel-P-205",
+      "tag": "VT-P-2051",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 4.6
+    },
+    {
+      "id": "iron_steel-V-208-SEN1",
+      "equipment_id": "iron_steel-V-208",
+      "tag": "FT-V-2081",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 461.2
+    },
+    {
+      "id": "iron_steel-V-209-SEN1",
+      "equipment_id": "iron_steel-V-209",
+      "tag": "PT-V-2091",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 3.1
+    },
+    {
+      "id": "iron_steel-V-210-SEN1",
+      "equipment_id": "iron_steel-V-210",
+      "tag": "LT-V-2101",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 17.8
+    },
+    {
+      "id": "iron_steel-V-211-SEN1",
+      "equipment_id": "iron_steel-V-211",
+      "tag": "PT-V-2111",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 2.3
+    },
+    {
+      "id": "iron_steel-V-212-SEN1",
+      "equipment_id": "iron_steel-V-212",
+      "tag": "LT-V-2121",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 11.6
+    },
+    {
+      "id": "iron_steel-V-213-SEN1",
+      "equipment_id": "iron_steel-V-213",
+      "tag": "LT-V-2131",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 80.5
+    },
+    {
+      "id": "iron_steel-V-214-SEN1",
+      "equipment_id": "iron_steel-V-214",
+      "tag": "FT-V-2141",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 10.4
+    },
+    {
+      "id": "iron_steel-F-205-SEN1",
+      "equipment_id": "iron_steel-F-205",
+      "tag": "TT-F-2051",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 343.5
+    },
+    {
+      "id": "iron_steel-F-206-SEN1",
+      "equipment_id": "iron_steel-F-206",
+      "tag": "TT-F-2061",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 437.9
+    },
+    {
+      "id": "iron_steel-F-206-SEN2",
+      "equipment_id": "iron_steel-F-206",
+      "tag": "VT-F-2062",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 5.5
+    },
+    {
+      "id": "iron_steel-C-201-SEN1",
+      "equipment_id": "iron_steel-C-201",
+      "tag": "LT-C-2011",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 60.2
+    },
+    {
+      "id": "iron_steel-C-201-SEN2",
+      "equipment_id": "iron_steel-C-201",
+      "tag": "TT-C-2012",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 452.8
+    },
+    {
+      "id": "iron_steel-C-202-SEN1",
+      "equipment_id": "iron_steel-C-202",
+      "tag": "VT-C-2021",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 4.4
+    },
+    {
+      "id": "iron_steel-C-203-SEN1",
+      "equipment_id": "iron_steel-C-203",
+      "tag": "LT-C-2031",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 88.1
+    },
+    {
+      "id": "iron_steel-V-215-SEN1",
+      "equipment_id": "iron_steel-V-215",
+      "tag": "LT-V-2151",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 45.5
+    },
+    {
+      "id": "iron_steel-V-216-SEN1",
+      "equipment_id": "iron_steel-V-216",
+      "tag": "FT-V-2161",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 131.0
+    },
+    {
+      "id": "iron_steel-V-217-SEN1",
+      "equipment_id": "iron_steel-V-217",
+      "tag": "PT-V-2171",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 7.0
+    },
+    {
+      "id": "iron_steel-V-218-SEN1",
+      "equipment_id": "iron_steel-V-218",
+      "tag": "TT-V-2181",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 312.5
+    },
+    {
+      "id": "iron_steel-V-219-SEN1",
+      "equipment_id": "iron_steel-V-219",
+      "tag": "PT-V-2191",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 15.1
+    },
+    {
+      "id": "iron_steel-CST-201-SEN1",
+      "equipment_id": "iron_steel-CST-201",
+      "tag": "LT-CST-2011",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 34.1
+    },
+    {
+      "id": "iron_steel-CST-202-SEN1",
+      "equipment_id": "iron_steel-CST-202",
+      "tag": "FT-CST-2021",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 63.8
+    },
+    {
+      "id": "iron_steel-CST-202-SEN2",
+      "equipment_id": "iron_steel-CST-202",
+      "tag": "VT-CST-2022",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 6.7
+    },
+    {
+      "id": "iron_steel-CST-203-SEN1",
+      "equipment_id": "iron_steel-CST-203",
+      "tag": "VT-CST-2031",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 3.5
+    },
+    {
+      "id": "iron_steel-CST-203-SEN2",
+      "equipment_id": "iron_steel-CST-203",
+      "tag": "LT-CST-2032",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 52.8
+    },
+    {
+      "id": "iron_steel-CST-204-SEN1",
+      "equipment_id": "iron_steel-CST-204",
+      "tag": "VT-CST-2041",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 6.2
+    },
+    {
+      "id": "iron_steel-CST-204-SEN2",
+      "equipment_id": "iron_steel-CST-204",
+      "tag": "PT-CST-2042",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 10.1
+    },
+    {
+      "id": "iron_steel-P-206-SEN1",
+      "equipment_id": "iron_steel-P-206",
+      "tag": "LT-P-2061",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 83.5
+    },
+    {
+      "id": "iron_steel-P-207-SEN1",
+      "equipment_id": "iron_steel-P-207",
+      "tag": "PT-P-2071",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 3.5
+    },
+    {
+      "id": "iron_steel-P-207-SEN2",
+      "equipment_id": "iron_steel-P-207",
+      "tag": "PT-P-2072",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 7.4
+    },
+    {
+      "id": "iron_steel-P-208-SEN1",
+      "equipment_id": "iron_steel-P-208",
+      "tag": "FT-P-2081",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 451.6
+    },
+    {
+      "id": "iron_steel-P-208-SEN2",
+      "equipment_id": "iron_steel-P-208",
+      "tag": "LT-P-2082",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 68.4
+    },
+    {
+      "id": "iron_steel-P-209-SEN1",
+      "equipment_id": "iron_steel-P-209",
+      "tag": "PT-P-2091",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 5.2
+    },
+    {
+      "id": "iron_steel-P-210-SEN1",
+      "equipment_id": "iron_steel-P-210",
+      "tag": "PT-P-2101",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 18.2
+    },
+    {
+      "id": "iron_steel-P-210-SEN2",
+      "equipment_id": "iron_steel-P-210",
+      "tag": "PT-P-2102",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 12.1
+    },
+    {
+      "id": "iron_steel-M-215-SEN1",
+      "equipment_id": "iron_steel-M-215",
+      "tag": "TT-M-2151",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 327.7
+    },
+    {
+      "id": "iron_steel-M-216-SEN1",
+      "equipment_id": "iron_steel-M-216",
+      "tag": "PT-M-2161",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 13.4
+    },
+    {
+      "id": "iron_steel-M-217-SEN1",
+      "equipment_id": "iron_steel-M-217",
+      "tag": "LT-M-2171",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 20.7
+    },
+    {
+      "id": "iron_steel-M-218-SEN1",
+      "equipment_id": "iron_steel-M-218",
+      "tag": "FT-M-2181",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 271.0
+    },
+    {
+      "id": "iron_steel-M-219-SEN1",
+      "equipment_id": "iron_steel-M-219",
+      "tag": "TT-M-2191",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 331.1
+    },
+    {
+      "id": "iron_steel-MS-201-SEN1",
+      "equipment_id": "iron_steel-MS-201",
+      "tag": "VT-MS-2011",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 6.9
+    },
+    {
+      "id": "iron_steel-MS-202-SEN1",
+      "equipment_id": "iron_steel-MS-202",
+      "tag": "FT-MS-2021",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 333.8
+    },
+    {
+      "id": "iron_steel-MS-202-SEN2",
+      "equipment_id": "iron_steel-MS-202",
+      "tag": "LT-MS-2022",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 69.0
+    },
+    {
+      "id": "iron_steel-MS-203-SEN1",
+      "equipment_id": "iron_steel-MS-203",
+      "tag": "TT-MS-2031",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 242.6
+    },
+    {
+      "id": "iron_steel-MS-203-SEN2",
+      "equipment_id": "iron_steel-MS-203",
+      "tag": "VT-MS-2032",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 2.6
+    },
+    {
+      "id": "iron_steel-MS-204-SEN1",
+      "equipment_id": "iron_steel-MS-204",
+      "tag": "VT-MS-2041",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 4.7
+    },
+    {
+      "id": "iron_steel-MS-204-SEN2",
+      "equipment_id": "iron_steel-MS-204",
+      "tag": "LT-MS-2042",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 18.0
+    },
+    {
+      "id": "iron_steel-MS-205-SEN1",
+      "equipment_id": "iron_steel-MS-205",
+      "tag": "VT-MS-2051",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 4.0
+    },
+    {
+      "id": "iron_steel-MS-206-SEN1",
+      "equipment_id": "iron_steel-MS-206",
+      "tag": "FT-MS-2061",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 400.2
+    },
+    {
+      "id": "iron_steel-MS-207-SEN1",
+      "equipment_id": "iron_steel-MS-207",
+      "tag": "TT-MS-2071",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 311.1
+    },
+    {
+      "id": "iron_steel-MS-207-SEN2",
+      "equipment_id": "iron_steel-MS-207",
+      "tag": "TT-MS-2072",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 327.1
+    },
+    {
+      "id": "iron_steel-MS-208-SEN1",
+      "equipment_id": "iron_steel-MS-208",
+      "tag": "LT-MS-2081",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 56.9
+    },
+    {
+      "id": "iron_steel-M-220-SEN1",
+      "equipment_id": "iron_steel-M-220",
+      "tag": "TT-M-2201",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 455.4
+    },
+    {
+      "id": "iron_steel-M-221-SEN1",
+      "equipment_id": "iron_steel-M-221",
+      "tag": "LT-M-2211",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 74.4
+    },
+    {
+      "id": "iron_steel-M-222-SEN1",
+      "equipment_id": "iron_steel-M-222",
+      "tag": "VT-M-2221",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 6.2
+    },
+    {
+      "id": "iron_steel-M-223-SEN1",
+      "equipment_id": "iron_steel-M-223",
+      "tag": "PT-M-2231",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 16.3
+    },
+    {
+      "id": "iron_steel-M-224-SEN1",
+      "equipment_id": "iron_steel-M-224",
+      "tag": "VT-M-2241",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 2.6
+    },
+    {
+      "id": "iron_steel-M-225-SEN1",
+      "equipment_id": "iron_steel-M-225",
+      "tag": "PT-M-2251",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 10.0
+    },
+    {
+      "id": "iron_steel-M-226-SEN1",
+      "equipment_id": "iron_steel-M-226",
+      "tag": "TT-M-2261",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 412.4
+    },
+    {
+      "id": "iron_steel-M-227-SEN1",
+      "equipment_id": "iron_steel-M-227",
+      "tag": "PT-M-2271",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 13.3
+    },
+    {
+      "id": "iron_steel-M-228-SEN1",
+      "equipment_id": "iron_steel-M-228",
+      "tag": "PT-M-2281",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 19.0
+    },
+    {
+      "id": "iron_steel-M-229-SEN1",
+      "equipment_id": "iron_steel-M-229",
+      "tag": "TT-M-2291",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 394.2
+    },
+    {
+      "id": "iron_steel-P-211-SEN1",
+      "equipment_id": "iron_steel-P-211",
+      "tag": "LT-P-2111",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 65.8
+    },
+    {
+      "id": "iron_steel-P-211-SEN2",
+      "equipment_id": "iron_steel-P-211",
+      "tag": "PT-P-2112",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 19.1
+    },
+    {
+      "id": "iron_steel-P-212-SEN1",
+      "equipment_id": "iron_steel-P-212",
+      "tag": "FT-P-2121",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 290.1
+    },
+    {
+      "id": "iron_steel-P-213-SEN1",
+      "equipment_id": "iron_steel-P-213",
+      "tag": "LT-P-2131",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 34.2
+    },
+    {
+      "id": "iron_steel-P-214-SEN1",
+      "equipment_id": "iron_steel-P-214",
+      "tag": "LT-P-2141",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 58.0
+    },
+    {
+      "id": "iron_steel-P-214-SEN2",
+      "equipment_id": "iron_steel-P-214",
+      "tag": "TT-P-2142",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 90.5
+    },
+    {
+      "id": "iron_steel-P-215-SEN1",
+      "equipment_id": "iron_steel-P-215",
+      "tag": "PT-P-2151",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 12.5
+    },
+    {
+      "id": "iron_steel-P-215-SEN2",
+      "equipment_id": "iron_steel-P-215",
+      "tag": "FT-P-2152",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 448.9
+    }
+  ],
+  "connections": [
+    {
+      "id": "conn-iron_steel-CV-201-iron_steel-CV-202",
+      "source": "iron_steel-CV-201",
+      "target": "iron_steel-CV-202",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CV-202-iron_steel-CV-203",
+      "source": "iron_steel-CV-202",
+      "target": "iron_steel-CV-203",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CV-203-iron_steel-CV-204",
+      "source": "iron_steel-CV-203",
+      "target": "iron_steel-CV-204",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CV-204-iron_steel-CV-205",
+      "source": "iron_steel-CV-204",
+      "target": "iron_steel-CV-205",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CV-205-iron_steel-CV-206",
+      "source": "iron_steel-CV-205",
+      "target": "iron_steel-CV-206",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CV-206-iron_steel-CV-207",
+      "source": "iron_steel-CV-206",
+      "target": "iron_steel-CV-207",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CV-207-iron_steel-CV-208",
+      "source": "iron_steel-CV-207",
+      "target": "iron_steel-CV-208",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CV-208-iron_steel-CV-209",
+      "source": "iron_steel-CV-208",
+      "target": "iron_steel-CV-209",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CV-209-iron_steel-CV-210",
+      "source": "iron_steel-CV-209",
+      "target": "iron_steel-CV-210",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CV-210-iron_steel-M-201",
+      "source": "iron_steel-CV-210",
+      "target": "iron_steel-M-201",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-201-iron_steel-M-202",
+      "source": "iron_steel-M-201",
+      "target": "iron_steel-M-202",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-202-iron_steel-M-203",
+      "source": "iron_steel-M-202",
+      "target": "iron_steel-M-203",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-203-iron_steel-M-204",
+      "source": "iron_steel-M-203",
+      "target": "iron_steel-M-204",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-204-iron_steel-M-205",
+      "source": "iron_steel-M-204",
+      "target": "iron_steel-M-205",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-205-iron_steel-M-206",
+      "source": "iron_steel-M-205",
+      "target": "iron_steel-M-206",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-206-iron_steel-M-207",
+      "source": "iron_steel-M-206",
+      "target": "iron_steel-M-207",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-207-iron_steel-M-208",
+      "source": "iron_steel-M-207",
+      "target": "iron_steel-M-208",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-208-iron_steel-V-201",
+      "source": "iron_steel-M-208",
+      "target": "iron_steel-V-201",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-201-iron_steel-V-202",
+      "source": "iron_steel-V-201",
+      "target": "iron_steel-V-202",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-202-iron_steel-V-203",
+      "source": "iron_steel-V-202",
+      "target": "iron_steel-V-203",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-F-201-iron_steel-F-202",
+      "source": "iron_steel-F-201",
+      "target": "iron_steel-F-202",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-F-202-iron_steel-CV-211",
+      "source": "iron_steel-F-202",
+      "target": "iron_steel-CV-211",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CV-211-iron_steel-CV-212",
+      "source": "iron_steel-CV-211",
+      "target": "iron_steel-CV-212",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CV-212-iron_steel-CV-213",
+      "source": "iron_steel-CV-212",
+      "target": "iron_steel-CV-213",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CV-213-iron_steel-CV-214",
+      "source": "iron_steel-CV-213",
+      "target": "iron_steel-CV-214",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CV-214-iron_steel-CV-215",
+      "source": "iron_steel-CV-214",
+      "target": "iron_steel-CV-215",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CV-215-iron_steel-CV-216",
+      "source": "iron_steel-CV-215",
+      "target": "iron_steel-CV-216",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CV-216-iron_steel-M-209",
+      "source": "iron_steel-CV-216",
+      "target": "iron_steel-M-209",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-209-iron_steel-M-210",
+      "source": "iron_steel-M-209",
+      "target": "iron_steel-M-210",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-210-iron_steel-M-211",
+      "source": "iron_steel-M-210",
+      "target": "iron_steel-M-211",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-211-iron_steel-M-212",
+      "source": "iron_steel-M-211",
+      "target": "iron_steel-M-212",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-212-iron_steel-M-213",
+      "source": "iron_steel-M-212",
+      "target": "iron_steel-M-213",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-213-iron_steel-M-214",
+      "source": "iron_steel-M-213",
+      "target": "iron_steel-M-214",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-214-iron_steel-V-204",
+      "source": "iron_steel-M-214",
+      "target": "iron_steel-V-204",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-204-iron_steel-V-205",
+      "source": "iron_steel-V-204",
+      "target": "iron_steel-V-205",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-205-iron_steel-V-206",
+      "source": "iron_steel-V-205",
+      "target": "iron_steel-V-206",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-206-iron_steel-V-207",
+      "source": "iron_steel-V-206",
+      "target": "iron_steel-V-207",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-F-203-iron_steel-F-204",
+      "source": "iron_steel-F-203",
+      "target": "iron_steel-F-204",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-F-204-iron_steel-B-201",
+      "source": "iron_steel-F-204",
+      "target": "iron_steel-B-201",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-B-201-iron_steel-B-202",
+      "source": "iron_steel-B-201",
+      "target": "iron_steel-B-202",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-B-202-iron_steel-B-203",
+      "source": "iron_steel-B-202",
+      "target": "iron_steel-B-203",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-B-203-iron_steel-B-204",
+      "source": "iron_steel-B-203",
+      "target": "iron_steel-B-204",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-B-204-iron_steel-P-201",
+      "source": "iron_steel-B-204",
+      "target": "iron_steel-P-201",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-P-201-iron_steel-P-202",
+      "source": "iron_steel-P-201",
+      "target": "iron_steel-P-202",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-P-202-iron_steel-P-203",
+      "source": "iron_steel-P-202",
+      "target": "iron_steel-P-203",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-P-203-iron_steel-P-204",
+      "source": "iron_steel-P-203",
+      "target": "iron_steel-P-204",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-P-204-iron_steel-P-205",
+      "source": "iron_steel-P-204",
+      "target": "iron_steel-P-205",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-P-205-iron_steel-V-208",
+      "source": "iron_steel-P-205",
+      "target": "iron_steel-V-208",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-208-iron_steel-V-209",
+      "source": "iron_steel-V-208",
+      "target": "iron_steel-V-209",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-209-iron_steel-V-210",
+      "source": "iron_steel-V-209",
+      "target": "iron_steel-V-210",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-210-iron_steel-V-211",
+      "source": "iron_steel-V-210",
+      "target": "iron_steel-V-211",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-211-iron_steel-V-212",
+      "source": "iron_steel-V-211",
+      "target": "iron_steel-V-212",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-212-iron_steel-V-213",
+      "source": "iron_steel-V-212",
+      "target": "iron_steel-V-213",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-213-iron_steel-V-214",
+      "source": "iron_steel-V-213",
+      "target": "iron_steel-V-214",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-F-205-iron_steel-F-206",
+      "source": "iron_steel-F-205",
+      "target": "iron_steel-F-206",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-F-206-iron_steel-C-201",
+      "source": "iron_steel-F-206",
+      "target": "iron_steel-C-201",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-C-201-iron_steel-C-202",
+      "source": "iron_steel-C-201",
+      "target": "iron_steel-C-202",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-C-202-iron_steel-C-203",
+      "source": "iron_steel-C-202",
+      "target": "iron_steel-C-203",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-C-203-iron_steel-V-215",
+      "source": "iron_steel-C-203",
+      "target": "iron_steel-V-215",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-215-iron_steel-V-216",
+      "source": "iron_steel-V-215",
+      "target": "iron_steel-V-216",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-216-iron_steel-V-217",
+      "source": "iron_steel-V-216",
+      "target": "iron_steel-V-217",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-217-iron_steel-V-218",
+      "source": "iron_steel-V-217",
+      "target": "iron_steel-V-218",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-218-iron_steel-V-219",
+      "source": "iron_steel-V-218",
+      "target": "iron_steel-V-219",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CST-201-iron_steel-CST-202",
+      "source": "iron_steel-CST-201",
+      "target": "iron_steel-CST-202",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CST-202-iron_steel-CST-203",
+      "source": "iron_steel-CST-202",
+      "target": "iron_steel-CST-203",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CST-203-iron_steel-CST-204",
+      "source": "iron_steel-CST-203",
+      "target": "iron_steel-CST-204",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-CST-204-iron_steel-P-206",
+      "source": "iron_steel-CST-204",
+      "target": "iron_steel-P-206",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-P-206-iron_steel-P-207",
+      "source": "iron_steel-P-206",
+      "target": "iron_steel-P-207",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-P-207-iron_steel-P-208",
+      "source": "iron_steel-P-207",
+      "target": "iron_steel-P-208",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-P-208-iron_steel-P-209",
+      "source": "iron_steel-P-208",
+      "target": "iron_steel-P-209",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-P-209-iron_steel-P-210",
+      "source": "iron_steel-P-209",
+      "target": "iron_steel-P-210",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-P-210-iron_steel-M-215",
+      "source": "iron_steel-P-210",
+      "target": "iron_steel-M-215",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-215-iron_steel-M-216",
+      "source": "iron_steel-M-215",
+      "target": "iron_steel-M-216",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-216-iron_steel-M-217",
+      "source": "iron_steel-M-216",
+      "target": "iron_steel-M-217",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-217-iron_steel-M-218",
+      "source": "iron_steel-M-217",
+      "target": "iron_steel-M-218",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-218-iron_steel-M-219",
+      "source": "iron_steel-M-218",
+      "target": "iron_steel-M-219",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-MS-201-iron_steel-MS-202",
+      "source": "iron_steel-MS-201",
+      "target": "iron_steel-MS-202",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-MS-202-iron_steel-MS-203",
+      "source": "iron_steel-MS-202",
+      "target": "iron_steel-MS-203",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-MS-203-iron_steel-MS-204",
+      "source": "iron_steel-MS-203",
+      "target": "iron_steel-MS-204",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-MS-204-iron_steel-MS-205",
+      "source": "iron_steel-MS-204",
+      "target": "iron_steel-MS-205",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-MS-205-iron_steel-MS-206",
+      "source": "iron_steel-MS-205",
+      "target": "iron_steel-MS-206",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-MS-206-iron_steel-MS-207",
+      "source": "iron_steel-MS-206",
+      "target": "iron_steel-MS-207",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-MS-207-iron_steel-MS-208",
+      "source": "iron_steel-MS-207",
+      "target": "iron_steel-MS-208",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-MS-208-iron_steel-M-220",
+      "source": "iron_steel-MS-208",
+      "target": "iron_steel-M-220",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-220-iron_steel-M-221",
+      "source": "iron_steel-M-220",
+      "target": "iron_steel-M-221",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-221-iron_steel-M-222",
+      "source": "iron_steel-M-221",
+      "target": "iron_steel-M-222",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-222-iron_steel-M-223",
+      "source": "iron_steel-M-222",
+      "target": "iron_steel-M-223",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-223-iron_steel-M-224",
+      "source": "iron_steel-M-223",
+      "target": "iron_steel-M-224",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-224-iron_steel-M-225",
+      "source": "iron_steel-M-224",
+      "target": "iron_steel-M-225",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-225-iron_steel-M-226",
+      "source": "iron_steel-M-225",
+      "target": "iron_steel-M-226",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-226-iron_steel-M-227",
+      "source": "iron_steel-M-226",
+      "target": "iron_steel-M-227",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-227-iron_steel-M-228",
+      "source": "iron_steel-M-227",
+      "target": "iron_steel-M-228",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-228-iron_steel-M-229",
+      "source": "iron_steel-M-228",
+      "target": "iron_steel-M-229",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-229-iron_steel-P-211",
+      "source": "iron_steel-M-229",
+      "target": "iron_steel-P-211",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-P-211-iron_steel-P-212",
+      "source": "iron_steel-P-211",
+      "target": "iron_steel-P-212",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-P-212-iron_steel-P-213",
+      "source": "iron_steel-P-212",
+      "target": "iron_steel-P-213",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-P-213-iron_steel-P-214",
+      "source": "iron_steel-P-213",
+      "target": "iron_steel-P-214",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-P-214-iron_steel-P-215",
+      "source": "iron_steel-P-214",
+      "target": "iron_steel-P-215",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-203-iron_steel-F-201",
+      "source": "iron_steel-V-203",
+      "target": "iron_steel-F-201",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-207-iron_steel-F-203",
+      "source": "iron_steel-V-207",
+      "target": "iron_steel-F-203",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-214-iron_steel-F-205",
+      "source": "iron_steel-V-214",
+      "target": "iron_steel-F-205",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-V-219-iron_steel-CST-201",
+      "source": "iron_steel-V-219",
+      "target": "iron_steel-CST-201",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-iron_steel-M-219-iron_steel-MS-201",
+      "source": "iron_steel-M-219",
+      "target": "iron_steel-MS-201",
+      "kind": "pipe"
+    },
+    {
+      "id": "wire-iron_steel-CV-201-SEN1",
+      "source": "iron_steel-CV-201-SEN1",
+      "target": "iron_steel-CV-201",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CV-202-SEN1",
+      "source": "iron_steel-CV-202-SEN1",
+      "target": "iron_steel-CV-202",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CV-203-SEN1",
+      "source": "iron_steel-CV-203-SEN1",
+      "target": "iron_steel-CV-203",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CV-204-SEN1",
+      "source": "iron_steel-CV-204-SEN1",
+      "target": "iron_steel-CV-204",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CV-205-SEN1",
+      "source": "iron_steel-CV-205-SEN1",
+      "target": "iron_steel-CV-205",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CV-206-SEN1",
+      "source": "iron_steel-CV-206-SEN1",
+      "target": "iron_steel-CV-206",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CV-207-SEN1",
+      "source": "iron_steel-CV-207-SEN1",
+      "target": "iron_steel-CV-207",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CV-208-SEN1",
+      "source": "iron_steel-CV-208-SEN1",
+      "target": "iron_steel-CV-208",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CV-209-SEN1",
+      "source": "iron_steel-CV-209-SEN1",
+      "target": "iron_steel-CV-209",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CV-210-SEN1",
+      "source": "iron_steel-CV-210-SEN1",
+      "target": "iron_steel-CV-210",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-201-SEN1",
+      "source": "iron_steel-M-201-SEN1",
+      "target": "iron_steel-M-201",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-202-SEN1",
+      "source": "iron_steel-M-202-SEN1",
+      "target": "iron_steel-M-202",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-203-SEN1",
+      "source": "iron_steel-M-203-SEN1",
+      "target": "iron_steel-M-203",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-204-SEN1",
+      "source": "iron_steel-M-204-SEN1",
+      "target": "iron_steel-M-204",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-205-SEN1",
+      "source": "iron_steel-M-205-SEN1",
+      "target": "iron_steel-M-205",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-206-SEN1",
+      "source": "iron_steel-M-206-SEN1",
+      "target": "iron_steel-M-206",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-207-SEN1",
+      "source": "iron_steel-M-207-SEN1",
+      "target": "iron_steel-M-207",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-208-SEN1",
+      "source": "iron_steel-M-208-SEN1",
+      "target": "iron_steel-M-208",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-201-SEN1",
+      "source": "iron_steel-V-201-SEN1",
+      "target": "iron_steel-V-201",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-202-SEN1",
+      "source": "iron_steel-V-202-SEN1",
+      "target": "iron_steel-V-202",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-203-SEN1",
+      "source": "iron_steel-V-203-SEN1",
+      "target": "iron_steel-V-203",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-F-201-SEN1",
+      "source": "iron_steel-F-201-SEN1",
+      "target": "iron_steel-F-201",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-F-201-SEN2",
+      "source": "iron_steel-F-201-SEN2",
+      "target": "iron_steel-F-201",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-F-202-SEN1",
+      "source": "iron_steel-F-202-SEN1",
+      "target": "iron_steel-F-202",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CV-211-SEN1",
+      "source": "iron_steel-CV-211-SEN1",
+      "target": "iron_steel-CV-211",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CV-212-SEN1",
+      "source": "iron_steel-CV-212-SEN1",
+      "target": "iron_steel-CV-212",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CV-213-SEN1",
+      "source": "iron_steel-CV-213-SEN1",
+      "target": "iron_steel-CV-213",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CV-214-SEN1",
+      "source": "iron_steel-CV-214-SEN1",
+      "target": "iron_steel-CV-214",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CV-215-SEN1",
+      "source": "iron_steel-CV-215-SEN1",
+      "target": "iron_steel-CV-215",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CV-216-SEN1",
+      "source": "iron_steel-CV-216-SEN1",
+      "target": "iron_steel-CV-216",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-209-SEN1",
+      "source": "iron_steel-M-209-SEN1",
+      "target": "iron_steel-M-209",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-210-SEN1",
+      "source": "iron_steel-M-210-SEN1",
+      "target": "iron_steel-M-210",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-211-SEN1",
+      "source": "iron_steel-M-211-SEN1",
+      "target": "iron_steel-M-211",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-212-SEN1",
+      "source": "iron_steel-M-212-SEN1",
+      "target": "iron_steel-M-212",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-213-SEN1",
+      "source": "iron_steel-M-213-SEN1",
+      "target": "iron_steel-M-213",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-214-SEN1",
+      "source": "iron_steel-M-214-SEN1",
+      "target": "iron_steel-M-214",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-204-SEN1",
+      "source": "iron_steel-V-204-SEN1",
+      "target": "iron_steel-V-204",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-205-SEN1",
+      "source": "iron_steel-V-205-SEN1",
+      "target": "iron_steel-V-205",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-206-SEN1",
+      "source": "iron_steel-V-206-SEN1",
+      "target": "iron_steel-V-206",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-207-SEN1",
+      "source": "iron_steel-V-207-SEN1",
+      "target": "iron_steel-V-207",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-F-203-SEN1",
+      "source": "iron_steel-F-203-SEN1",
+      "target": "iron_steel-F-203",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-F-204-SEN1",
+      "source": "iron_steel-F-204-SEN1",
+      "target": "iron_steel-F-204",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-B-201-SEN1",
+      "source": "iron_steel-B-201-SEN1",
+      "target": "iron_steel-B-201",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-B-201-SEN2",
+      "source": "iron_steel-B-201-SEN2",
+      "target": "iron_steel-B-201",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-B-202-SEN1",
+      "source": "iron_steel-B-202-SEN1",
+      "target": "iron_steel-B-202",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-B-202-SEN2",
+      "source": "iron_steel-B-202-SEN2",
+      "target": "iron_steel-B-202",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-B-203-SEN1",
+      "source": "iron_steel-B-203-SEN1",
+      "target": "iron_steel-B-203",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-B-204-SEN1",
+      "source": "iron_steel-B-204-SEN1",
+      "target": "iron_steel-B-204",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-B-204-SEN2",
+      "source": "iron_steel-B-204-SEN2",
+      "target": "iron_steel-B-204",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-201-SEN1",
+      "source": "iron_steel-P-201-SEN1",
+      "target": "iron_steel-P-201",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-202-SEN1",
+      "source": "iron_steel-P-202-SEN1",
+      "target": "iron_steel-P-202",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-203-SEN1",
+      "source": "iron_steel-P-203-SEN1",
+      "target": "iron_steel-P-203",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-203-SEN2",
+      "source": "iron_steel-P-203-SEN2",
+      "target": "iron_steel-P-203",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-204-SEN1",
+      "source": "iron_steel-P-204-SEN1",
+      "target": "iron_steel-P-204",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-204-SEN2",
+      "source": "iron_steel-P-204-SEN2",
+      "target": "iron_steel-P-204",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-205-SEN1",
+      "source": "iron_steel-P-205-SEN1",
+      "target": "iron_steel-P-205",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-208-SEN1",
+      "source": "iron_steel-V-208-SEN1",
+      "target": "iron_steel-V-208",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-209-SEN1",
+      "source": "iron_steel-V-209-SEN1",
+      "target": "iron_steel-V-209",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-210-SEN1",
+      "source": "iron_steel-V-210-SEN1",
+      "target": "iron_steel-V-210",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-211-SEN1",
+      "source": "iron_steel-V-211-SEN1",
+      "target": "iron_steel-V-211",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-212-SEN1",
+      "source": "iron_steel-V-212-SEN1",
+      "target": "iron_steel-V-212",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-213-SEN1",
+      "source": "iron_steel-V-213-SEN1",
+      "target": "iron_steel-V-213",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-214-SEN1",
+      "source": "iron_steel-V-214-SEN1",
+      "target": "iron_steel-V-214",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-F-205-SEN1",
+      "source": "iron_steel-F-205-SEN1",
+      "target": "iron_steel-F-205",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-F-206-SEN1",
+      "source": "iron_steel-F-206-SEN1",
+      "target": "iron_steel-F-206",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-F-206-SEN2",
+      "source": "iron_steel-F-206-SEN2",
+      "target": "iron_steel-F-206",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-C-201-SEN1",
+      "source": "iron_steel-C-201-SEN1",
+      "target": "iron_steel-C-201",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-C-201-SEN2",
+      "source": "iron_steel-C-201-SEN2",
+      "target": "iron_steel-C-201",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-C-202-SEN1",
+      "source": "iron_steel-C-202-SEN1",
+      "target": "iron_steel-C-202",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-C-203-SEN1",
+      "source": "iron_steel-C-203-SEN1",
+      "target": "iron_steel-C-203",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-215-SEN1",
+      "source": "iron_steel-V-215-SEN1",
+      "target": "iron_steel-V-215",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-216-SEN1",
+      "source": "iron_steel-V-216-SEN1",
+      "target": "iron_steel-V-216",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-217-SEN1",
+      "source": "iron_steel-V-217-SEN1",
+      "target": "iron_steel-V-217",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-218-SEN1",
+      "source": "iron_steel-V-218-SEN1",
+      "target": "iron_steel-V-218",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-V-219-SEN1",
+      "source": "iron_steel-V-219-SEN1",
+      "target": "iron_steel-V-219",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CST-201-SEN1",
+      "source": "iron_steel-CST-201-SEN1",
+      "target": "iron_steel-CST-201",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CST-202-SEN1",
+      "source": "iron_steel-CST-202-SEN1",
+      "target": "iron_steel-CST-202",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CST-202-SEN2",
+      "source": "iron_steel-CST-202-SEN2",
+      "target": "iron_steel-CST-202",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CST-203-SEN1",
+      "source": "iron_steel-CST-203-SEN1",
+      "target": "iron_steel-CST-203",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CST-203-SEN2",
+      "source": "iron_steel-CST-203-SEN2",
+      "target": "iron_steel-CST-203",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CST-204-SEN1",
+      "source": "iron_steel-CST-204-SEN1",
+      "target": "iron_steel-CST-204",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-CST-204-SEN2",
+      "source": "iron_steel-CST-204-SEN2",
+      "target": "iron_steel-CST-204",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-206-SEN1",
+      "source": "iron_steel-P-206-SEN1",
+      "target": "iron_steel-P-206",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-207-SEN1",
+      "source": "iron_steel-P-207-SEN1",
+      "target": "iron_steel-P-207",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-207-SEN2",
+      "source": "iron_steel-P-207-SEN2",
+      "target": "iron_steel-P-207",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-208-SEN1",
+      "source": "iron_steel-P-208-SEN1",
+      "target": "iron_steel-P-208",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-208-SEN2",
+      "source": "iron_steel-P-208-SEN2",
+      "target": "iron_steel-P-208",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-209-SEN1",
+      "source": "iron_steel-P-209-SEN1",
+      "target": "iron_steel-P-209",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-210-SEN1",
+      "source": "iron_steel-P-210-SEN1",
+      "target": "iron_steel-P-210",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-210-SEN2",
+      "source": "iron_steel-P-210-SEN2",
+      "target": "iron_steel-P-210",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-215-SEN1",
+      "source": "iron_steel-M-215-SEN1",
+      "target": "iron_steel-M-215",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-216-SEN1",
+      "source": "iron_steel-M-216-SEN1",
+      "target": "iron_steel-M-216",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-217-SEN1",
+      "source": "iron_steel-M-217-SEN1",
+      "target": "iron_steel-M-217",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-218-SEN1",
+      "source": "iron_steel-M-218-SEN1",
+      "target": "iron_steel-M-218",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-219-SEN1",
+      "source": "iron_steel-M-219-SEN1",
+      "target": "iron_steel-M-219",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-MS-201-SEN1",
+      "source": "iron_steel-MS-201-SEN1",
+      "target": "iron_steel-MS-201",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-MS-202-SEN1",
+      "source": "iron_steel-MS-202-SEN1",
+      "target": "iron_steel-MS-202",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-MS-202-SEN2",
+      "source": "iron_steel-MS-202-SEN2",
+      "target": "iron_steel-MS-202",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-MS-203-SEN1",
+      "source": "iron_steel-MS-203-SEN1",
+      "target": "iron_steel-MS-203",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-MS-203-SEN2",
+      "source": "iron_steel-MS-203-SEN2",
+      "target": "iron_steel-MS-203",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-MS-204-SEN1",
+      "source": "iron_steel-MS-204-SEN1",
+      "target": "iron_steel-MS-204",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-MS-204-SEN2",
+      "source": "iron_steel-MS-204-SEN2",
+      "target": "iron_steel-MS-204",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-MS-205-SEN1",
+      "source": "iron_steel-MS-205-SEN1",
+      "target": "iron_steel-MS-205",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-MS-206-SEN1",
+      "source": "iron_steel-MS-206-SEN1",
+      "target": "iron_steel-MS-206",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-MS-207-SEN1",
+      "source": "iron_steel-MS-207-SEN1",
+      "target": "iron_steel-MS-207",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-MS-207-SEN2",
+      "source": "iron_steel-MS-207-SEN2",
+      "target": "iron_steel-MS-207",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-MS-208-SEN1",
+      "source": "iron_steel-MS-208-SEN1",
+      "target": "iron_steel-MS-208",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-220-SEN1",
+      "source": "iron_steel-M-220-SEN1",
+      "target": "iron_steel-M-220",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-221-SEN1",
+      "source": "iron_steel-M-221-SEN1",
+      "target": "iron_steel-M-221",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-222-SEN1",
+      "source": "iron_steel-M-222-SEN1",
+      "target": "iron_steel-M-222",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-223-SEN1",
+      "source": "iron_steel-M-223-SEN1",
+      "target": "iron_steel-M-223",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-224-SEN1",
+      "source": "iron_steel-M-224-SEN1",
+      "target": "iron_steel-M-224",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-225-SEN1",
+      "source": "iron_steel-M-225-SEN1",
+      "target": "iron_steel-M-225",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-226-SEN1",
+      "source": "iron_steel-M-226-SEN1",
+      "target": "iron_steel-M-226",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-227-SEN1",
+      "source": "iron_steel-M-227-SEN1",
+      "target": "iron_steel-M-227",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-228-SEN1",
+      "source": "iron_steel-M-228-SEN1",
+      "target": "iron_steel-M-228",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-M-229-SEN1",
+      "source": "iron_steel-M-229-SEN1",
+      "target": "iron_steel-M-229",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-211-SEN1",
+      "source": "iron_steel-P-211-SEN1",
+      "target": "iron_steel-P-211",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-211-SEN2",
+      "source": "iron_steel-P-211-SEN2",
+      "target": "iron_steel-P-211",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-212-SEN1",
+      "source": "iron_steel-P-212-SEN1",
+      "target": "iron_steel-P-212",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-213-SEN1",
+      "source": "iron_steel-P-213-SEN1",
+      "target": "iron_steel-P-213",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-214-SEN1",
+      "source": "iron_steel-P-214-SEN1",
+      "target": "iron_steel-P-214",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-214-SEN2",
+      "source": "iron_steel-P-214-SEN2",
+      "target": "iron_steel-P-214",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-215-SEN1",
+      "source": "iron_steel-P-215-SEN1",
+      "target": "iron_steel-P-215",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-iron_steel-P-215-SEN2",
+      "source": "iron_steel-P-215-SEN2",
+      "target": "iron_steel-P-215",
+      "kind": "wire"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+"""Ingestion document stage."""

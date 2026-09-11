@@ -1,0 +1,48 @@
+name: report-generation
+description: >-
+  Produce a slide deck from retrieved evidence. Demonstrates the agent-designs
+  then tool-renders split: the documentation agent emits a specification and
+  the create_pptx tool renders it inside the sandbox.
+version: "1"
+agent: documentation
+inputs:
+  - topic
+steps:
+  - id: retrieve
+    kind: retrieve
+    name: retrieval
+    description: Gather evidence on the topic
+    arguments:
+      query: "{{inputs.topic}}"
+      top_k: 12
+    timeout_seconds: 120
+
+  - id: author
+    kind: agent
+    name: documentation
+    description: Design the deck structure and content from the evidence
+    depends_on:
+      - retrieve
+    arguments:
+      task: "Produce a briefing deck on {{inputs.topic}}"
+      topic: "{{inputs.topic}}"
+    timeout_seconds: 300
+    when: "steps.retrieve.output.evidence > 0"
+
+  - id: render
+    kind: tool
+    name: create_pptx
+    description: Render the deck from the agent's specification
+    depends_on:
+      - author
+    arguments:
+      filename: "briefing.pptx"
+    timeout_seconds: 300
+    when: "steps.author.output.spec"
+
+  - id: verify
+    kind: verify
+    name: verifier
+    description: Check every slide claim traces to a citation
+    depends_on:
+      - author

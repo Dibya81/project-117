@@ -1,0 +1,108 @@
+[
+  {
+    "id": "WO-8852",
+    "title": "C-3 drive-end bearing inspection",
+    "equipmentId": "C-3",
+    "priority": "high",
+    "status": "open",
+    "type": "corrective",
+    "assignee": "R. Mehta",
+    "dueDate": "2026-09-18",
+    "createdAt": "2026-09-07T04:20:00Z",
+    "createdBy": "reliability.engineer",
+    "description": "Inspect DE bearing following 18% vibration rise above baseline (IR-204). Hot alignment check required before re-baselining per SOP-07.3 rev4 4.3.",
+    "evidence": [
+      "d-1",
+      "d-2",
+      "d-4"
+    ],
+    "origin": "inspection_report",
+    "source": "committed"
+  },
+  {
+    "id": "WO-8841",
+    "title": "P-1042 discharge pressure investigation",
+    "equipmentId": "P-1042",
+    "priority": "medium",
+    "status": "in_progress",
+    "type": "corrective",
+    "assignee": "S. Iyer",
+    "dueDate": "2026-09-12",
+    "createdAt": "2026-09-04T09:05:00Z",
+    "createdBy": "operations.shift",
+    "description": "Discharge pressure above 17.0 bar limit; check relief path and impeller wear.",
+    "evidence": [
+      "d-7"
+    ],
+    "origin": "alarm",
+    "source": "committed"
+  },
+  {
+    "id": "WO-8837",
+    "title": "V-2210 high level alarm response",
+    "equipmentId": "V-2210",
+    "priority": "critical",
+    "status": "in_progress",
+    "type": "corrective",
+    "assignee": "A. Fernandes",
+    "dueDate": "2026-09-10",
+    "createdAt": "2026-09-03T17:40:00Z",
+    "createdBy": "operations.shift",
+    "description": "Level 87% above 80% setpoint; verify level transmitter and drain path.",
+    "evidence": [
+      "d-7"
+    ],
+    "origin": "alarm",
+    "source": "committed"
+  },
+  {
+    "id": "WO-8810",
+    "title": "E-340 fouling trend review",
+    "equipmentId": "E-340",
+    "priority": "low",
+    "status": "open",
+    "type": "preventive",
+    "assignee": "R. Mehta",
+    "dueDate": "2026-09-30",
+    "createdAt": "2026-08-26T06:15:00Z",
+    "createdBy": "reliability.engineer",
+    "description": "Quarterly delta-P trend review; no action expected.",
+    "evidence": [],
+    "origin": "schedule",
+    "source": "committed"
+  },
+  {
+    "id": "WO-8802",
+    "title": "T-118 external visual inspection",
+    "equipmentId": "T-118",
+    "priority": "low",
+    "status": "completed",
+    "type": "preventive",
+    "assignee": "K. Nair",
+    "dueDate": "2026-08-30",
+    "createdAt": "2026-08-18T05:00:00Z",
+    "createdBy": "maintenance.planner",
+    "description": "Six-monthly external visual inspection. No findings.",
+    "evidence": [],
+    "origin": "schedule",
+    "source": "committed"
+  },
+  {
+    "id": "WO-8790",
+    "title": "P-2051 mechanical seal replacement",
+    "equipmentId": "P-2051",
+    "priority": "medium",
+    "status": "in_progress",
+    "type": "corrective",
+    "assignee": "S. Iyer",
+    "dueDate": "2026-09-11",
+    "createdAt": "2026-08-14T11:30:00Z",
+    "createdBy": "maintenance.planner",
+    "description": "Planned seal replacement; pump isolated per SOP-11.2.",
+    "evidence": [
+      "d-7"
+    ],
+    "origin": "inspection_report",
+    "source": "committed"
+  }
+]

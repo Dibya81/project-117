@@ -1,0 +1,28 @@
+{
+  "plants": [
+    {
+      "id": "build",
+      "name": "Build your own",
+      "subtitle": "Start from an empty canvas",
+      "description": "Drop equipment and sensors, wire them, validate the circuit, then inject a fault and watch the orchestration trace.",
+      "data_file": null,
+      "builtin": false
+    },
+    {
+      "id": "refinery",
+      "name": "Oil refinery",
+      "subtitle": "Crude distillation through product blending",
+      "description": "Six zones and a full process train. The reference plant for the fault-injection demo.",
+      "data_file": "/data/oil_refinery.json",
+      "builtin": true
+    },
+    {
+      "id": "iron_steel_plant",
+      "name": "Iron and steel plant",
+      "subtitle": "Raw material through finished product",
+      "description": "The second prebuilt plant, same schema and the same canvas behaviours.",
+      "data_file": "/data/iron_steel_plant.json",
+      "builtin": true
+    }
+  ]
+}

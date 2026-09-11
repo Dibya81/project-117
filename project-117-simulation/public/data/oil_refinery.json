@@ -1,0 +1,4646 @@
+{
+  "plant_id": "refinery",
+  "plant_name": "Oil refinery",
+  "zones": [
+    {
+      "id": "refinery-zone0",
+      "name": "Crude distillation unit",
+      "sequence": 0
+    },
+    {
+      "id": "refinery-zone1",
+      "name": "Vacuum distillation unit",
+      "sequence": 1
+    },
+    {
+      "id": "refinery-zone2",
+      "name": "Fluid catalytic cracker",
+      "sequence": 2
+    },
+    {
+      "id": "refinery-zone3",
+      "name": "Hydrotreater",
+      "sequence": 3
+    },
+    {
+      "id": "refinery-zone4",
+      "name": "Storage and tank farm",
+      "sequence": 4
+    },
+    {
+      "id": "refinery-zone5",
+      "name": "Utilities and pipeline network",
+      "sequence": 5
+    }
+  ],
+  "equipment": [
+    {
+      "id": "refinery-CL-101",
+      "tag": "CL-101",
+      "type": "column",
+      "zone_id": "refinery-zone0",
+      "install_date": "2019-04-24",
+      "expected_lifespan_years": 12,
+      "age_years": 7.4,
+      "last_inspection": "2026-07-25",
+      "status": "normal",
+      "failure_modes": [
+        "tray fouling",
+        "flooding",
+        "corrosion at feed nozzle"
+      ]
+    },
+    {
+      "id": "refinery-CL-102",
+      "tag": "CL-102",
+      "type": "column",
+      "zone_id": "refinery-zone0",
+      "install_date": "2012-03-02",
+      "expected_lifespan_years": 18,
+      "age_years": 14.5,
+      "last_inspection": "2026-03-10",
+      "status": "normal",
+      "failure_modes": [
+        "tray fouling",
+        "flooding",
+        "corrosion at feed nozzle"
+      ]
+    },
+    {
+      "id": "refinery-E-101",
+      "tag": "E-101",
+      "type": "heat_exchanger",
+      "zone_id": "refinery-zone0",
+      "install_date": "2017-04-09",
+      "expected_lifespan_years": 15,
+      "age_years": 9.4,
+      "last_inspection": "2026-05-12",
+      "status": "normal",
+      "failure_modes": [
+        "tube fouling",
+        "tube leak",
+        "shell corrosion"
+      ]
+    },
+    {
+      "id": "refinery-E-102",
+      "tag": "E-102",
+      "type": "heat_exchanger",
+      "zone_id": "refinery-zone0",
+      "install_date": "2014-12-14",
+      "expected_lifespan_years": 10,
+      "age_years": 11.7,
+      "last_inspection": "2026-07-26",
+      "status": "critical",
+      "failure_modes": [
+        "tube fouling",
+        "tube leak",
+        "shell corrosion"
+      ]
+    },
+    {
+      "id": "refinery-E-103",
+      "tag": "E-103",
+      "type": "heat_exchanger",
+      "zone_id": "refinery-zone0",
+      "install_date": "2008-12-03",
+      "expected_lifespan_years": 18,
+      "age_years": 17.8,
+      "last_inspection": "2026-03-26",
+      "status": "warning",
+      "failure_modes": [
+        "tube fouling",
+        "tube leak",
+        "shell corrosion"
+      ]
+    },
+    {
+      "id": "refinery-E-104",
+      "tag": "E-104",
+      "type": "heat_exchanger",
+      "zone_id": "refinery-zone0",
+      "install_date": "2021-07-04",
+      "expected_lifespan_years": 18,
+      "age_years": 5.2,
+      "last_inspection": "2026-03-03",
+      "status": "normal",
+      "failure_modes": [
+        "tube fouling",
+        "tube leak",
+        "shell corrosion"
+      ]
+    },
+    {
+      "id": "refinery-E-105",
+      "tag": "E-105",
+      "type": "heat_exchanger",
+      "zone_id": "refinery-zone0",
+      "install_date": "2011-06-19",
+      "expected_lifespan_years": 10,
+      "age_years": 15.2,
+      "last_inspection": "2026-03-30",
+      "status": "critical",
+      "failure_modes": [
+        "tube fouling",
+        "tube leak",
+        "shell corrosion"
+      ]
+    },
+    {
+      "id": "refinery-E-106",
+      "tag": "E-106",
+      "type": "heat_exchanger",
+      "zone_id": "refinery-zone0",
+      "install_date": "2017-03-24",
+      "expected_lifespan_years": 15,
+      "age_years": 9.5,
+      "last_inspection": "2026-05-24",
+      "status": "normal",
+      "failure_modes": [
+        "tube fouling",
+        "tube leak",
+        "shell corrosion"
+      ]
+    },
+    {
+      "id": "refinery-P-101",
+      "tag": "P-101",
+      "type": "pump",
+      "zone_id": "refinery-zone0",
+      "install_date": "2019-03-17",
+      "expected_lifespan_years": 25,
+      "age_years": 7.5,
+      "last_inspection": "2026-07-30",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-102",
+      "tag": "P-102",
+      "type": "pump",
+      "zone_id": "refinery-zone0",
+      "install_date": "2011-06-08",
+      "expected_lifespan_years": 18,
+      "age_years": 15.3,
+      "last_inspection": "2026-06-14",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-103",
+      "tag": "P-103",
+      "type": "pump",
+      "zone_id": "refinery-zone0",
+      "install_date": "2023-10-17",
+      "expected_lifespan_years": 25,
+      "age_years": 2.9,
+      "last_inspection": "2026-02-24",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-104",
+      "tag": "P-104",
+      "type": "pump",
+      "zone_id": "refinery-zone0",
+      "install_date": "2014-09-14",
+      "expected_lifespan_years": 25,
+      "age_years": 12.0,
+      "last_inspection": "2026-04-11",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-105",
+      "tag": "P-105",
+      "type": "pump",
+      "zone_id": "refinery-zone0",
+      "install_date": "2018-02-06",
+      "expected_lifespan_years": 12,
+      "age_years": 8.6,
+      "last_inspection": "2026-04-08",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-106",
+      "tag": "P-106",
+      "type": "pump",
+      "zone_id": "refinery-zone0",
+      "install_date": "2018-08-16",
+      "expected_lifespan_years": 15,
+      "age_years": 8.1,
+      "last_inspection": "2026-09-02",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-V-101",
+      "tag": "V-101",
+      "type": "valve",
+      "zone_id": "refinery-zone0",
+      "install_date": "2008-11-25",
+      "expected_lifespan_years": 18,
+      "age_years": 17.8,
+      "last_inspection": "2026-07-11",
+      "status": "warning",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-102",
+      "tag": "V-102",
+      "type": "valve",
+      "zone_id": "refinery-zone0",
+      "install_date": "2012-01-05",
+      "expected_lifespan_years": 20,
+      "age_years": 14.7,
+      "last_inspection": "2026-03-13",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-103",
+      "tag": "V-103",
+      "type": "valve",
+      "zone_id": "refinery-zone0",
+      "install_date": "2017-05-03",
+      "expected_lifespan_years": 10,
+      "age_years": 9.4,
+      "last_inspection": "2026-06-25",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-104",
+      "tag": "V-104",
+      "type": "valve",
+      "zone_id": "refinery-zone0",
+      "install_date": "2010-11-23",
+      "expected_lifespan_years": 15,
+      "age_years": 15.8,
+      "last_inspection": "2026-07-10",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-105",
+      "tag": "V-105",
+      "type": "valve",
+      "zone_id": "refinery-zone0",
+      "install_date": "2011-01-19",
+      "expected_lifespan_years": 12,
+      "age_years": 15.7,
+      "last_inspection": "2026-02-28",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-106",
+      "tag": "V-106",
+      "type": "valve",
+      "zone_id": "refinery-zone0",
+      "install_date": "2008-07-04",
+      "expected_lifespan_years": 25,
+      "age_years": 18.2,
+      "last_inspection": "2026-04-13",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-107",
+      "tag": "V-107",
+      "type": "valve",
+      "zone_id": "refinery-zone0",
+      "install_date": "2009-08-04",
+      "expected_lifespan_years": 18,
+      "age_years": 17.1,
+      "last_inspection": "2026-04-09",
+      "status": "warning",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-108",
+      "tag": "V-108",
+      "type": "valve",
+      "zone_id": "refinery-zone0",
+      "install_date": "2018-06-29",
+      "expected_lifespan_years": 10,
+      "age_years": 8.2,
+      "last_inspection": "2026-06-03",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-CL-103",
+      "tag": "CL-103",
+      "type": "column",
+      "zone_id": "refinery-zone1",
+      "install_date": "2007-09-01",
+      "expected_lifespan_years": 15,
+      "age_years": 19.0,
+      "last_inspection": "2026-05-12",
+      "status": "critical",
+      "failure_modes": [
+        "tray fouling",
+        "flooding",
+        "corrosion at feed nozzle"
+      ]
+    },
+    {
+      "id": "refinery-E-107",
+      "tag": "E-107",
+      "type": "heat_exchanger",
+      "zone_id": "refinery-zone1",
+      "install_date": "2023-05-13",
+      "expected_lifespan_years": 18,
+      "age_years": 3.3,
+      "last_inspection": "2026-04-14",
+      "status": "normal",
+      "failure_modes": [
+        "tube fouling",
+        "tube leak",
+        "shell corrosion"
+      ]
+    },
+    {
+      "id": "refinery-E-108",
+      "tag": "E-108",
+      "type": "heat_exchanger",
+      "zone_id": "refinery-zone1",
+      "install_date": "2021-03-08",
+      "expected_lifespan_years": 18,
+      "age_years": 5.5,
+      "last_inspection": "2026-06-03",
+      "status": "normal",
+      "failure_modes": [
+        "tube fouling",
+        "tube leak",
+        "shell corrosion"
+      ]
+    },
+    {
+      "id": "refinery-E-109",
+      "tag": "E-109",
+      "type": "heat_exchanger",
+      "zone_id": "refinery-zone1",
+      "install_date": "2020-02-23",
+      "expected_lifespan_years": 18,
+      "age_years": 6.6,
+      "last_inspection": "2026-02-24",
+      "status": "normal",
+      "failure_modes": [
+        "tube fouling",
+        "tube leak",
+        "shell corrosion"
+      ]
+    },
+    {
+      "id": "refinery-E-110",
+      "tag": "E-110",
+      "type": "heat_exchanger",
+      "zone_id": "refinery-zone1",
+      "install_date": "2011-06-05",
+      "expected_lifespan_years": 10,
+      "age_years": 15.3,
+      "last_inspection": "2026-06-29",
+      "status": "critical",
+      "failure_modes": [
+        "tube fouling",
+        "tube leak",
+        "shell corrosion"
+      ]
+    },
+    {
+      "id": "refinery-P-107",
+      "tag": "P-107",
+      "type": "pump",
+      "zone_id": "refinery-zone1",
+      "install_date": "2019-03-09",
+      "expected_lifespan_years": 20,
+      "age_years": 7.5,
+      "last_inspection": "2026-02-28",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-108",
+      "tag": "P-108",
+      "type": "pump",
+      "zone_id": "refinery-zone1",
+      "install_date": "2014-06-03",
+      "expected_lifespan_years": 20,
+      "age_years": 12.3,
+      "last_inspection": "2026-08-22",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-109",
+      "tag": "P-109",
+      "type": "pump",
+      "zone_id": "refinery-zone1",
+      "install_date": "2021-12-22",
+      "expected_lifespan_years": 18,
+      "age_years": 4.7,
+      "last_inspection": "2026-06-30",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-110",
+      "tag": "P-110",
+      "type": "pump",
+      "zone_id": "refinery-zone1",
+      "install_date": "2014-10-17",
+      "expected_lifespan_years": 20,
+      "age_years": 11.9,
+      "last_inspection": "2026-06-09",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-V-109",
+      "tag": "V-109",
+      "type": "valve",
+      "zone_id": "refinery-zone1",
+      "install_date": "2007-04-22",
+      "expected_lifespan_years": 20,
+      "age_years": 19.4,
+      "last_inspection": "2026-06-02",
+      "status": "warning",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-110",
+      "tag": "V-110",
+      "type": "valve",
+      "zone_id": "refinery-zone1",
+      "install_date": "2013-02-08",
+      "expected_lifespan_years": 18,
+      "age_years": 13.6,
+      "last_inspection": "2026-03-11",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-111",
+      "tag": "V-111",
+      "type": "valve",
+      "zone_id": "refinery-zone1",
+      "install_date": "2007-02-22",
+      "expected_lifespan_years": 10,
+      "age_years": 19.6,
+      "last_inspection": "2026-04-26",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-112",
+      "tag": "V-112",
+      "type": "valve",
+      "zone_id": "refinery-zone1",
+      "install_date": "2007-07-23",
+      "expected_lifespan_years": 10,
+      "age_years": 19.1,
+      "last_inspection": "2026-04-12",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-113",
+      "tag": "V-113",
+      "type": "valve",
+      "zone_id": "refinery-zone1",
+      "install_date": "2007-02-19",
+      "expected_lifespan_years": 15,
+      "age_years": 19.6,
+      "last_inspection": "2026-02-17",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-114",
+      "tag": "V-114",
+      "type": "valve",
+      "zone_id": "refinery-zone1",
+      "install_date": "2024-03-07",
+      "expected_lifespan_years": 10,
+      "age_years": 2.5,
+      "last_inspection": "2026-05-23",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-R-101",
+      "tag": "R-101",
+      "type": "reactor",
+      "zone_id": "refinery-zone2",
+      "install_date": "2013-03-13",
+      "expected_lifespan_years": 15,
+      "age_years": 13.5,
+      "last_inspection": "2026-04-12",
+      "status": "normal",
+      "failure_modes": [
+        "catalyst deactivation",
+        "refractory wear",
+        "thermocouple drift"
+      ]
+    },
+    {
+      "id": "refinery-R-102",
+      "tag": "R-102",
+      "type": "reactor",
+      "zone_id": "refinery-zone2",
+      "install_date": "2017-09-12",
+      "expected_lifespan_years": 20,
+      "age_years": 9.0,
+      "last_inspection": "2026-07-18",
+      "status": "normal",
+      "failure_modes": [
+        "catalyst deactivation",
+        "refractory wear",
+        "thermocouple drift"
+      ]
+    },
+    {
+      "id": "refinery-C-101",
+      "tag": "C-101",
+      "type": "compressor",
+      "zone_id": "refinery-zone2",
+      "install_date": "2018-03-29",
+      "expected_lifespan_years": 10,
+      "age_years": 8.5,
+      "last_inspection": "2026-07-10",
+      "status": "normal",
+      "failure_modes": [
+        "surge",
+        "bearing wear",
+        "valve plate fracture"
+      ]
+    },
+    {
+      "id": "refinery-C-102",
+      "tag": "C-102",
+      "type": "compressor",
+      "zone_id": "refinery-zone2",
+      "install_date": "2011-03-14",
+      "expected_lifespan_years": 20,
+      "age_years": 15.5,
+      "last_inspection": "2026-03-17",
+      "status": "normal",
+      "failure_modes": [
+        "surge",
+        "bearing wear",
+        "valve plate fracture"
+      ]
+    },
+    {
+      "id": "refinery-C-103",
+      "tag": "C-103",
+      "type": "compressor",
+      "zone_id": "refinery-zone2",
+      "install_date": "2005-03-05",
+      "expected_lifespan_years": 12,
+      "age_years": 21.5,
+      "last_inspection": "2026-05-07",
+      "status": "critical",
+      "failure_modes": [
+        "surge",
+        "bearing wear",
+        "valve plate fracture"
+      ]
+    },
+    {
+      "id": "refinery-P-111",
+      "tag": "P-111",
+      "type": "pump",
+      "zone_id": "refinery-zone2",
+      "install_date": "2017-10-23",
+      "expected_lifespan_years": 10,
+      "age_years": 8.9,
+      "last_inspection": "2026-07-08",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-112",
+      "tag": "P-112",
+      "type": "pump",
+      "zone_id": "refinery-zone2",
+      "install_date": "2012-08-31",
+      "expected_lifespan_years": 15,
+      "age_years": 14.0,
+      "last_inspection": "2026-05-02",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-113",
+      "tag": "P-113",
+      "type": "pump",
+      "zone_id": "refinery-zone2",
+      "install_date": "2018-01-05",
+      "expected_lifespan_years": 20,
+      "age_years": 8.7,
+      "last_inspection": "2026-06-29",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-114",
+      "tag": "P-114",
+      "type": "pump",
+      "zone_id": "refinery-zone2",
+      "install_date": "2019-10-28",
+      "expected_lifespan_years": 12,
+      "age_years": 6.9,
+      "last_inspection": "2026-08-29",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-V-115",
+      "tag": "V-115",
+      "type": "valve",
+      "zone_id": "refinery-zone2",
+      "install_date": "2019-09-21",
+      "expected_lifespan_years": 18,
+      "age_years": 7.0,
+      "last_inspection": "2026-03-30",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-116",
+      "tag": "V-116",
+      "type": "valve",
+      "zone_id": "refinery-zone2",
+      "install_date": "2024-08-23",
+      "expected_lifespan_years": 25,
+      "age_years": 2.0,
+      "last_inspection": "2026-05-02",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-117",
+      "tag": "V-117",
+      "type": "valve",
+      "zone_id": "refinery-zone2",
+      "install_date": "2020-06-23",
+      "expected_lifespan_years": 25,
+      "age_years": 6.2,
+      "last_inspection": "2026-05-30",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-118",
+      "tag": "V-118",
+      "type": "valve",
+      "zone_id": "refinery-zone2",
+      "install_date": "2024-08-11",
+      "expected_lifespan_years": 10,
+      "age_years": 2.1,
+      "last_inspection": "2026-02-14",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-119",
+      "tag": "V-119",
+      "type": "valve",
+      "zone_id": "refinery-zone2",
+      "install_date": "2021-03-19",
+      "expected_lifespan_years": 15,
+      "age_years": 5.5,
+      "last_inspection": "2026-03-31",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-120",
+      "tag": "V-120",
+      "type": "valve",
+      "zone_id": "refinery-zone2",
+      "install_date": "2009-01-19",
+      "expected_lifespan_years": 15,
+      "age_years": 17.7,
+      "last_inspection": "2026-02-28",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-R-103",
+      "tag": "R-103",
+      "type": "reactor",
+      "zone_id": "refinery-zone3",
+      "install_date": "2014-08-21",
+      "expected_lifespan_years": 25,
+      "age_years": 12.1,
+      "last_inspection": "2026-03-04",
+      "status": "normal",
+      "failure_modes": [
+        "catalyst deactivation",
+        "refractory wear",
+        "thermocouple drift"
+      ]
+    },
+    {
+      "id": "refinery-R-104",
+      "tag": "R-104",
+      "type": "reactor",
+      "zone_id": "refinery-zone3",
+      "install_date": "2021-10-06",
+      "expected_lifespan_years": 15,
+      "age_years": 4.9,
+      "last_inspection": "2026-02-13",
+      "status": "normal",
+      "failure_modes": [
+        "catalyst deactivation",
+        "refractory wear",
+        "thermocouple drift"
+      ]
+    },
+    {
+      "id": "refinery-C-104",
+      "tag": "C-104",
+      "type": "compressor",
+      "zone_id": "refinery-zone3",
+      "install_date": "2021-04-20",
+      "expected_lifespan_years": 18,
+      "age_years": 5.4,
+      "last_inspection": "2026-09-05",
+      "status": "normal",
+      "failure_modes": [
+        "surge",
+        "bearing wear",
+        "valve plate fracture"
+      ]
+    },
+    {
+      "id": "refinery-C-105",
+      "tag": "C-105",
+      "type": "compressor",
+      "zone_id": "refinery-zone3",
+      "install_date": "2022-01-06",
+      "expected_lifespan_years": 25,
+      "age_years": 4.7,
+      "last_inspection": "2026-02-09",
+      "status": "normal",
+      "failure_modes": [
+        "surge",
+        "bearing wear",
+        "valve plate fracture"
+      ]
+    },
+    {
+      "id": "refinery-P-115",
+      "tag": "P-115",
+      "type": "pump",
+      "zone_id": "refinery-zone3",
+      "install_date": "2024-03-05",
+      "expected_lifespan_years": 25,
+      "age_years": 2.5,
+      "last_inspection": "2026-07-14",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-116",
+      "tag": "P-116",
+      "type": "pump",
+      "zone_id": "refinery-zone3",
+      "install_date": "2006-03-08",
+      "expected_lifespan_years": 10,
+      "age_years": 20.5,
+      "last_inspection": "2026-06-15",
+      "status": "critical",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-117",
+      "tag": "P-117",
+      "type": "pump",
+      "zone_id": "refinery-zone3",
+      "install_date": "2007-03-31",
+      "expected_lifespan_years": 15,
+      "age_years": 19.5,
+      "last_inspection": "2026-02-13",
+      "status": "critical",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-V-121",
+      "tag": "V-121",
+      "type": "valve",
+      "zone_id": "refinery-zone3",
+      "install_date": "2012-01-03",
+      "expected_lifespan_years": 25,
+      "age_years": 14.7,
+      "last_inspection": "2026-04-16",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-122",
+      "tag": "V-122",
+      "type": "valve",
+      "zone_id": "refinery-zone3",
+      "install_date": "2008-03-02",
+      "expected_lifespan_years": 10,
+      "age_years": 18.5,
+      "last_inspection": "2026-06-30",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-123",
+      "tag": "V-123",
+      "type": "valve",
+      "zone_id": "refinery-zone3",
+      "install_date": "2006-07-12",
+      "expected_lifespan_years": 20,
+      "age_years": 20.2,
+      "last_inspection": "2026-02-06",
+      "status": "warning",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-124",
+      "tag": "V-124",
+      "type": "valve",
+      "zone_id": "refinery-zone3",
+      "install_date": "2005-05-11",
+      "expected_lifespan_years": 18,
+      "age_years": 21.3,
+      "last_inspection": "2026-07-13",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-125",
+      "tag": "V-125",
+      "type": "valve",
+      "zone_id": "refinery-zone3",
+      "install_date": "2010-01-21",
+      "expected_lifespan_years": 15,
+      "age_years": 16.6,
+      "last_inspection": "2026-03-31",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-TK-101",
+      "tag": "TK-101",
+      "type": "tank",
+      "zone_id": "refinery-zone4",
+      "install_date": "2005-04-30",
+      "expected_lifespan_years": 20,
+      "age_years": 21.4,
+      "last_inspection": "2026-02-06",
+      "status": "critical",
+      "failure_modes": [
+        "corrosion",
+        "level sensor drift",
+        "roof seal degradation"
+      ]
+    },
+    {
+      "id": "refinery-TK-102",
+      "tag": "TK-102",
+      "type": "tank",
+      "zone_id": "refinery-zone4",
+      "install_date": "2024-02-25",
+      "expected_lifespan_years": 25,
+      "age_years": 2.5,
+      "last_inspection": "2026-04-09",
+      "status": "normal",
+      "failure_modes": [
+        "corrosion",
+        "level sensor drift",
+        "roof seal degradation"
+      ]
+    },
+    {
+      "id": "refinery-TK-103",
+      "tag": "TK-103",
+      "type": "tank",
+      "zone_id": "refinery-zone4",
+      "install_date": "2017-08-21",
+      "expected_lifespan_years": 10,
+      "age_years": 9.1,
+      "last_inspection": "2026-08-26",
+      "status": "normal",
+      "failure_modes": [
+        "corrosion",
+        "level sensor drift",
+        "roof seal degradation"
+      ]
+    },
+    {
+      "id": "refinery-TK-104",
+      "tag": "TK-104",
+      "type": "tank",
+      "zone_id": "refinery-zone4",
+      "install_date": "2005-12-30",
+      "expected_lifespan_years": 18,
+      "age_years": 20.7,
+      "last_inspection": "2026-07-31",
+      "status": "critical",
+      "failure_modes": [
+        "corrosion",
+        "level sensor drift",
+        "roof seal degradation"
+      ]
+    },
+    {
+      "id": "refinery-TK-105",
+      "tag": "TK-105",
+      "type": "tank",
+      "zone_id": "refinery-zone4",
+      "install_date": "2015-02-26",
+      "expected_lifespan_years": 18,
+      "age_years": 11.5,
+      "last_inspection": "2026-08-11",
+      "status": "normal",
+      "failure_modes": [
+        "corrosion",
+        "level sensor drift",
+        "roof seal degradation"
+      ]
+    },
+    {
+      "id": "refinery-TK-106",
+      "tag": "TK-106",
+      "type": "tank",
+      "zone_id": "refinery-zone4",
+      "install_date": "2023-05-20",
+      "expected_lifespan_years": 15,
+      "age_years": 3.3,
+      "last_inspection": "2026-06-29",
+      "status": "normal",
+      "failure_modes": [
+        "corrosion",
+        "level sensor drift",
+        "roof seal degradation"
+      ]
+    },
+    {
+      "id": "refinery-TK-107",
+      "tag": "TK-107",
+      "type": "tank",
+      "zone_id": "refinery-zone4",
+      "install_date": "2014-01-11",
+      "expected_lifespan_years": 20,
+      "age_years": 12.7,
+      "last_inspection": "2026-08-04",
+      "status": "normal",
+      "failure_modes": [
+        "corrosion",
+        "level sensor drift",
+        "roof seal degradation"
+      ]
+    },
+    {
+      "id": "refinery-TK-108",
+      "tag": "TK-108",
+      "type": "tank",
+      "zone_id": "refinery-zone4",
+      "install_date": "2007-09-27",
+      "expected_lifespan_years": 25,
+      "age_years": 19.0,
+      "last_inspection": "2026-07-07",
+      "status": "normal",
+      "failure_modes": [
+        "corrosion",
+        "level sensor drift",
+        "roof seal degradation"
+      ]
+    },
+    {
+      "id": "refinery-TK-109",
+      "tag": "TK-109",
+      "type": "tank",
+      "zone_id": "refinery-zone4",
+      "install_date": "2016-08-12",
+      "expected_lifespan_years": 25,
+      "age_years": 10.1,
+      "last_inspection": "2026-06-09",
+      "status": "normal",
+      "failure_modes": [
+        "corrosion",
+        "level sensor drift",
+        "roof seal degradation"
+      ]
+    },
+    {
+      "id": "refinery-TK-110",
+      "tag": "TK-110",
+      "type": "tank",
+      "zone_id": "refinery-zone4",
+      "install_date": "2018-09-25",
+      "expected_lifespan_years": 20,
+      "age_years": 8.0,
+      "last_inspection": "2026-07-27",
+      "status": "normal",
+      "failure_modes": [
+        "corrosion",
+        "level sensor drift",
+        "roof seal degradation"
+      ]
+    },
+    {
+      "id": "refinery-P-118",
+      "tag": "P-118",
+      "type": "pump",
+      "zone_id": "refinery-zone4",
+      "install_date": "2019-04-14",
+      "expected_lifespan_years": 25,
+      "age_years": 7.4,
+      "last_inspection": "2026-05-05",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-119",
+      "tag": "P-119",
+      "type": "pump",
+      "zone_id": "refinery-zone4",
+      "install_date": "2017-06-21",
+      "expected_lifespan_years": 25,
+      "age_years": 9.2,
+      "last_inspection": "2026-04-01",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-120",
+      "tag": "P-120",
+      "type": "pump",
+      "zone_id": "refinery-zone4",
+      "install_date": "2022-12-22",
+      "expected_lifespan_years": 12,
+      "age_years": 3.7,
+      "last_inspection": "2026-03-01",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-121",
+      "tag": "P-121",
+      "type": "pump",
+      "zone_id": "refinery-zone4",
+      "install_date": "2017-07-14",
+      "expected_lifespan_years": 15,
+      "age_years": 9.2,
+      "last_inspection": "2026-03-02",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-V-126",
+      "tag": "V-126",
+      "type": "valve",
+      "zone_id": "refinery-zone4",
+      "install_date": "2023-12-20",
+      "expected_lifespan_years": 18,
+      "age_years": 2.7,
+      "last_inspection": "2026-03-27",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-127",
+      "tag": "V-127",
+      "type": "valve",
+      "zone_id": "refinery-zone4",
+      "install_date": "2014-12-30",
+      "expected_lifespan_years": 12,
+      "age_years": 11.7,
+      "last_inspection": "2026-05-31",
+      "status": "warning",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-128",
+      "tag": "V-128",
+      "type": "valve",
+      "zone_id": "refinery-zone4",
+      "install_date": "2022-05-21",
+      "expected_lifespan_years": 25,
+      "age_years": 4.3,
+      "last_inspection": "2026-08-18",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-129",
+      "tag": "V-129",
+      "type": "valve",
+      "zone_id": "refinery-zone4",
+      "install_date": "2019-10-20",
+      "expected_lifespan_years": 12,
+      "age_years": 6.9,
+      "last_inspection": "2026-07-07",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-130",
+      "tag": "V-130",
+      "type": "valve",
+      "zone_id": "refinery-zone4",
+      "install_date": "2022-10-03",
+      "expected_lifespan_years": 10,
+      "age_years": 3.9,
+      "last_inspection": "2026-03-28",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-131",
+      "tag": "V-131",
+      "type": "valve",
+      "zone_id": "refinery-zone4",
+      "install_date": "2008-10-18",
+      "expected_lifespan_years": 10,
+      "age_years": 17.9,
+      "last_inspection": "2026-07-12",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-B-101",
+      "tag": "B-101",
+      "type": "compressor_blower",
+      "zone_id": "refinery-zone5",
+      "install_date": "2007-01-23",
+      "expected_lifespan_years": 10,
+      "age_years": 19.6,
+      "last_inspection": "2026-05-09",
+      "status": "critical",
+      "failure_modes": [
+        "bearing wear",
+        "impeller imbalance"
+      ]
+    },
+    {
+      "id": "refinery-B-102",
+      "tag": "B-102",
+      "type": "compressor_blower",
+      "zone_id": "refinery-zone5",
+      "install_date": "2018-12-11",
+      "expected_lifespan_years": 25,
+      "age_years": 7.8,
+      "last_inspection": "2026-02-09",
+      "status": "normal",
+      "failure_modes": [
+        "bearing wear",
+        "impeller imbalance"
+      ]
+    },
+    {
+      "id": "refinery-B-103",
+      "tag": "B-103",
+      "type": "compressor_blower",
+      "zone_id": "refinery-zone5",
+      "install_date": "2021-06-04",
+      "expected_lifespan_years": 25,
+      "age_years": 5.3,
+      "last_inspection": "2026-04-28",
+      "status": "normal",
+      "failure_modes": [
+        "bearing wear",
+        "impeller imbalance"
+      ]
+    },
+    {
+      "id": "refinery-P-122",
+      "tag": "P-122",
+      "type": "pump",
+      "zone_id": "refinery-zone5",
+      "install_date": "2019-07-06",
+      "expected_lifespan_years": 10,
+      "age_years": 7.2,
+      "last_inspection": "2026-07-05",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-123",
+      "tag": "P-123",
+      "type": "pump",
+      "zone_id": "refinery-zone5",
+      "install_date": "2004-11-10",
+      "expected_lifespan_years": 20,
+      "age_years": 21.8,
+      "last_inspection": "2026-04-05",
+      "status": "critical",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-124",
+      "tag": "P-124",
+      "type": "pump",
+      "zone_id": "refinery-zone5",
+      "install_date": "2007-11-17",
+      "expected_lifespan_years": 25,
+      "age_years": 18.8,
+      "last_inspection": "2026-06-01",
+      "status": "normal",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-P-125",
+      "tag": "P-125",
+      "type": "pump",
+      "zone_id": "refinery-zone5",
+      "install_date": "2008-12-23",
+      "expected_lifespan_years": 12,
+      "age_years": 17.7,
+      "last_inspection": "2026-07-11",
+      "status": "critical",
+      "failure_modes": [
+        "seal wear",
+        "cavitation",
+        "bearing failure",
+        "impeller erosion"
+      ]
+    },
+    {
+      "id": "refinery-V-132",
+      "tag": "V-132",
+      "type": "valve",
+      "zone_id": "refinery-zone5",
+      "install_date": "2015-03-12",
+      "expected_lifespan_years": 25,
+      "age_years": 11.5,
+      "last_inspection": "2026-03-15",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-133",
+      "tag": "V-133",
+      "type": "valve",
+      "zone_id": "refinery-zone5",
+      "install_date": "2015-02-12",
+      "expected_lifespan_years": 20,
+      "age_years": 11.6,
+      "last_inspection": "2026-05-24",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-134",
+      "tag": "V-134",
+      "type": "valve",
+      "zone_id": "refinery-zone5",
+      "install_date": "2023-04-08",
+      "expected_lifespan_years": 25,
+      "age_years": 3.4,
+      "last_inspection": "2026-04-26",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-135",
+      "tag": "V-135",
+      "type": "valve",
+      "zone_id": "refinery-zone5",
+      "install_date": "2013-01-24",
+      "expected_lifespan_years": 10,
+      "age_years": 13.6,
+      "last_inspection": "2026-08-09",
+      "status": "critical",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-136",
+      "tag": "V-136",
+      "type": "valve",
+      "zone_id": "refinery-zone5",
+      "install_date": "2020-05-11",
+      "expected_lifespan_years": 15,
+      "age_years": 6.3,
+      "last_inspection": "2026-08-08",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-V-137",
+      "tag": "V-137",
+      "type": "valve",
+      "zone_id": "refinery-zone5",
+      "install_date": "2008-05-14",
+      "expected_lifespan_years": 20,
+      "age_years": 18.3,
+      "last_inspection": "2026-07-22",
+      "status": "normal",
+      "failure_modes": [
+        "actuator failure",
+        "seat leakage",
+        "stem seizure",
+        "positioner drift"
+      ]
+    },
+    {
+      "id": "refinery-M-101",
+      "tag": "M-101",
+      "type": "motor",
+      "zone_id": "refinery-zone5",
+      "install_date": "2020-02-19",
+      "expected_lifespan_years": 20,
+      "age_years": 6.6,
+      "last_inspection": "2026-03-22",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "refinery-M-102",
+      "tag": "M-102",
+      "type": "motor",
+      "zone_id": "refinery-zone5",
+      "install_date": "2018-05-23",
+      "expected_lifespan_years": 10,
+      "age_years": 8.3,
+      "last_inspection": "2026-03-15",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "refinery-M-103",
+      "tag": "M-103",
+      "type": "motor",
+      "zone_id": "refinery-zone5",
+      "install_date": "2015-08-21",
+      "expected_lifespan_years": 15,
+      "age_years": 11.1,
+      "last_inspection": "2026-05-31",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    },
+    {
+      "id": "refinery-M-104",
+      "tag": "M-104",
+      "type": "motor",
+      "zone_id": "refinery-zone5",
+      "install_date": "2013-09-03",
+      "expected_lifespan_years": 25,
+      "age_years": 13.0,
+      "last_inspection": "2026-02-05",
+      "status": "normal",
+      "failure_modes": [
+        "winding overheat",
+        "bearing wear",
+        "shaft misalignment"
+      ]
+    }
+  ],
+  "sensors": [
+    {
+      "id": "refinery-CL-101-SEN1",
+      "equipment_id": "refinery-CL-101",
+      "tag": "LT-CL-1011",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 81.7
+    },
+    {
+      "id": "refinery-CL-102-SEN1",
+      "equipment_id": "refinery-CL-102",
+      "tag": "VT-CL-1021",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 6.7
+    },
+    {
+      "id": "refinery-E-101-SEN1",
+      "equipment_id": "refinery-E-101",
+      "tag": "TT-E-1011",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 469.2
+    },
+    {
+      "id": "refinery-E-102-SEN1",
+      "equipment_id": "refinery-E-102",
+      "tag": "LT-E-1021",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 64.5
+    },
+    {
+      "id": "refinery-E-102-SEN2",
+      "equipment_id": "refinery-E-102",
+      "tag": "LT-E-1022",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 10.6
+    },
+    {
+      "id": "refinery-E-103-SEN1",
+      "equipment_id": "refinery-E-103",
+      "tag": "VT-E-1031",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 5.3
+    },
+    {
+      "id": "refinery-E-104-SEN1",
+      "equipment_id": "refinery-E-104",
+      "tag": "LT-E-1041",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 85.3
+    },
+    {
+      "id": "refinery-E-104-SEN2",
+      "equipment_id": "refinery-E-104",
+      "tag": "TT-E-1042",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 191.1
+    },
+    {
+      "id": "refinery-E-105-SEN1",
+      "equipment_id": "refinery-E-105",
+      "tag": "PT-E-1051",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 6.2
+    },
+    {
+      "id": "refinery-E-106-SEN1",
+      "equipment_id": "refinery-E-106",
+      "tag": "FT-E-1061",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 191.8
+    },
+    {
+      "id": "refinery-E-106-SEN2",
+      "equipment_id": "refinery-E-106",
+      "tag": "VT-E-1062",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 2.7
+    },
+    {
+      "id": "refinery-P-101-SEN1",
+      "equipment_id": "refinery-P-101",
+      "tag": "PT-P-1011",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 7.4
+    },
+    {
+      "id": "refinery-P-101-SEN2",
+      "equipment_id": "refinery-P-101",
+      "tag": "VT-P-1012",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 6.3
+    },
+    {
+      "id": "refinery-P-102-SEN1",
+      "equipment_id": "refinery-P-102",
+      "tag": "FT-P-1021",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 270.6
+    },
+    {
+      "id": "refinery-P-103-SEN1",
+      "equipment_id": "refinery-P-103",
+      "tag": "TT-P-1031",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 370.5
+    },
+    {
+      "id": "refinery-P-103-SEN2",
+      "equipment_id": "refinery-P-103",
+      "tag": "LT-P-1032",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 55.8
+    },
+    {
+      "id": "refinery-P-104-SEN1",
+      "equipment_id": "refinery-P-104",
+      "tag": "VT-P-1041",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 4.0
+    },
+    {
+      "id": "refinery-P-104-SEN2",
+      "equipment_id": "refinery-P-104",
+      "tag": "PT-P-1042",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 4.3
+    },
+    {
+      "id": "refinery-P-105-SEN1",
+      "equipment_id": "refinery-P-105",
+      "tag": "FT-P-1051",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 77.5
+    },
+    {
+      "id": "refinery-P-105-SEN2",
+      "equipment_id": "refinery-P-105",
+      "tag": "LT-P-1052",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 85.7
+    },
+    {
+      "id": "refinery-P-106-SEN1",
+      "equipment_id": "refinery-P-106",
+      "tag": "FT-P-1061",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 346.5
+    },
+    {
+      "id": "refinery-V-101-SEN1",
+      "equipment_id": "refinery-V-101",
+      "tag": "LT-V-1011",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 15.4
+    },
+    {
+      "id": "refinery-V-102-SEN1",
+      "equipment_id": "refinery-V-102",
+      "tag": "VT-V-1021",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 2.9
+    },
+    {
+      "id": "refinery-V-103-SEN1",
+      "equipment_id": "refinery-V-103",
+      "tag": "LT-V-1031",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 64.2
+    },
+    {
+      "id": "refinery-V-104-SEN1",
+      "equipment_id": "refinery-V-104",
+      "tag": "VT-V-1041",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 2.6
+    },
+    {
+      "id": "refinery-V-105-SEN1",
+      "equipment_id": "refinery-V-105",
+      "tag": "PT-V-1051",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 7.5
+    },
+    {
+      "id": "refinery-V-106-SEN1",
+      "equipment_id": "refinery-V-106",
+      "tag": "PT-V-1061",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 4.2
+    },
+    {
+      "id": "refinery-V-107-SEN1",
+      "equipment_id": "refinery-V-107",
+      "tag": "VT-V-1071",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 3.0
+    },
+    {
+      "id": "refinery-V-108-SEN1",
+      "equipment_id": "refinery-V-108",
+      "tag": "VT-V-1081",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 6.2
+    },
+    {
+      "id": "refinery-CL-103-SEN1",
+      "equipment_id": "refinery-CL-103",
+      "tag": "VT-CL-1031",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 1.2
+    },
+    {
+      "id": "refinery-CL-103-SEN2",
+      "equipment_id": "refinery-CL-103",
+      "tag": "TT-CL-1032",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 218.6
+    },
+    {
+      "id": "refinery-E-107-SEN1",
+      "equipment_id": "refinery-E-107",
+      "tag": "PT-E-1071",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 6.1
+    },
+    {
+      "id": "refinery-E-108-SEN1",
+      "equipment_id": "refinery-E-108",
+      "tag": "LT-E-1081",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 62.5
+    },
+    {
+      "id": "refinery-E-108-SEN2",
+      "equipment_id": "refinery-E-108",
+      "tag": "VT-E-1082",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 5.1
+    },
+    {
+      "id": "refinery-E-109-SEN1",
+      "equipment_id": "refinery-E-109",
+      "tag": "TT-E-1091",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 144.7
+    },
+    {
+      "id": "refinery-E-109-SEN2",
+      "equipment_id": "refinery-E-109",
+      "tag": "TT-E-1092",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 276.0
+    },
+    {
+      "id": "refinery-E-110-SEN1",
+      "equipment_id": "refinery-E-110",
+      "tag": "LT-E-1101",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 66.3
+    },
+    {
+      "id": "refinery-P-107-SEN1",
+      "equipment_id": "refinery-P-107",
+      "tag": "FT-P-1071",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 371.4
+    },
+    {
+      "id": "refinery-P-107-SEN2",
+      "equipment_id": "refinery-P-107",
+      "tag": "VT-P-1072",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 3.6
+    },
+    {
+      "id": "refinery-P-108-SEN1",
+      "equipment_id": "refinery-P-108",
+      "tag": "FT-P-1081",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 288.5
+    },
+    {
+      "id": "refinery-P-109-SEN1",
+      "equipment_id": "refinery-P-109",
+      "tag": "LT-P-1091",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 88.7
+    },
+    {
+      "id": "refinery-P-110-SEN1",
+      "equipment_id": "refinery-P-110",
+      "tag": "PT-P-1101",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 18.7
+    },
+    {
+      "id": "refinery-P-110-SEN2",
+      "equipment_id": "refinery-P-110",
+      "tag": "VT-P-1102",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 4.5
+    },
+    {
+      "id": "refinery-V-109-SEN1",
+      "equipment_id": "refinery-V-109",
+      "tag": "PT-V-1091",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 21.3
+    },
+    {
+      "id": "refinery-V-110-SEN1",
+      "equipment_id": "refinery-V-110",
+      "tag": "LT-V-1101",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 12.4
+    },
+    {
+      "id": "refinery-V-111-SEN1",
+      "equipment_id": "refinery-V-111",
+      "tag": "TT-V-1111",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 234.6
+    },
+    {
+      "id": "refinery-V-112-SEN1",
+      "equipment_id": "refinery-V-112",
+      "tag": "PT-V-1121",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 15.4
+    },
+    {
+      "id": "refinery-V-113-SEN1",
+      "equipment_id": "refinery-V-113",
+      "tag": "PT-V-1131",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 7.4
+    },
+    {
+      "id": "refinery-V-114-SEN1",
+      "equipment_id": "refinery-V-114",
+      "tag": "FT-V-1141",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 64.9
+    },
+    {
+      "id": "refinery-R-101-SEN1",
+      "equipment_id": "refinery-R-101",
+      "tag": "TT-R-1011",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 328.7
+    },
+    {
+      "id": "refinery-R-102-SEN1",
+      "equipment_id": "refinery-R-102",
+      "tag": "PT-R-1021",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 15.4
+    },
+    {
+      "id": "refinery-R-102-SEN2",
+      "equipment_id": "refinery-R-102",
+      "tag": "PT-R-1022",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 11.2
+    },
+    {
+      "id": "refinery-C-101-SEN1",
+      "equipment_id": "refinery-C-101",
+      "tag": "FT-C-1011",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 77.5
+    },
+    {
+      "id": "refinery-C-102-SEN1",
+      "equipment_id": "refinery-C-102",
+      "tag": "LT-C-1021",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 40.1
+    },
+    {
+      "id": "refinery-C-102-SEN2",
+      "equipment_id": "refinery-C-102",
+      "tag": "TT-C-1022",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 280.9
+    },
+    {
+      "id": "refinery-C-103-SEN1",
+      "equipment_id": "refinery-C-103",
+      "tag": "VT-C-1031",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 4.2
+    },
+    {
+      "id": "refinery-C-103-SEN2",
+      "equipment_id": "refinery-C-103",
+      "tag": "TT-C-1032",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 86.4
+    },
+    {
+      "id": "refinery-P-111-SEN1",
+      "equipment_id": "refinery-P-111",
+      "tag": "PT-P-1111",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 12.2
+    },
+    {
+      "id": "refinery-P-111-SEN2",
+      "equipment_id": "refinery-P-111",
+      "tag": "LT-P-1112",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 32.0
+    },
+    {
+      "id": "refinery-P-112-SEN1",
+      "equipment_id": "refinery-P-112",
+      "tag": "FT-P-1121",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 226.0
+    },
+    {
+      "id": "refinery-P-112-SEN2",
+      "equipment_id": "refinery-P-112",
+      "tag": "FT-P-1122",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 276.1
+    },
+    {
+      "id": "refinery-P-113-SEN1",
+      "equipment_id": "refinery-P-113",
+      "tag": "VT-P-1131",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 0.8
+    },
+    {
+      "id": "refinery-P-114-SEN1",
+      "equipment_id": "refinery-P-114",
+      "tag": "PT-P-1141",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 12.5
+    },
+    {
+      "id": "refinery-P-114-SEN2",
+      "equipment_id": "refinery-P-114",
+      "tag": "TT-P-1142",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 233.1
+    },
+    {
+      "id": "refinery-V-115-SEN1",
+      "equipment_id": "refinery-V-115",
+      "tag": "TT-V-1151",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 381.3
+    },
+    {
+      "id": "refinery-V-116-SEN1",
+      "equipment_id": "refinery-V-116",
+      "tag": "TT-V-1161",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 448.5
+    },
+    {
+      "id": "refinery-V-117-SEN1",
+      "equipment_id": "refinery-V-117",
+      "tag": "TT-V-1171",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 403.1
+    },
+    {
+      "id": "refinery-V-118-SEN1",
+      "equipment_id": "refinery-V-118",
+      "tag": "PT-V-1181",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 15.3
+    },
+    {
+      "id": "refinery-V-119-SEN1",
+      "equipment_id": "refinery-V-119",
+      "tag": "VT-V-1191",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 3.9
+    },
+    {
+      "id": "refinery-V-120-SEN1",
+      "equipment_id": "refinery-V-120",
+      "tag": "LT-V-1201",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 27.1
+    },
+    {
+      "id": "refinery-R-103-SEN1",
+      "equipment_id": "refinery-R-103",
+      "tag": "VT-R-1031",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 0.9
+    },
+    {
+      "id": "refinery-R-104-SEN1",
+      "equipment_id": "refinery-R-104",
+      "tag": "LT-R-1041",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 30.5
+    },
+    {
+      "id": "refinery-R-104-SEN2",
+      "equipment_id": "refinery-R-104",
+      "tag": "FT-R-1042",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 109.5
+    },
+    {
+      "id": "refinery-C-104-SEN1",
+      "equipment_id": "refinery-C-104",
+      "tag": "LT-C-1041",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 34.9
+    },
+    {
+      "id": "refinery-C-104-SEN2",
+      "equipment_id": "refinery-C-104",
+      "tag": "PT-C-1042",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 6.9
+    },
+    {
+      "id": "refinery-C-105-SEN1",
+      "equipment_id": "refinery-C-105",
+      "tag": "VT-C-1051",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 4.5
+    },
+    {
+      "id": "refinery-P-115-SEN1",
+      "equipment_id": "refinery-P-115",
+      "tag": "VT-P-1151",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 1.4
+    },
+    {
+      "id": "refinery-P-115-SEN2",
+      "equipment_id": "refinery-P-115",
+      "tag": "TT-P-1152",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 436.9
+    },
+    {
+      "id": "refinery-P-116-SEN1",
+      "equipment_id": "refinery-P-116",
+      "tag": "TT-P-1161",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 140.9
+    },
+    {
+      "id": "refinery-P-116-SEN2",
+      "equipment_id": "refinery-P-116",
+      "tag": "PT-P-1162",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 22.0
+    },
+    {
+      "id": "refinery-P-117-SEN1",
+      "equipment_id": "refinery-P-117",
+      "tag": "FT-P-1171",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 440.3
+    },
+    {
+      "id": "refinery-P-117-SEN2",
+      "equipment_id": "refinery-P-117",
+      "tag": "FT-P-1172",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 377.1
+    },
+    {
+      "id": "refinery-V-121-SEN1",
+      "equipment_id": "refinery-V-121",
+      "tag": "LT-V-1211",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 94.3
+    },
+    {
+      "id": "refinery-V-122-SEN1",
+      "equipment_id": "refinery-V-122",
+      "tag": "TT-V-1221",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 100.6
+    },
+    {
+      "id": "refinery-V-123-SEN1",
+      "equipment_id": "refinery-V-123",
+      "tag": "LT-V-1231",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 62.2
+    },
+    {
+      "id": "refinery-V-124-SEN1",
+      "equipment_id": "refinery-V-124",
+      "tag": "TT-V-1241",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 75.8
+    },
+    {
+      "id": "refinery-V-125-SEN1",
+      "equipment_id": "refinery-V-125",
+      "tag": "LT-V-1251",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 92.7
+    },
+    {
+      "id": "refinery-TK-101-SEN1",
+      "equipment_id": "refinery-TK-101",
+      "tag": "FT-TK-1011",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 144.1
+    },
+    {
+      "id": "refinery-TK-102-SEN1",
+      "equipment_id": "refinery-TK-102",
+      "tag": "LT-TK-1021",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 93.9
+    },
+    {
+      "id": "refinery-TK-103-SEN1",
+      "equipment_id": "refinery-TK-103",
+      "tag": "TT-TK-1031",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 414.6
+    },
+    {
+      "id": "refinery-TK-104-SEN1",
+      "equipment_id": "refinery-TK-104",
+      "tag": "LT-TK-1041",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 83.4
+    },
+    {
+      "id": "refinery-TK-104-SEN2",
+      "equipment_id": "refinery-TK-104",
+      "tag": "TT-TK-1042",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 389.8
+    },
+    {
+      "id": "refinery-TK-105-SEN1",
+      "equipment_id": "refinery-TK-105",
+      "tag": "PT-TK-1051",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 10.6
+    },
+    {
+      "id": "refinery-TK-105-SEN2",
+      "equipment_id": "refinery-TK-105",
+      "tag": "TT-TK-1052",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 294.5
+    },
+    {
+      "id": "refinery-TK-106-SEN1",
+      "equipment_id": "refinery-TK-106",
+      "tag": "TT-TK-1061",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 325.0
+    },
+    {
+      "id": "refinery-TK-106-SEN2",
+      "equipment_id": "refinery-TK-106",
+      "tag": "PT-TK-1062",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 12.5
+    },
+    {
+      "id": "refinery-TK-107-SEN1",
+      "equipment_id": "refinery-TK-107",
+      "tag": "TT-TK-1071",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 167.7
+    },
+    {
+      "id": "refinery-TK-108-SEN1",
+      "equipment_id": "refinery-TK-108",
+      "tag": "LT-TK-1081",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 67.7
+    },
+    {
+      "id": "refinery-TK-108-SEN2",
+      "equipment_id": "refinery-TK-108",
+      "tag": "PT-TK-1082",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 16.6
+    },
+    {
+      "id": "refinery-TK-109-SEN1",
+      "equipment_id": "refinery-TK-109",
+      "tag": "PT-TK-1091",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 19.2
+    },
+    {
+      "id": "refinery-TK-110-SEN1",
+      "equipment_id": "refinery-TK-110",
+      "tag": "TT-TK-1101",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 185.1
+    },
+    {
+      "id": "refinery-TK-110-SEN2",
+      "equipment_id": "refinery-TK-110",
+      "tag": "TT-TK-1102",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 323.7
+    },
+    {
+      "id": "refinery-P-118-SEN1",
+      "equipment_id": "refinery-P-118",
+      "tag": "FT-P-1181",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 327.0
+    },
+    {
+      "id": "refinery-P-119-SEN1",
+      "equipment_id": "refinery-P-119",
+      "tag": "PT-P-1191",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 14.4
+    },
+    {
+      "id": "refinery-P-119-SEN2",
+      "equipment_id": "refinery-P-119",
+      "tag": "FT-P-1192",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 421.5
+    },
+    {
+      "id": "refinery-P-120-SEN1",
+      "equipment_id": "refinery-P-120",
+      "tag": "FT-P-1201",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 117.8
+    },
+    {
+      "id": "refinery-P-120-SEN2",
+      "equipment_id": "refinery-P-120",
+      "tag": "TT-P-1202",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 380.3
+    },
+    {
+      "id": "refinery-P-121-SEN1",
+      "equipment_id": "refinery-P-121",
+      "tag": "TT-P-1211",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 255.3
+    },
+    {
+      "id": "refinery-P-121-SEN2",
+      "equipment_id": "refinery-P-121",
+      "tag": "FT-P-1212",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 322.1
+    },
+    {
+      "id": "refinery-V-126-SEN1",
+      "equipment_id": "refinery-V-126",
+      "tag": "PT-V-1261",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 6.0
+    },
+    {
+      "id": "refinery-V-127-SEN1",
+      "equipment_id": "refinery-V-127",
+      "tag": "PT-V-1271",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 5.6
+    },
+    {
+      "id": "refinery-V-128-SEN1",
+      "equipment_id": "refinery-V-128",
+      "tag": "LT-V-1281",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 94.6
+    },
+    {
+      "id": "refinery-V-129-SEN1",
+      "equipment_id": "refinery-V-129",
+      "tag": "LT-V-1291",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 76.9
+    },
+    {
+      "id": "refinery-V-130-SEN1",
+      "equipment_id": "refinery-V-130",
+      "tag": "VT-V-1301",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 5.6
+    },
+    {
+      "id": "refinery-V-131-SEN1",
+      "equipment_id": "refinery-V-131",
+      "tag": "LT-V-1311",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 90.0
+    },
+    {
+      "id": "refinery-B-101-SEN1",
+      "equipment_id": "refinery-B-101",
+      "tag": "TT-B-1011",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 72.1
+    },
+    {
+      "id": "refinery-B-102-SEN1",
+      "equipment_id": "refinery-B-102",
+      "tag": "FT-B-1021",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 443.6
+    },
+    {
+      "id": "refinery-B-103-SEN1",
+      "equipment_id": "refinery-B-103",
+      "tag": "VT-B-1031",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 5.7
+    },
+    {
+      "id": "refinery-B-103-SEN2",
+      "equipment_id": "refinery-B-103",
+      "tag": "TT-B-1032",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 203.1
+    },
+    {
+      "id": "refinery-P-122-SEN1",
+      "equipment_id": "refinery-P-122",
+      "tag": "LT-P-1221",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 48.2
+    },
+    {
+      "id": "refinery-P-122-SEN2",
+      "equipment_id": "refinery-P-122",
+      "tag": "TT-P-1222",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 65.6
+    },
+    {
+      "id": "refinery-P-123-SEN1",
+      "equipment_id": "refinery-P-123",
+      "tag": "PT-P-1231",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 6.9
+    },
+    {
+      "id": "refinery-P-123-SEN2",
+      "equipment_id": "refinery-P-123",
+      "tag": "LT-P-1232",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 70.0
+    },
+    {
+      "id": "refinery-P-124-SEN1",
+      "equipment_id": "refinery-P-124",
+      "tag": "PT-P-1241",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 11.0
+    },
+    {
+      "id": "refinery-P-124-SEN2",
+      "equipment_id": "refinery-P-124",
+      "tag": "VT-P-1242",
+      "type": "VT",
+      "label": "vibration",
+      "unit": "mm/s",
+      "normal_min": 0.5,
+      "normal_max": 7.0,
+      "current_value": 3.8
+    },
+    {
+      "id": "refinery-P-125-SEN1",
+      "equipment_id": "refinery-P-125",
+      "tag": "PT-P-1251",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 20.7
+    },
+    {
+      "id": "refinery-P-125-SEN2",
+      "equipment_id": "refinery-P-125",
+      "tag": "TT-P-1252",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 205.2
+    },
+    {
+      "id": "refinery-V-132-SEN1",
+      "equipment_id": "refinery-V-132",
+      "tag": "TT-V-1321",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 63.0
+    },
+    {
+      "id": "refinery-V-133-SEN1",
+      "equipment_id": "refinery-V-133",
+      "tag": "PT-V-1331",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 8.5
+    },
+    {
+      "id": "refinery-V-134-SEN1",
+      "equipment_id": "refinery-V-134",
+      "tag": "PT-V-1341",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 13.9
+    },
+    {
+      "id": "refinery-V-135-SEN1",
+      "equipment_id": "refinery-V-135",
+      "tag": "LT-V-1351",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 83.9
+    },
+    {
+      "id": "refinery-V-136-SEN1",
+      "equipment_id": "refinery-V-136",
+      "tag": "LT-V-1361",
+      "type": "LT",
+      "label": "level",
+      "unit": "%",
+      "normal_min": 10,
+      "normal_max": 95,
+      "current_value": 22.9
+    },
+    {
+      "id": "refinery-V-137-SEN1",
+      "equipment_id": "refinery-V-137",
+      "tag": "FT-V-1371",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 283.5
+    },
+    {
+      "id": "refinery-M-101-SEN1",
+      "equipment_id": "refinery-M-101",
+      "tag": "PT-M-1011",
+      "type": "PT",
+      "label": "pressure",
+      "unit": "bar",
+      "normal_min": 2,
+      "normal_max": 22,
+      "current_value": 16.9
+    },
+    {
+      "id": "refinery-M-102-SEN1",
+      "equipment_id": "refinery-M-102",
+      "tag": "FT-M-1021",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 138.4
+    },
+    {
+      "id": "refinery-M-103-SEN1",
+      "equipment_id": "refinery-M-103",
+      "tag": "FT-M-1031",
+      "type": "FT",
+      "label": "flow",
+      "unit": "m3/h",
+      "normal_min": 10,
+      "normal_max": 600,
+      "current_value": 340.5
+    },
+    {
+      "id": "refinery-M-104-SEN1",
+      "equipment_id": "refinery-M-104",
+      "tag": "TT-M-1041",
+      "type": "TT",
+      "label": "temperature",
+      "unit": "C",
+      "normal_min": 40,
+      "normal_max": 480,
+      "current_value": 381.9
+    }
+  ],
+  "connections": [
+    {
+      "id": "conn-refinery-CL-101-refinery-CL-102",
+      "source": "refinery-CL-101",
+      "target": "refinery-CL-102",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-CL-102-refinery-E-101",
+      "source": "refinery-CL-102",
+      "target": "refinery-E-101",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-E-101-refinery-E-102",
+      "source": "refinery-E-101",
+      "target": "refinery-E-102",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-E-102-refinery-E-103",
+      "source": "refinery-E-102",
+      "target": "refinery-E-103",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-E-103-refinery-E-104",
+      "source": "refinery-E-103",
+      "target": "refinery-E-104",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-E-104-refinery-E-105",
+      "source": "refinery-E-104",
+      "target": "refinery-E-105",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-E-105-refinery-E-106",
+      "source": "refinery-E-105",
+      "target": "refinery-E-106",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-E-106-refinery-P-101",
+      "source": "refinery-E-106",
+      "target": "refinery-P-101",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-101-refinery-P-102",
+      "source": "refinery-P-101",
+      "target": "refinery-P-102",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-102-refinery-P-103",
+      "source": "refinery-P-102",
+      "target": "refinery-P-103",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-103-refinery-P-104",
+      "source": "refinery-P-103",
+      "target": "refinery-P-104",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-104-refinery-P-105",
+      "source": "refinery-P-104",
+      "target": "refinery-P-105",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-105-refinery-P-106",
+      "source": "refinery-P-105",
+      "target": "refinery-P-106",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-106-refinery-V-101",
+      "source": "refinery-P-106",
+      "target": "refinery-V-101",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-101-refinery-V-102",
+      "source": "refinery-V-101",
+      "target": "refinery-V-102",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-102-refinery-V-103",
+      "source": "refinery-V-102",
+      "target": "refinery-V-103",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-103-refinery-V-104",
+      "source": "refinery-V-103",
+      "target": "refinery-V-104",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-104-refinery-V-105",
+      "source": "refinery-V-104",
+      "target": "refinery-V-105",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-105-refinery-V-106",
+      "source": "refinery-V-105",
+      "target": "refinery-V-106",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-106-refinery-V-107",
+      "source": "refinery-V-106",
+      "target": "refinery-V-107",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-107-refinery-V-108",
+      "source": "refinery-V-107",
+      "target": "refinery-V-108",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-CL-103-refinery-E-107",
+      "source": "refinery-CL-103",
+      "target": "refinery-E-107",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-E-107-refinery-E-108",
+      "source": "refinery-E-107",
+      "target": "refinery-E-108",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-E-108-refinery-E-109",
+      "source": "refinery-E-108",
+      "target": "refinery-E-109",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-E-109-refinery-E-110",
+      "source": "refinery-E-109",
+      "target": "refinery-E-110",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-E-110-refinery-P-107",
+      "source": "refinery-E-110",
+      "target": "refinery-P-107",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-107-refinery-P-108",
+      "source": "refinery-P-107",
+      "target": "refinery-P-108",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-108-refinery-P-109",
+      "source": "refinery-P-108",
+      "target": "refinery-P-109",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-109-refinery-P-110",
+      "source": "refinery-P-109",
+      "target": "refinery-P-110",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-110-refinery-V-109",
+      "source": "refinery-P-110",
+      "target": "refinery-V-109",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-109-refinery-V-110",
+      "source": "refinery-V-109",
+      "target": "refinery-V-110",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-110-refinery-V-111",
+      "source": "refinery-V-110",
+      "target": "refinery-V-111",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-111-refinery-V-112",
+      "source": "refinery-V-111",
+      "target": "refinery-V-112",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-112-refinery-V-113",
+      "source": "refinery-V-112",
+      "target": "refinery-V-113",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-113-refinery-V-114",
+      "source": "refinery-V-113",
+      "target": "refinery-V-114",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-R-101-refinery-R-102",
+      "source": "refinery-R-101",
+      "target": "refinery-R-102",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-R-102-refinery-C-101",
+      "source": "refinery-R-102",
+      "target": "refinery-C-101",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-C-101-refinery-C-102",
+      "source": "refinery-C-101",
+      "target": "refinery-C-102",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-C-102-refinery-C-103",
+      "source": "refinery-C-102",
+      "target": "refinery-C-103",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-C-103-refinery-P-111",
+      "source": "refinery-C-103",
+      "target": "refinery-P-111",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-111-refinery-P-112",
+      "source": "refinery-P-111",
+      "target": "refinery-P-112",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-112-refinery-P-113",
+      "source": "refinery-P-112",
+      "target": "refinery-P-113",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-113-refinery-P-114",
+      "source": "refinery-P-113",
+      "target": "refinery-P-114",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-114-refinery-V-115",
+      "source": "refinery-P-114",
+      "target": "refinery-V-115",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-115-refinery-V-116",
+      "source": "refinery-V-115",
+      "target": "refinery-V-116",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-116-refinery-V-117",
+      "source": "refinery-V-116",
+      "target": "refinery-V-117",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-117-refinery-V-118",
+      "source": "refinery-V-117",
+      "target": "refinery-V-118",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-118-refinery-V-119",
+      "source": "refinery-V-118",
+      "target": "refinery-V-119",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-119-refinery-V-120",
+      "source": "refinery-V-119",
+      "target": "refinery-V-120",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-R-103-refinery-R-104",
+      "source": "refinery-R-103",
+      "target": "refinery-R-104",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-R-104-refinery-C-104",
+      "source": "refinery-R-104",
+      "target": "refinery-C-104",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-C-104-refinery-C-105",
+      "source": "refinery-C-104",
+      "target": "refinery-C-105",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-C-105-refinery-P-115",
+      "source": "refinery-C-105",
+      "target": "refinery-P-115",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-115-refinery-P-116",
+      "source": "refinery-P-115",
+      "target": "refinery-P-116",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-116-refinery-P-117",
+      "source": "refinery-P-116",
+      "target": "refinery-P-117",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-117-refinery-V-121",
+      "source": "refinery-P-117",
+      "target": "refinery-V-121",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-121-refinery-V-122",
+      "source": "refinery-V-121",
+      "target": "refinery-V-122",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-122-refinery-V-123",
+      "source": "refinery-V-122",
+      "target": "refinery-V-123",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-123-refinery-V-124",
+      "source": "refinery-V-123",
+      "target": "refinery-V-124",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-124-refinery-V-125",
+      "source": "refinery-V-124",
+      "target": "refinery-V-125",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-TK-101-refinery-TK-102",
+      "source": "refinery-TK-101",
+      "target": "refinery-TK-102",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-TK-102-refinery-TK-103",
+      "source": "refinery-TK-102",
+      "target": "refinery-TK-103",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-TK-103-refinery-TK-104",
+      "source": "refinery-TK-103",
+      "target": "refinery-TK-104",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-TK-104-refinery-TK-105",
+      "source": "refinery-TK-104",
+      "target": "refinery-TK-105",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-TK-105-refinery-TK-106",
+      "source": "refinery-TK-105",
+      "target": "refinery-TK-106",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-TK-106-refinery-TK-107",
+      "source": "refinery-TK-106",
+      "target": "refinery-TK-107",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-TK-107-refinery-TK-108",
+      "source": "refinery-TK-107",
+      "target": "refinery-TK-108",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-TK-108-refinery-TK-109",
+      "source": "refinery-TK-108",
+      "target": "refinery-TK-109",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-TK-109-refinery-TK-110",
+      "source": "refinery-TK-109",
+      "target": "refinery-TK-110",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-TK-110-refinery-P-118",
+      "source": "refinery-TK-110",
+      "target": "refinery-P-118",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-118-refinery-P-119",
+      "source": "refinery-P-118",
+      "target": "refinery-P-119",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-119-refinery-P-120",
+      "source": "refinery-P-119",
+      "target": "refinery-P-120",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-120-refinery-P-121",
+      "source": "refinery-P-120",
+      "target": "refinery-P-121",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-121-refinery-V-126",
+      "source": "refinery-P-121",
+      "target": "refinery-V-126",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-126-refinery-V-127",
+      "source": "refinery-V-126",
+      "target": "refinery-V-127",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-127-refinery-V-128",
+      "source": "refinery-V-127",
+      "target": "refinery-V-128",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-128-refinery-V-129",
+      "source": "refinery-V-128",
+      "target": "refinery-V-129",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-129-refinery-V-130",
+      "source": "refinery-V-129",
+      "target": "refinery-V-130",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-130-refinery-V-131",
+      "source": "refinery-V-130",
+      "target": "refinery-V-131",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-B-101-refinery-B-102",
+      "source": "refinery-B-101",
+      "target": "refinery-B-102",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-B-102-refinery-B-103",
+      "source": "refinery-B-102",
+      "target": "refinery-B-103",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-B-103-refinery-P-122",
+      "source": "refinery-B-103",
+      "target": "refinery-P-122",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-122-refinery-P-123",
+      "source": "refinery-P-122",
+      "target": "refinery-P-123",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-123-refinery-P-124",
+      "source": "refinery-P-123",
+      "target": "refinery-P-124",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-124-refinery-P-125",
+      "source": "refinery-P-124",
+      "target": "refinery-P-125",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-P-125-refinery-V-132",
+      "source": "refinery-P-125",
+      "target": "refinery-V-132",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-132-refinery-V-133",
+      "source": "refinery-V-132",
+      "target": "refinery-V-133",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-133-refinery-V-134",
+      "source": "refinery-V-133",
+      "target": "refinery-V-134",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-134-refinery-V-135",
+      "source": "refinery-V-134",
+      "target": "refinery-V-135",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-135-refinery-V-136",
+      "source": "refinery-V-135",
+      "target": "refinery-V-136",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-136-refinery-V-137",
+      "source": "refinery-V-136",
+      "target": "refinery-V-137",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-137-refinery-M-101",
+      "source": "refinery-V-137",
+      "target": "refinery-M-101",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-M-101-refinery-M-102",
+      "source": "refinery-M-101",
+      "target": "refinery-M-102",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-M-102-refinery-M-103",
+      "source": "refinery-M-102",
+      "target": "refinery-M-103",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-M-103-refinery-M-104",
+      "source": "refinery-M-103",
+      "target": "refinery-M-104",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-108-refinery-CL-103",
+      "source": "refinery-V-108",
+      "target": "refinery-CL-103",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-114-refinery-R-101",
+      "source": "refinery-V-114",
+      "target": "refinery-R-101",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-120-refinery-R-103",
+      "source": "refinery-V-120",
+      "target": "refinery-R-103",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-125-refinery-TK-101",
+      "source": "refinery-V-125",
+      "target": "refinery-TK-101",
+      "kind": "pipe"
+    },
+    {
+      "id": "conn-refinery-V-131-refinery-B-101",
+      "source": "refinery-V-131",
+      "target": "refinery-B-101",
+      "kind": "pipe"
+    },
+    {
+      "id": "wire-refinery-CL-101-SEN1",
+      "source": "refinery-CL-101-SEN1",
+      "target": "refinery-CL-101",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-CL-102-SEN1",
+      "source": "refinery-CL-102-SEN1",
+      "target": "refinery-CL-102",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-E-101-SEN1",
+      "source": "refinery-E-101-SEN1",
+      "target": "refinery-E-101",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-E-102-SEN1",
+      "source": "refinery-E-102-SEN1",
+      "target": "refinery-E-102",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-E-102-SEN2",
+      "source": "refinery-E-102-SEN2",
+      "target": "refinery-E-102",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-E-103-SEN1",
+      "source": "refinery-E-103-SEN1",
+      "target": "refinery-E-103",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-E-104-SEN1",
+      "source": "refinery-E-104-SEN1",
+      "target": "refinery-E-104",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-E-104-SEN2",
+      "source": "refinery-E-104-SEN2",
+      "target": "refinery-E-104",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-E-105-SEN1",
+      "source": "refinery-E-105-SEN1",
+      "target": "refinery-E-105",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-E-106-SEN1",
+      "source": "refinery-E-106-SEN1",
+      "target": "refinery-E-106",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-E-106-SEN2",
+      "source": "refinery-E-106-SEN2",
+      "target": "refinery-E-106",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-101-SEN1",
+      "source": "refinery-P-101-SEN1",
+      "target": "refinery-P-101",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-101-SEN2",
+      "source": "refinery-P-101-SEN2",
+      "target": "refinery-P-101",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-102-SEN1",
+      "source": "refinery-P-102-SEN1",
+      "target": "refinery-P-102",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-103-SEN1",
+      "source": "refinery-P-103-SEN1",
+      "target": "refinery-P-103",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-103-SEN2",
+      "source": "refinery-P-103-SEN2",
+      "target": "refinery-P-103",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-104-SEN1",
+      "source": "refinery-P-104-SEN1",
+      "target": "refinery-P-104",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-104-SEN2",
+      "source": "refinery-P-104-SEN2",
+      "target": "refinery-P-104",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-105-SEN1",
+      "source": "refinery-P-105-SEN1",
+      "target": "refinery-P-105",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-105-SEN2",
+      "source": "refinery-P-105-SEN2",
+      "target": "refinery-P-105",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-106-SEN1",
+      "source": "refinery-P-106-SEN1",
+      "target": "refinery-P-106",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-101-SEN1",
+      "source": "refinery-V-101-SEN1",
+      "target": "refinery-V-101",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-102-SEN1",
+      "source": "refinery-V-102-SEN1",
+      "target": "refinery-V-102",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-103-SEN1",
+      "source": "refinery-V-103-SEN1",
+      "target": "refinery-V-103",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-104-SEN1",
+      "source": "refinery-V-104-SEN1",
+      "target": "refinery-V-104",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-105-SEN1",
+      "source": "refinery-V-105-SEN1",
+      "target": "refinery-V-105",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-106-SEN1",
+      "source": "refinery-V-106-SEN1",
+      "target": "refinery-V-106",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-107-SEN1",
+      "source": "refinery-V-107-SEN1",
+      "target": "refinery-V-107",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-108-SEN1",
+      "source": "refinery-V-108-SEN1",
+      "target": "refinery-V-108",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-CL-103-SEN1",
+      "source": "refinery-CL-103-SEN1",
+      "target": "refinery-CL-103",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-CL-103-SEN2",
+      "source": "refinery-CL-103-SEN2",
+      "target": "refinery-CL-103",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-E-107-SEN1",
+      "source": "refinery-E-107-SEN1",
+      "target": "refinery-E-107",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-E-108-SEN1",
+      "source": "refinery-E-108-SEN1",
+      "target": "refinery-E-108",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-E-108-SEN2",
+      "source": "refinery-E-108-SEN2",
+      "target": "refinery-E-108",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-E-109-SEN1",
+      "source": "refinery-E-109-SEN1",
+      "target": "refinery-E-109",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-E-109-SEN2",
+      "source": "refinery-E-109-SEN2",
+      "target": "refinery-E-109",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-E-110-SEN1",
+      "source": "refinery-E-110-SEN1",
+      "target": "refinery-E-110",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-107-SEN1",
+      "source": "refinery-P-107-SEN1",
+      "target": "refinery-P-107",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-107-SEN2",
+      "source": "refinery-P-107-SEN2",
+      "target": "refinery-P-107",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-108-SEN1",
+      "source": "refinery-P-108-SEN1",
+      "target": "refinery-P-108",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-109-SEN1",
+      "source": "refinery-P-109-SEN1",
+      "target": "refinery-P-109",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-110-SEN1",
+      "source": "refinery-P-110-SEN1",
+      "target": "refinery-P-110",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-110-SEN2",
+      "source": "refinery-P-110-SEN2",
+      "target": "refinery-P-110",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-109-SEN1",
+      "source": "refinery-V-109-SEN1",
+      "target": "refinery-V-109",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-110-SEN1",
+      "source": "refinery-V-110-SEN1",
+      "target": "refinery-V-110",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-111-SEN1",
+      "source": "refinery-V-111-SEN1",
+      "target": "refinery-V-111",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-112-SEN1",
+      "source": "refinery-V-112-SEN1",
+      "target": "refinery-V-112",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-113-SEN1",
+      "source": "refinery-V-113-SEN1",
+      "target": "refinery-V-113",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-114-SEN1",
+      "source": "refinery-V-114-SEN1",
+      "target": "refinery-V-114",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-R-101-SEN1",
+      "source": "refinery-R-101-SEN1",
+      "target": "refinery-R-101",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-R-102-SEN1",
+      "source": "refinery-R-102-SEN1",
+      "target": "refinery-R-102",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-R-102-SEN2",
+      "source": "refinery-R-102-SEN2",
+      "target": "refinery-R-102",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-C-101-SEN1",
+      "source": "refinery-C-101-SEN1",
+      "target": "refinery-C-101",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-C-102-SEN1",
+      "source": "refinery-C-102-SEN1",
+      "target": "refinery-C-102",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-C-102-SEN2",
+      "source": "refinery-C-102-SEN2",
+      "target": "refinery-C-102",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-C-103-SEN1",
+      "source": "refinery-C-103-SEN1",
+      "target": "refinery-C-103",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-C-103-SEN2",
+      "source": "refinery-C-103-SEN2",
+      "target": "refinery-C-103",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-111-SEN1",
+      "source": "refinery-P-111-SEN1",
+      "target": "refinery-P-111",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-111-SEN2",
+      "source": "refinery-P-111-SEN2",
+      "target": "refinery-P-111",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-112-SEN1",
+      "source": "refinery-P-112-SEN1",
+      "target": "refinery-P-112",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-112-SEN2",
+      "source": "refinery-P-112-SEN2",
+      "target": "refinery-P-112",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-113-SEN1",
+      "source": "refinery-P-113-SEN1",
+      "target": "refinery-P-113",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-114-SEN1",
+      "source": "refinery-P-114-SEN1",
+      "target": "refinery-P-114",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-114-SEN2",
+      "source": "refinery-P-114-SEN2",
+      "target": "refinery-P-114",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-115-SEN1",
+      "source": "refinery-V-115-SEN1",
+      "target": "refinery-V-115",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-116-SEN1",
+      "source": "refinery-V-116-SEN1",
+      "target": "refinery-V-116",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-117-SEN1",
+      "source": "refinery-V-117-SEN1",
+      "target": "refinery-V-117",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-118-SEN1",
+      "source": "refinery-V-118-SEN1",
+      "target": "refinery-V-118",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-119-SEN1",
+      "source": "refinery-V-119-SEN1",
+      "target": "refinery-V-119",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-120-SEN1",
+      "source": "refinery-V-120-SEN1",
+      "target": "refinery-V-120",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-R-103-SEN1",
+      "source": "refinery-R-103-SEN1",
+      "target": "refinery-R-103",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-R-104-SEN1",
+      "source": "refinery-R-104-SEN1",
+      "target": "refinery-R-104",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-R-104-SEN2",
+      "source": "refinery-R-104-SEN2",
+      "target": "refinery-R-104",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-C-104-SEN1",
+      "source": "refinery-C-104-SEN1",
+      "target": "refinery-C-104",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-C-104-SEN2",
+      "source": "refinery-C-104-SEN2",
+      "target": "refinery-C-104",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-C-105-SEN1",
+      "source": "refinery-C-105-SEN1",
+      "target": "refinery-C-105",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-115-SEN1",
+      "source": "refinery-P-115-SEN1",
+      "target": "refinery-P-115",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-115-SEN2",
+      "source": "refinery-P-115-SEN2",
+      "target": "refinery-P-115",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-116-SEN1",
+      "source": "refinery-P-116-SEN1",
+      "target": "refinery-P-116",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-116-SEN2",
+      "source": "refinery-P-116-SEN2",
+      "target": "refinery-P-116",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-117-SEN1",
+      "source": "refinery-P-117-SEN1",
+      "target": "refinery-P-117",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-117-SEN2",
+      "source": "refinery-P-117-SEN2",
+      "target": "refinery-P-117",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-121-SEN1",
+      "source": "refinery-V-121-SEN1",
+      "target": "refinery-V-121",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-122-SEN1",
+      "source": "refinery-V-122-SEN1",
+      "target": "refinery-V-122",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-123-SEN1",
+      "source": "refinery-V-123-SEN1",
+      "target": "refinery-V-123",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-124-SEN1",
+      "source": "refinery-V-124-SEN1",
+      "target": "refinery-V-124",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-125-SEN1",
+      "source": "refinery-V-125-SEN1",
+      "target": "refinery-V-125",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-TK-101-SEN1",
+      "source": "refinery-TK-101-SEN1",
+      "target": "refinery-TK-101",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-TK-102-SEN1",
+      "source": "refinery-TK-102-SEN1",
+      "target": "refinery-TK-102",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-TK-103-SEN1",
+      "source": "refinery-TK-103-SEN1",
+      "target": "refinery-TK-103",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-TK-104-SEN1",
+      "source": "refinery-TK-104-SEN1",
+      "target": "refinery-TK-104",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-TK-104-SEN2",
+      "source": "refinery-TK-104-SEN2",
+      "target": "refinery-TK-104",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-TK-105-SEN1",
+      "source": "refinery-TK-105-SEN1",
+      "target": "refinery-TK-105",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-TK-105-SEN2",
+      "source": "refinery-TK-105-SEN2",
+      "target": "refinery-TK-105",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-TK-106-SEN1",
+      "source": "refinery-TK-106-SEN1",
+      "target": "refinery-TK-106",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-TK-106-SEN2",
+      "source": "refinery-TK-106-SEN2",
+      "target": "refinery-TK-106",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-TK-107-SEN1",
+      "source": "refinery-TK-107-SEN1",
+      "target": "refinery-TK-107",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-TK-108-SEN1",
+      "source": "refinery-TK-108-SEN1",
+      "target": "refinery-TK-108",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-TK-108-SEN2",
+      "source": "refinery-TK-108-SEN2",
+      "target": "refinery-TK-108",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-TK-109-SEN1",
+      "source": "refinery-TK-109-SEN1",
+      "target": "refinery-TK-109",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-TK-110-SEN1",
+      "source": "refinery-TK-110-SEN1",
+      "target": "refinery-TK-110",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-TK-110-SEN2",
+      "source": "refinery-TK-110-SEN2",
+      "target": "refinery-TK-110",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-118-SEN1",
+      "source": "refinery-P-118-SEN1",
+      "target": "refinery-P-118",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-119-SEN1",
+      "source": "refinery-P-119-SEN1",
+      "target": "refinery-P-119",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-119-SEN2",
+      "source": "refinery-P-119-SEN2",
+      "target": "refinery-P-119",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-120-SEN1",
+      "source": "refinery-P-120-SEN1",
+      "target": "refinery-P-120",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-120-SEN2",
+      "source": "refinery-P-120-SEN2",
+      "target": "refinery-P-120",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-121-SEN1",
+      "source": "refinery-P-121-SEN1",
+      "target": "refinery-P-121",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-121-SEN2",
+      "source": "refinery-P-121-SEN2",
+      "target": "refinery-P-121",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-126-SEN1",
+      "source": "refinery-V-126-SEN1",
+      "target": "refinery-V-126",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-127-SEN1",
+      "source": "refinery-V-127-SEN1",
+      "target": "refinery-V-127",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-128-SEN1",
+      "source": "refinery-V-128-SEN1",
+      "target": "refinery-V-128",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-129-SEN1",
+      "source": "refinery-V-129-SEN1",
+      "target": "refinery-V-129",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-130-SEN1",
+      "source": "refinery-V-130-SEN1",
+      "target": "refinery-V-130",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-131-SEN1",
+      "source": "refinery-V-131-SEN1",
+      "target": "refinery-V-131",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-B-101-SEN1",
+      "source": "refinery-B-101-SEN1",
+      "target": "refinery-B-101",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-B-102-SEN1",
+      "source": "refinery-B-102-SEN1",
+      "target": "refinery-B-102",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-B-103-SEN1",
+      "source": "refinery-B-103-SEN1",
+      "target": "refinery-B-103",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-B-103-SEN2",
+      "source": "refinery-B-103-SEN2",
+      "target": "refinery-B-103",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-122-SEN1",
+      "source": "refinery-P-122-SEN1",
+      "target": "refinery-P-122",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-122-SEN2",
+      "source": "refinery-P-122-SEN2",
+      "target": "refinery-P-122",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-123-SEN1",
+      "source": "refinery-P-123-SEN1",
+      "target": "refinery-P-123",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-123-SEN2",
+      "source": "refinery-P-123-SEN2",
+      "target": "refinery-P-123",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-124-SEN1",
+      "source": "refinery-P-124-SEN1",
+      "target": "refinery-P-124",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-124-SEN2",
+      "source": "refinery-P-124-SEN2",
+      "target": "refinery-P-124",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-125-SEN1",
+      "source": "refinery-P-125-SEN1",
+      "target": "refinery-P-125",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-P-125-SEN2",
+      "source": "refinery-P-125-SEN2",
+      "target": "refinery-P-125",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-132-SEN1",
+      "source": "refinery-V-132-SEN1",
+      "target": "refinery-V-132",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-133-SEN1",
+      "source": "refinery-V-133-SEN1",
+      "target": "refinery-V-133",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-134-SEN1",
+      "source": "refinery-V-134-SEN1",
+      "target": "refinery-V-134",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-135-SEN1",
+      "source": "refinery-V-135-SEN1",
+      "target": "refinery-V-135",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-136-SEN1",
+      "source": "refinery-V-136-SEN1",
+      "target": "refinery-V-136",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-V-137-SEN1",
+      "source": "refinery-V-137-SEN1",
+      "target": "refinery-V-137",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-M-101-SEN1",
+      "source": "refinery-M-101-SEN1",
+      "target": "refinery-M-101",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-M-102-SEN1",
+      "source": "refinery-M-102-SEN1",
+      "target": "refinery-M-102",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-M-103-SEN1",
+      "source": "refinery-M-103-SEN1",
+      "target": "refinery-M-103",
+      "kind": "wire"
+    },
+    {
+      "id": "wire-refinery-M-104-SEN1",
+      "source": "refinery-M-104-SEN1",
+      "target": "refinery-M-104",
+      "kind": "wire"
+    }
+  ]
+}

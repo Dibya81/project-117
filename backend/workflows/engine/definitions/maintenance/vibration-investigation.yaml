@@ -1,0 +1,57 @@
+name: vibration-investigation
+description: >-
+  Investigate a rising-vibration report on a rotating machine. Retrieves the
+  manual and history, asks the maintenance agent to assess it, and escalates to
+  the safety agent only when the assessment is grounded and flags a hazard.
+version: "1"
+agent: maintenance
+inputs:
+  - equipment_tag
+  - symptom
+steps:
+  - id: retrieve
+    kind: retrieve
+    name: retrieval
+    description: Pull manual sections and operational history for this tag
+    arguments:
+      query: "{{inputs.equipment_tag}} vibration {{inputs.symptom}}"
+      top_k: 12
+    timeout_seconds: 120
+
+  - id: assess
+    kind: agent
+    name: maintenance
+    description: Assess probable cause and recommended action from the evidence
+    depends_on:
+      - retrieve
+    arguments:
+      task: "Assess the vibration trend on {{inputs.equipment_tag}}: {{inputs.symptom}}"
+      equipment_tag: "{{inputs.equipment_tag}}"
+      symptom: "{{inputs.symptom}}"
+    timeout_seconds: 300
+    # The retrieval step reports how much evidence it actually assembled.
+    # With none, the agent would be answering from model priors, so the run
+    # skips the assessment rather than producing an ungrounded recommendation.
+    when: "steps.retrieve.output.evidence > 0"
+
+  - id: safety_review
+    kind: agent
+    name: safety
+    description: Independent safety review of the maintenance recommendation
+    depends_on:
+      - assess
+    arguments:
+      task: "Review the maintenance assessment for {{inputs.equipment_tag}} for safety implications"
+      equipment_tag: "{{inputs.equipment_tag}}"
+    timeout_seconds: 300
+    # Only review a grounded, non-degraded assessment. Reviewing a degraded
+    # one would attach a safety sign-off to an answer the agent itself said
+    # was incomplete.
+    when: "steps.assess.output.grounded and not steps.assess.output.degraded"
+
+  - id: verify
+    kind: verify
+    name: verifier
+    description: Check evidence, citations and calculations before release
+    depends_on:
+      - assess

@@ -1,0 +1,69 @@
+[
+  {
+    "id": "APR-231",
+    "title": "Outage window for C-3 bearing inspection",
+    "type": "work_order_schedule",
+    "status": "pending",
+    "risk": "medium",
+    "requestedBy": "reliability.engineer",
+    "requestedAt": "2026-09-07T05:02:00Z",
+    "requiredRole": "manager",
+    "relatedId": "WO-8852",
+    "summary": "SOP-07.3 rev4 section 5 requires Maintenance Manager approval for an outage on criticality-high equipment.",
+    "evidence": [
+      "d-1",
+      "d-2"
+    ]
+  },
+  {
+    "id": "APR-220",
+    "title": "Publish vibration analysis report for C-3",
+    "type": "artifact_release",
+    "status": "pending",
+    "risk": "low",
+    "requestedBy": "ai.orchestrator",
+    "requestedAt": "2026-09-07T04:58:00Z",
+    "requiredRole": "engineer",
+    "relatedId": "art-61",
+    "summary": "Generated PDF carries citations to IR-204 and SOP-07.3; release for distribution.",
+    "evidence": [
+      "d-1",
+      "d-2",
+      "d-4"
+    ]
+  },
+  {
+    "id": "APR-218",
+    "title": "Raise priority of V-2210 level investigation",
+    "type": "work_order_change",
+    "status": "approved",
+    "risk": "high",
+    "requestedBy": "operations.shift",
+    "requestedAt": "2026-09-03T18:10:00Z",
+    "decidedBy": "maintenance.manager",
+    "decidedAt": "2026-09-03T18:44:00Z",
+    "decisionNote": "Approved; level excursion is a safety-relevant deviation.",
+    "requiredRole": "manager",
+    "relatedId": "WO-8837",
+    "summary": "Escalate to critical priority following sustained high level.",
+    "evidence": [
+      "d-7"
+    ]
+  },
+  {
+    "id": "APR-209",
+    "title": "Sandbox execution of vibration FFT script",
+    "type": "code_execution",
+    "status": "approved",
+    "risk": "medium",
+    "requestedBy": "ai.orchestrator",
+    "requestedAt": "2026-09-02T10:22:00Z",
+    "decidedBy": "reliability.engineer",
+    "decidedAt": "2026-09-02T10:31:00Z",
+    "decisionNote": "Approved; no network, read-only inputs.",
+    "requiredRole": "engineer",
+    "relatedId": "job-88",
+    "summary": "Analysis step requires running Python in the isolated sandbox.",
+    "evidence": []
+  }
+]

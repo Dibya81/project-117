@@ -1,0 +1,17 @@
+# Never crawl vendored deps, virtualenvs, build output or audit scratch
+node_modules/
+.graphify-venv/
+.venv/
+.next/
+.pnpm-store/
+.pytest_cache/
+__pycache__/
+.ruff_cache/
+.p117-audit/
+graphify-out/
+.lancedb/
+lancedb/
+data/uploads/
+*.log
+uv.lock
+pnpm-lock.yaml

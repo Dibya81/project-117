@@ -1,0 +1,33 @@
+name: maintenance-recommendation
+description: >-
+  Given an equipment tag and a symptom, retrieve relevant manuals/history,
+  ask the maintenance agent for a recommendation, then verify the answer
+  before it is returned.
+version: "1"
+agent: maintenance
+inputs:
+  - equipment_tag
+  - symptom
+steps:
+  - id: retrieve
+    kind: retrieve
+    name: retrieval
+    description: Pull relevant manual/history evidence for this equipment
+    arguments:
+      query: "{{inputs.equipment_tag}} {{inputs.symptom}}"
+  - id: recommend
+    kind: agent
+    name: maintenance
+    description: Produce a maintenance recommendation grounded in the retrieved evidence
+    depends_on:
+      - retrieve
+    arguments:
+      equipment_tag: "{{inputs.equipment_tag}}"
+      symptom: "{{inputs.symptom}}"
+    requires_approval: false
+  - id: verify
+    kind: verify
+    name: verifier
+    description: Check evidence, citations and calculations before returning the recommendation
+    depends_on:
+      - recommend

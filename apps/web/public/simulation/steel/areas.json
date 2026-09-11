@@ -1,0 +1,138 @@
+[
+  {
+    "id": "raw-material",
+    "name": "Raw Material Handling",
+    "x": 40,
+    "y": 40,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "sinter",
+    "name": "Sinter Plant",
+    "x": 340,
+    "y": 40,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "coke",
+    "name": "Coke Handling",
+    "x": 640,
+    "y": 40,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "blast-furnace",
+    "name": "Blast Furnace",
+    "x": 940,
+    "y": 40,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "hot-blast",
+    "name": "Hot Blast System",
+    "x": 1240,
+    "y": 40,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "gas-cleaning",
+    "name": "Gas Cleaning",
+    "x": 1540,
+    "y": 40,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "bof",
+    "name": "BOF Shop",
+    "x": 40,
+    "y": 250,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "ladle",
+    "name": "Secondary Metallurgy",
+    "x": 340,
+    "y": 250,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "casting",
+    "name": "Continuous Casting",
+    "x": 640,
+    "y": 250,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "reheat",
+    "name": "Reheating",
+    "x": 940,
+    "y": 250,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "rolling",
+    "name": "Hot Rolling",
+    "x": 1240,
+    "y": 250,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "cooling",
+    "name": "Cooling",
+    "x": 1540,
+    "y": 250,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "finishing",
+    "name": "Finishing",
+    "x": 40,
+    "y": 460,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "utilities",
+    "name": "Utilities",
+    "x": 340,
+    "y": 460,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "water",
+    "name": "Water Treatment",
+    "x": 640,
+    "y": 460,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "dust",
+    "name": "Dust Collection",
+    "x": 940,
+    "y": 460,
+    "w": 280,
+    "h": 180
+  },
+  {
+    "id": "safety",
+    "name": "Safety Systems",
+    "x": 1240,
+    "y": 460,
+    "w": 280,
+    "h": 180
+  }
+]

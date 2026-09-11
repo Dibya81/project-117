@@ -1,0 +1,276 @@
+"""Simulation API — /api/simulation/*
+
+REST for control + snapshot, SSE for the live event stream. AuthZ follows
+the equipment routes: reads need connectors:read, control needs
+connectors:write (an operator cannot trip a pump by guessing a URL).
+"""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+
+from backend.api.src.deps import get_principal
+from backend.security.rbac import Principal
+from backend.simulation import datasets
+from backend.simulation.models import Plant
+from backend.simulation.service import SimulationService
+
+router = APIRouter(prefix="/api/simulation", tags=["simulation"])
+
+
+class InjectRequest(BaseModel):
+    mode_id: str
+
+
+class DecisionRequest(BaseModel):
+    approved: bool
+
+
+class SavePlantRequest(BaseModel):
+    """Builder save payload: the full plant definition the canvas produced."""
+
+    plant: Plant
+
+
+def _svc() -> SimulationService:
+    # Wired in main.py at startup via attach().
+    from backend.simulation import api as _self
+    if _self.service is None:
+        raise HTTPException(status_code=503, detail={"code": "simulation_unavailable", "message": "no simulation service attached"})
+    return _self.service
+
+
+service: SimulationService | None = None
+
+
+def attach(svc: SimulationService) -> None:
+    """Called once at app startup; mirrors how the demo store is bound."""
+    global service
+    service = svc
+
+
+@router.get("/health")
+def health(principal: Principal = Depends(get_principal)) -> dict:
+    """Liveness probe the frontend calls before entering live mode.
+
+    The web app refuses to run its embedded engine unless mock mode was
+    explicitly selected, so this endpoint is what makes a missing backend
+    visible instead of silently faked.
+    """
+    svc = _svc()
+    return {
+        "status": "ok",
+        "mode": "live",
+        "database": svc.store.path,
+        "agents": svc.roster.status(),
+        "plants_registered": svc.registered_ids(),
+        "plants_available": [p["id"] for p in datasets.list_plants()],
+    }
+
+
+@router.get("/plants")
+def list_plants(principal: Principal = Depends(get_principal)) -> dict:
+    """Dataset plants plus any plant the builder saved to the database."""
+    svc = _svc()
+    return {
+        "source": "synthetic-simulation",
+        "plants": [*datasets.list_plants(), *svc.store.list_saved_plants(origin="builder")],
+    }
+
+
+@router.post("/plants", status_code=201)
+def save_plant(body: SavePlantRequest, principal: Principal = Depends(get_principal)) -> dict:
+    """Builder save. Writes the graph (plant, zones, equipment, sensors,
+    actuators, connections) to the database and registers it for simulation,
+    so a reload or a backend restart finds it again."""
+    svc = _svc()
+    svc.register(body.plant, origin="builder")
+    return {
+        "plant": body.plant.id,
+        "saved": True,
+        "equipment": len(body.plant.equipment),
+        "sensors": sum(len(e.sensors) for e in body.plant.equipment),
+        "connections": len(body.plant.connections),
+    }
+
+
+@router.get("/plants/{plant_id}/definition")
+def plant_definition(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    """Builder load: rehydrate a saved plant straight from the database."""
+    svc = _svc()
+    plant = svc.store.load_plant_definition(plant_id)
+    if plant is None:
+        try:
+            plant = datasets.load_plant(plant_id)
+        except datasets.DatasetError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"plant": plant.model_dump(), "source": "database"}
+
+
+@router.delete("/plants/{plant_id}")
+def delete_plant(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    svc = _svc()
+    removed = svc.store.delete_plant(plant_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail="unknown plant")
+    return {"plant": plant_id, "deleted": True}
+
+
+@router.post("/plants/{plant_id}/start")
+def start(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    svc = _svc()
+    try:
+        rt = svc.runtime(plant_id)
+    except KeyError:
+        # cold start: load + register on first use
+        try:
+            plant = datasets.load_plant(plant_id)
+        except datasets.DatasetError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        rt = svc.register(plant)
+    svc.start(plant_id)
+    return {"plant": plant_id, "running": rt.running, "t": rt.engine.t}
+
+
+@router.post("/plants/{plant_id}/pause")
+def pause(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    svc = _svc()
+    svc.pause(plant_id)
+    return {"plant": plant_id, "running": False}
+
+
+@router.get("/plants/{plant_id}/snapshot")
+def snapshot(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    svc = _svc()
+    try:
+        rt = svc.runtime(plant_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="plant not running") from exc
+    snap = rt.engine.snapshot()
+    snap["plant"] = rt.engine.plant.model_dump()
+    snap["source"] = "synthetic-simulation"
+    return snap
+
+
+@router.get("/plants/{plant_id}/stream")
+async def stream(plant_id: str, after: int = 0, principal: Principal = Depends(get_principal)) -> StreamingResponse:
+    svc = _svc()
+    try:
+        svc.runtime(plant_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="plant not running") from exc
+
+    async def gen():
+        async for ev in svc.subscribe(plant_id, after_seq=after):
+            yield f"data: {_json(ev)}\n\n"
+
+    return StreamingResponse(gen(), media_type="text/event-stream")
+
+
+def _json(ev: dict) -> str:
+    import json
+
+    return json.dumps(ev, separators=(",", ":"))
+
+
+@router.get("/plants/{plant_id}/incidents")
+def incidents(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    rt = _svc().runtime(plant_id)
+    return {"incidents": [i.model_dump() for i in rt.engine.incidents.values()]}
+
+
+@router.get("/plants/{plant_id}/incidents/{incident_id}/tasks")
+def incident_tasks(plant_id: str, incident_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    rt = _svc().runtime(plant_id)
+    tasks = rt.incident_tasks.get(incident_id)
+    plan = rt.incident_plans.get(incident_id)
+    if tasks is None or plan is None:
+        raise HTTPException(status_code=404, detail="unknown incident")
+    return {
+        "tasks": [t.model_dump() for t in tasks],
+        "plan": plan.model_dump(),
+    }
+
+
+@router.post("/plants/{plant_id}/equipment/{equipment_id}/failure")
+def inject(plant_id: str, equipment_id: str, body: InjectRequest, principal: Principal = Depends(get_principal)) -> dict:
+    svc = _svc()
+    try:
+        return svc.inject_failure(plant_id, equipment_id, body.mode_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/plants/{plant_id}/equipment/{equipment_id}/disable")
+def disable(plant_id: str, equipment_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    svc = _svc()
+    svc.disable_equipment(plant_id, equipment_id)
+    return {"equipment_id": equipment_id, "state": "disabled"}
+
+
+@router.post("/plants/{plant_id}/equipment/{equipment_id}/remove")
+def remove(plant_id: str, equipment_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    svc = _svc()
+    broken = svc.remove_equipment(plant_id, equipment_id)
+    return {"equipment_id": equipment_id, "state": "removed", "broken_paths": broken}
+
+
+@router.post("/plants/{plant_id}/incidents/{incident_id}/decision")
+def decide(plant_id: str, incident_id: str, body: DecisionRequest, principal: Principal = Depends(get_principal)) -> dict:
+    svc = _svc()
+    try:
+        return svc.decide(plant_id, incident_id, body.approved)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/plants/{plant_id}/alarms")
+def alarms(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    rt = _svc().runtime(plant_id)
+    return {"alarms": [a.model_dump() for a in rt.engine.alarms.values()]}
+
+
+@router.get("/plants/{plant_id}/artifacts")
+def artifacts(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    rt = _svc().runtime(plant_id)
+    return {"artifacts": rt.artifacts}
+
+
+@router.get("/plants/{plant_id}/history")
+def history(plant_id: str, limit: int = 50, principal: Principal = Depends(get_principal)) -> dict:
+    """Persisted incident history — read from the database, not from memory.
+
+    This is the endpoint that proves restart survival: it answers after a
+    process restart, with no plant registered in RAM.
+    """
+    svc = _svc()
+    return {"source": "database", "incidents": svc.store.incident_history(plant_id, limit=limit)}
+
+
+@router.get("/incidents/{incident_id}/record")
+def incident_record(incident_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    """Full persisted record for one incident: execution, tasks, evidence,
+    approval, action, verification, artifacts and audit events."""
+    svc = _svc()
+    record = svc.store.incident_record(incident_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="unknown incident")
+    return record
+
+
+@router.get("/audit")
+def audit(
+    plant_id: str | None = None,
+    incident_id: str | None = None,
+    limit: int = 200,
+    principal: Principal = Depends(get_principal),
+) -> dict:
+    """Persistent audit trail. The SSE stream mirrors these rows; the database
+    is the source of truth."""
+    svc = _svc()
+    return {
+        "source": "database",
+        "events": svc.store.audit_events(plant_id=plant_id, incident_id=incident_id, limit=limit),
+    }

@@ -1,0 +1,41 @@
+name: inspection-analysis
+description: >-
+  Analyse the readings table in an inspection report. Retries the table
+  extraction, then only analyses if a table was actually found.
+version: "1"
+agent: data-analysis
+inputs:
+  - document_id
+steps:
+  - id: extract
+    kind: tool
+    name: extract_table
+    description: Extract the readings table from the inspection report
+    arguments:
+      document_id: "{{inputs.document_id}}"
+    timeout_seconds: 180
+    retry:
+      max_attempts: 3
+      backoff_seconds: 1.0
+      backoff_multiplier: 2.0
+      max_backoff_seconds: 8.0
+    continue_on_error: true
+
+  - id: analyse
+    kind: agent
+    name: data-analysis
+    description: Interpret the extracted readings
+    depends_on:
+      - extract
+    arguments:
+      task: "Analyse the inspection readings and flag exceedances"
+      document_id: "{{inputs.document_id}}"
+    timeout_seconds: 300
+    when: "steps.extract.status == 'succeeded'"
+
+  - id: verify
+    kind: verify
+    name: verifier
+    description: Check the analysis arithmetic and citations
+    depends_on:
+      - analyse

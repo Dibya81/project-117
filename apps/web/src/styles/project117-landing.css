@@ -1,0 +1,1313 @@
+/*
+ * Project 117 — cinematic landing experience.
+ * Scoped under .p117 so nothing leaks into the (future) console styles.
+ * Palette is derived from the frame sequence: deep navy-black, steel gray,
+ * cool blue, controlled cyan, warm orange accents (the brand frame's "117").
+ */
+
+.p117 {
+  --ink: #e9eef4;
+  --ink-2: #aab8c6;
+  --ink-3: #66788a;
+  --cyan: #46b8e8;
+  --orange: #e8713a;
+  --bg: #070a0e;
+  --sans: Inter, "Helvetica Neue", "Segoe UI", Arial, ui-sans-serif, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  position: relative;
+}
+
+/* ---- scroll track ------------------------------------------------------- */
+
+/* The page is one tall track; the canvas and overlay stack are pinned while
+ * scroll position drives the frame sequence and scene choreography. */
+.p117-track {
+  position: relative;
+  height: 1120vh; /* 7 scenes × 160vh */
+}
+
+.p117-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  /* The stage owns the page background. Individual canvases must stay
+     transparent or every full-bleed canvas above the film paints it out. */
+  background: var(--bg);
+}
+
+.p117-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: transparent;
+}
+
+/* Readability gradients only — never enough to destroy frame detail. */
+.p117-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to top, rgba(7, 10, 14, 0.82), transparent 34%),
+    linear-gradient(to bottom, rgba(7, 10, 14, 0.55), transparent 26%);
+}
+
+.p117-scene-dark {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(4, 6, 9, 0.66);
+  opacity: 0;
+  transition: opacity 200ms linear;
+}
+
+/* ---- overlay stack ------------------------------------------------------- */
+
+.p117-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.p117-scene {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0 clamp(24px, 6vw, 96px) clamp(56px, 10vh, 120px);
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+.p117-scene--center {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding-bottom: 0;
+}
+
+.p117-scene--right {
+  align-items: flex-end;
+  text-align: right;
+}
+
+/* ---- typography ----------------------------------------------------------- */
+
+.p117-kicker {
+  font-family: var(--mono);
+  font-size: clamp(10px, 1vw, 12px);
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin: 0 0 18px;
+}
+
+.p117-kicker--orange {
+  color: var(--orange);
+}
+
+.p117-headline {
+  font-size: clamp(44px, 8.4vw, 128px);
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  margin: 0;
+  max-width: 12ch;
+  text-wrap: balance;
+}
+
+.p117-scene--center .p117-headline {
+  max-width: 16ch;
+}
+
+.p117-sub {
+  font-size: clamp(15px, 1.6vw, 20px);
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 44ch;
+  margin: 22px 0 0;
+}
+
+.p117-scene--center .p117-sub {
+  margin-inline: auto;
+}
+
+.p117-mono-line {
+  font-family: var(--mono);
+  font-size: clamp(11px, 1.1vw, 13px);
+  letter-spacing: 0.18em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+
+/* Scene 5 verbs — one at a time, large and spare. */
+.p117-verb {
+  font-size: clamp(56px, 11vw, 172px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  margin: 0;
+}
+
+.p117-verb em {
+  font-style: normal;
+  color: var(--cyan);
+}
+
+/* Scene 6 capability lines — typography instead of feature cards. */
+.p117-capabilities {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 2.2vh, 22px);
+}
+
+.p117-capabilities li {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  font-size: clamp(18px, 2.6vw, 34px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.p117-capabilities li::before {
+  content: attr(data-index);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--orange);
+}
+
+/* ---- navigation ------------------------------------------------------------ */
+
+.p117-nav {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px clamp(24px, 4vw, 56px);
+  pointer-events: none;
+}
+
+.p117-nav a,
+.p117-nav button {
+  pointer-events: auto;
+}
+
+.p117-brand {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.34em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.p117-brand b {
+  color: var(--orange);
+  font-weight: 700;
+}
+
+.p117-nav-links {
+  display: flex;
+  gap: clamp(14px, 2.4vw, 34px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.p117-nav-links a {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.p117-nav-links a:hover,
+.p117-nav-links a:focus-visible {
+  color: var(--ink);
+}
+
+/* ---- chapter + progress ----------------------------------------------------- */
+
+.p117-chapters {
+  position: fixed;
+  right: clamp(16px, 3vw, 44px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.p117-chapters button {
+  appearance: none;
+  border: 0;
+  padding: 3px 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: #93a4b6;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  transition: color 160ms ease;
+  /* The rail floats over the film, which runs from near-black interiors to a
+     bright dusk sky. A soft scrim keeps the labels legible on every frame
+     instead of only the dark ones. */
+  border-radius: 3px;
+  background: rgba(5, 8, 12, 0.42);
+  backdrop-filter: blur(3px);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.85);
+}
+
+.p117-chapters button::after {
+  content: "";
+  width: 18px;
+  height: 1px;
+  background: currentColor;
+  transition: width 160ms ease;
+}
+
+.p117-chapters button[aria-current="true"] {
+  color: var(--cyan);
+}
+
+.p117-chapters button[aria-current="true"]::after {
+  width: 34px;
+}
+
+.p117-chapters span {
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .p117-chapters span {
+    display: inline;
+  }
+}
+
+.p117-progress {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  z-index: 30;
+  height: 2px;
+  width: 100%;
+  background: rgba(102, 120, 138, 0.22);
+}
+
+.p117-progress i {
+  display: block;
+  height: 100%;
+  background: var(--cyan);
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+
+.p117-scrollhint {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  z-index: 30;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.34em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: opacity 400ms ease;
+}
+
+.p117-scrollhint::after {
+  content: "";
+  width: 1px;
+  height: 34px;
+  background: linear-gradient(to bottom, var(--ink-3), transparent);
+  animation: p117-drip 2.2s ease-in-out infinite;
+}
+
+@keyframes p117-drip {
+  0% { transform: scaleY(0); transform-origin: top; }
+  45% { transform: scaleY(1); transform-origin: top; }
+  55% { transform: scaleY(1); transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+
+/* ---- CTA --------------------------------------------------------------------- */
+
+.p117-cta {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 40px;
+  padding: 16px 30px;
+  border: 1px solid rgba(70, 184, 232, 0.55);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  text-decoration: none;
+  background: rgba(70, 184, 232, 0.07);
+  transition: background 200ms ease, border-color 200ms ease;
+}
+
+.p117-cta:hover,
+.p117-cta:focus-visible {
+  background: rgba(70, 184, 232, 0.16);
+  border-color: var(--cyan);
+}
+
+.p117-cta svg {
+  transition: transform 200ms ease;
+}
+
+.p117-cta:hover svg {
+  transform: translateX(4px);
+}
+
+/* ---- reduced motion ------------------------------------------------------------ */
+
+/* Static stacked scenes with representative stills; no scrub, no pin. */
+.p117--static .p117-track {
+  height: auto;
+}
+
+.p117--static .p117-stage {
+  position: static;
+  height: auto;
+  overflow: visible;
+}
+
+.p117--static .p117-canvas,
+.p117--static .p117-scrollhint,
+.p117--static .p117-progress {
+  display: none;
+}
+
+.p117--static .p117-overlay {
+  position: static;
+}
+
+.p117--static .p117-scene {
+  position: relative;
+  min-height: 82vh;
+  opacity: 1;
+  visibility: visible;
+  justify-content: center;
+  background-size: cover;
+  background-position: center;
+}
+
+.p117--static .p117-scene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(7, 10, 14, 0.85), rgba(7, 10, 14, 0.35));
+}
+
+.p117--static .p117-scene > * {
+  position: relative;
+}
+
+/* ---- responsive ------------------------------------------------------------------ */
+
+@media (max-width: 760px) {
+  .p117-nav-links {
+    display: none; /* brand + chapter rail remain; story is the nav on small screens */
+  }
+
+  .p117-chapters {
+    right: 12px;
+    gap: 10px;
+  }
+
+  .p117-scene {
+    padding-bottom: 84px;
+  }
+}
+
+
+/* ==================================================================
+ * Sections 2–5 — one continuous cinematic world
+ * ================================================================== */
+
+.p117-track {
+  height: 2950vh; /* five acts, one film */
+}
+
+.p117-fx {
+  opacity: 1;
+  background: transparent;
+  pointer-events: none;
+}
+
+/* Generic scroll beat: absolutely pinned text moment driven by the director. */
+.p117-beat {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 clamp(20px, 5vw, 80px);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+.p117-beat--bl {
+  align-items: flex-start;
+  text-align: left;
+  justify-content: flex-end;
+  padding-bottom: clamp(64px, 11vh, 130px);
+}
+
+/* Legibility bed for a beat: a soft radial scrim that darkens the centre
+ * enough for type without flattening the film underneath at the edges. */
+.p117-beat::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 68% 58% at 50% 50%,
+    rgba(5, 8, 12, 0.78) 0%,
+    rgba(5, 8, 12, 0.42) 48%,
+    rgba(5, 8, 12, 0) 80%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.p117-beat--bl::after {
+  background: linear-gradient(
+    to top,
+    rgba(5, 8, 12, 0.9) 0%,
+    rgba(5, 8, 12, 0.5) 34%,
+    rgba(5, 8, 12, 0) 72%
+  );
+}
+
+.p117-beat > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Optional still backdrop for a beat (React writes `background-image`). */
+.p117-beat[style*="background-image"] {
+  background-size: cover;
+  background-position: center;
+}
+
+.p117-beat[style*="background-image"]::after {
+  background: linear-gradient(to top, rgba(7, 10, 14, 0.82), rgba(7, 10, 14, 0.35));
+}
+
+.p117-beat--split {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 9vw;
+}
+
+.p117-headline--mid {
+  font-size: clamp(34px, 6vw, 84px);
+}
+
+.p117-sub--big {
+  font-size: clamp(20px, 3vw, 34px);
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+
+.p117-mono-line--danger {
+  color: var(--orange);
+}
+
+.p117-verb--accent,
+.p117-verb em {
+  color: var(--cyan);
+  font-style: normal;
+}
+
+/* Section 2 — morphing word stack */
+.p117-morph {
+  position: relative;
+  height: 1.1em;
+  font-size: clamp(44px, 8.4vw, 128px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-top: 6px;
+  min-width: 12ch;
+}
+
+.p117-morphword {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  color: var(--cyan);
+}
+
+.p117-morphword span {
+  display: inline-block;
+  opacity: 0;
+  will-change: transform, opacity, filter;
+}
+
+.p117-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Request pill — a task entering the system */
+.p117-request {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--line);
+  background: rgba(17, 23, 32, 0.85);
+  padding: 14px 22px;
+  font-size: clamp(13px, 1.4vw, 17px);
+  color: var(--ink);
+  border-radius: 4px;
+}
+
+.p117-request span {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--orange);
+}
+
+.p117-request--center {
+  font-size: clamp(15px, 1.8vw, 21px);
+}
+
+/* Section 5 — workflow rail */
+.p117-steps {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 3vh, 26px);
+  align-items: flex-start;
+}
+
+.p117-step {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: clamp(22px, 3.4vw, 44px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  opacity: 0.18;
+}
+
+.p117-step i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  flex: none;
+}
+
+/* Section 5 — agent delegation row */
+.p117-agentrow {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(14px, 3vw, 40px);
+  font-family: var(--mono);
+  font-size: clamp(10px, 1.1vw, 13px);
+  letter-spacing: 0.22em;
+  padding-top: 26px;
+  border-top: 1px solid var(--line);
+  min-width: min(80vw, 900px);
+}
+
+.p117-agentdot {
+  position: absolute;
+  top: -3px;
+  left: var(--dotx, 0%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan);
+  transition: left 80ms linear;
+}
+
+/* Section 5 — sandbox */
+.p117-sandbox {
+  border: 1px dashed rgba(70, 184, 232, 0.3);
+  border-radius: 8px;
+  padding: clamp(20px, 4vw, 44px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  background: rgba(11, 15, 20, 0.6);
+  transition: border-color 120ms linear;
+}
+
+.p117-code {
+  font-family: var(--mono);
+  font-size: clamp(10px, 1.15vw, 14px);
+  line-height: 1.8;
+  color: var(--ink-2);
+  background: rgba(7, 10, 14, 0.9);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 16px 20px;
+  margin: 0;
+  text-align: left;
+  will-change: transform;
+}
+
+.p117-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.p117-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  border: 1px solid rgba(70, 184, 232, 0.4);
+  padding: 7px 14px;
+  border-radius: 999px;
+  opacity: 0;
+}
+
+/* Section 5 — self-drawing graph */
+.p117-graph {
+  width: min(64vw, 460px);
+  height: auto;
+}
+
+.p117-graphcaption {
+  margin-top: 14px;
+  color: var(--orange);
+}
+
+/* Section 5 — artifact assembly */
+.p117-genlabel {
+  position: absolute;
+  top: clamp(56px, 12vh, 120px);
+  color: var(--orange);
+}
+
+.p117-docs {
+  position: relative;
+  display: flex;
+  gap: clamp(18px, 4vw, 54px);
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.p117-doc {
+  position: relative;
+  width: clamp(84px, 9vw, 124px);
+  height: clamp(110px, 12vw, 160px);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: rgba(17, 23, 32, 0.92);
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  will-change: transform, opacity;
+}
+
+.p117-doc span {
+  position: absolute;
+  bottom: -24px;
+  left: 0;
+  right: 0;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--ink-3);
+}
+
+.p117-doc i {
+  display: block;
+  background: var(--line);
+  height: 4px;
+  border-radius: 2px;
+  opacity: 0;
+}
+
+.p117-doc--pdf i {
+  background: rgba(232, 113, 58, 0.5);
+}
+.p117-doc--pdf i:nth-child(1) { width: 55%; }
+.p117-doc--pdf i:nth-child(2) { width: 90%; height: 34px; background: rgba(232, 113, 58, 0.16); }
+.p117-doc--pdf i:nth-child(3) { width: 75%; }
+
+.p117-doc--xlsx {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-auto-rows: 14px;
+  gap: 4px;
+  align-content: start;
+}
+.p117-doc--xlsx i { height: auto; background: rgba(52, 211, 153, 0.28); }
+.p117-doc--xlsx i:nth-child(1) { background: rgba(52, 211, 153, 0.55); }
+
+.p117-doc--pptx i { height: 34px; background: rgba(70, 184, 232, 0.2); }
+.p117-doc--pptx i:nth-child(2) { height: 20px; background: rgba(70, 184, 232, 0.4); }
+
+.p117-doc--docx i { width: 88%; }
+.p117-doc--docx i:nth-child(2) { width: 64%; }
+.p117-doc--docx i:nth-child(4) { width: 40%; background: rgba(70, 184, 232, 0.4); }
+
+/* Section 5 — verification */
+.p117-verify {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.p117-claim {
+  font-size: clamp(16px, 2.2vw, 26px);
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: rgba(17, 23, 32, 0.9);
+  padding: 14px 24px;
+  border-radius: 4px;
+  opacity: 0;
+}
+
+.p117-link {
+  width: 1px;
+  height: 34px;
+  background: var(--cyan);
+  transform: scaleX(0);
+  transform-origin: center;
+  /* drawn vertically: */
+  writing-mode: vertical-lr;
+}
+
+.p117-source {
+  font-family: var(--mono);
+  font-size: clamp(10px, 1.1vw, 13px);
+  letter-spacing: 0.24em;
+  color: var(--ink-2);
+  opacity: 0;
+}
+
+.p117-verdict {
+  font-family: var(--mono);
+  font-size: clamp(15px, 1.8vw, 22px);
+  letter-spacing: 0.34em;
+  color: var(--green);
+  opacity: 0;
+  margin-top: 8px;
+}
+
+.p117-checks {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.p117-check {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  opacity: 0;
+}
+
+.p117-check::before {
+  content: "✓ ";
+  color: var(--green);
+}
+
+/* Section 5 — finale ring */
+.p117-ring {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.p117-ringitem {
+  position: absolute;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--ink-3);
+  opacity: 0;
+}
+
+.p117-finalstmt {
+  opacity: 0;
+}
+
+.p117-finalbrand {
+  opacity: 0;
+  margin-top: 26px;
+}
+
+.p117-cta {
+  pointer-events: none;
+}
+
+.p117-cta.is-live {
+  pointer-events: auto;
+}
+
+/* Film grain — a whisper, not a texture pack. */
+.p117-grain {
+  position: absolute;
+  inset: -50%;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+  animation: p117-grain 900ms steps(4) infinite;
+}
+
+@keyframes p117-grain {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-2%, 1%); }
+  50% { transform: translate(1%, -2%); }
+  75% { transform: translate(-1%, 2%); }
+  100% { transform: translate(2%, -1%); }
+}
+
+/* ---- reduced motion: the same story, statically -------------------- */
+
+.p117--static .p117-track {
+  height: auto;
+}
+
+.p117--static .p117-stage {
+  position: static;
+  height: auto;
+  overflow: visible;
+}
+
+.p117--static .p117-canvas,
+.p117--static .p117-fx,
+.p117--static .p117-grain,
+.p117--static .p117-scrollhint,
+.p117--static .p117-progress {
+  display: none;
+}
+
+.p117--static .p117-overlay {
+  position: static;
+}
+
+.p117--static .p117-beat {
+  position: relative;
+  min-height: 62vh;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  background-size: cover;
+  background-position: center;
+  border-bottom: 1px solid var(--line);
+}
+
+.p117--static .p117-morphword {
+  position: static;
+  display: block;
+}
+
+.p117--static .p117-morphword span {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+.p117--static .p117-step,
+.p117--static .p117-agentnode,
+.p117--static .p117-badge,
+.p117--static .p117-claim,
+.p117--static .p117-source,
+.p117--static .p117-verdict,
+.p117--static .p117-check,
+.p117--static .p117-ringitem,
+.p117--static .p117-finalstmt,
+.p117--static .p117-finalbrand,
+.p117--static .p117-cta {
+  opacity: 1;
+}
+
+.p117--static .p117-cta {
+  pointer-events: auto;
+}
+
+.p117--static .p117-doc,
+.p117--static .p117-doc i {
+  opacity: 1;
+  transform: none;
+}
+
+.p117--static [data-graph-line] {
+  stroke-dashoffset: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p117-grain {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   2026 ELEVATION LAYER — obsidian reactor identity.
+   Appended last: equal-specificity rules here win the cascade.
+   ========================================================================== */
+
+.p117 {
+  --cyan: #45d5ff;
+  --orange: #ff7a3d;
+  --ember: #ff7a3d;
+}
+
+/* ---- preloader ---------------------------------------------------------- */
+
+.p117-preloader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background:
+    radial-gradient(ellipse 60% 45% at 50% 42%, rgba(69, 213, 255, 0.07), transparent 70%),
+    #04070c;
+  transition: opacity 700ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)), visibility 700ms;
+}
+.p117-preloader.is-done {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.p117-preloader__mark {
+  font-family: var(--mono);
+  font-size: 15px;
+  letter-spacing: 0.34em;
+  color: var(--ink);
+}
+.p117-preloader__mark b {
+  background: linear-gradient(100deg, var(--cyan), #8be9ff 55%, var(--ember));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 800;
+}
+.p117-preloader__bar {
+  width: min(300px, 60vw);
+  height: 2px;
+  background: rgba(140, 180, 220, 0.14);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.p117-preloader__bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), #8be9ff);
+  box-shadow: 0 0 12px rgba(69, 213, 255, 0.8);
+  transform-origin: left;
+  transition: transform 120ms linear;
+}
+.p117-preloader__pct {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--cyan);
+}
+.p117-preloader__hint {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  animation: p117-blink 1.6s ease-in-out infinite;
+}
+
+/* ---- nav ----------------------------------------------------------------- */
+
+.p117-nav {
+  padding: 14px clamp(20px, 3.4vw, 44px);
+  background: linear-gradient(180deg, rgba(4, 7, 12, 0.82), rgba(4, 7, 12, 0));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(140, 180, 220, 0.07);
+}
+
+.p117-brand {
+  letter-spacing: 0.26em;
+  position: relative;
+}
+.p117-brand b {
+  background: linear-gradient(100deg, var(--cyan), #8be9ff 55%, var(--ember));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.p117-nav-links a {
+  position: relative;
+  transition: color 200ms ease;
+}
+.p117-nav-links a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -5px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  transform: scaleX(0);
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.p117-nav-links a:hover { color: var(--cyan); }
+.p117-nav-links a:hover::after { transform: scaleX(1); }
+
+.p117-nav-cta {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 18px;
+  border: 1px solid rgba(69, 213, 255, 0.45);
+  border-radius: 99px;
+  color: var(--cyan);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  text-decoration: none;
+  background: rgba(69, 213, 255, 0.06);
+  transition: box-shadow 240ms ease, background 240ms ease, transform 240ms ease;
+}
+.p117-nav-cta:hover {
+  background: rgba(69, 213, 255, 0.14);
+  box-shadow: 0 0 26px rgba(69, 213, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+/* ---- typography elevation ------------------------------------------------ */
+
+.p117-headline {
+  letter-spacing: -0.032em;
+  text-shadow: 0 0 80px rgba(69, 213, 255, 0.14);
+}
+
+.p117-headline--glow {
+  background: linear-gradient(105deg, #fff 35%, #9fd8f5 60%, var(--cyan) 85%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 34px rgba(69, 213, 255, 0.25));
+}
+
+.p117-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px;
+  border: 1px solid rgba(69, 213, 255, 0.28);
+  border-radius: 99px;
+  background: rgba(69, 213, 255, 0.05);
+  backdrop-filter: blur(6px);
+}
+.p117-kicker--orange {
+  border-color: rgba(255, 122, 61, 0.35);
+  background: rgba(255, 122, 61, 0.06);
+}
+
+.p117-verb {
+  text-shadow: 0 0 110px rgba(255, 122, 61, 0.22);
+}
+.p117-verb em {
+  background: linear-gradient(100deg, var(--orange), #ffc09a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.p117-verb--accent {
+  background: linear-gradient(100deg, var(--cyan), #8be9ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 44px rgba(69, 213, 255, 0.35));
+}
+
+/* ---- scroll hint --------------------------------------------------------- */
+
+.p117-scrollhint__line {
+  width: 1px;
+  height: 34px;
+  background: rgba(140, 180, 220, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+.p117-scrollhint__line::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -40%;
+  width: 100%;
+  height: 40%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  animation: p117-hint-drop 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+@keyframes p117-hint-drop {
+  0% { top: -40%; }
+  70%, 100% { top: 110%; }
+}
+
+/* ---- finale: orb, stats, CTA ---------------------------------------------- */
+
+.p117-beat--final {
+  overflow: hidden;
+}
+
+.p117-orbwrap {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0.9;
+}
+.p117-orbwrap > * {
+  width: min(76vmin, 720px);
+  height: min(76vmin, 720px);
+  transform: translateY(-4vh);
+}
+
+.p117-beat--final .p117-finalstmt,
+.p117-beat--final .p117-finalbrand,
+.p117-beat--final .p117-finalstats,
+.p117-beat--final .p117-cta {
+  position: relative;
+  z-index: 2;
+}
+
+.p117-finalstats {
+  display: flex;
+  gap: clamp(18px, 4vw, 46px);
+  margin-top: 30px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.p117-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.p117-stat b {
+  font-family: var(--mono);
+  font-size: clamp(20px, 2.6vw, 30px);
+  font-weight: 750;
+  color: var(--cyan);
+  text-shadow: 0 0 24px rgba(69, 213, 255, 0.5);
+}
+.p117-stat i {
+  font-family: var(--mono);
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.p117-cta {
+  border-radius: 99px;
+  border-color: rgba(69, 213, 255, 0.5);
+  background: linear-gradient(120deg, rgba(69, 213, 255, 0.16), rgba(69, 213, 255, 0.04));
+  position: relative;
+}
+.p117-cta.is-live {
+  pointer-events: auto;
+  box-shadow: 0 0 34px rgba(69, 213, 255, 0.28), inset 0 0 18px rgba(69, 213, 255, 0.06);
+  animation: p117-cta-breathe 2.8s ease-in-out infinite;
+}
+.p117-cta.is-live:hover {
+  box-shadow: 0 0 54px rgba(69, 213, 255, 0.5), inset 0 0 24px rgba(69, 213, 255, 0.1);
+  border-color: rgba(69, 213, 255, 0.9);
+}
+@keyframes p117-cta-breathe {
+  0%, 100% { box-shadow: 0 0 30px rgba(69, 213, 255, 0.24), inset 0 0 18px rgba(69, 213, 255, 0.05); }
+  50% { box-shadow: 0 0 48px rgba(69, 213, 255, 0.42), inset 0 0 22px rgba(69, 213, 255, 0.09); }
+}
+
+/* ---- artifact docs + verification polish ---------------------------------- */
+
+.p117-doc {
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(140, 180, 220, 0.1);
+  backdrop-filter: blur(4px);
+}
+
+.p117-verify {
+  padding: 26px 34px;
+  border: 1px solid rgba(140, 180, 220, 0.12);
+  border-radius: 18px;
+  background: rgba(7, 11, 17, 0.55);
+  backdrop-filter: blur(10px);
+}
+.p117-verdict {
+  text-shadow: 0 0 30px rgba(61, 220, 151, 0.6);
+}
+
+.p117-badge {
+  backdrop-filter: blur(6px);
+}
+
+.p117-ringitem {
+  font-family: var(--mono);
+  letter-spacing: 0.3em;
+  text-shadow: 0 0 16px rgba(69, 213, 255, 0.35);
+}

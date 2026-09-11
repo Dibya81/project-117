@@ -1,0 +1,589 @@
+/* ==========================================================================
+   PROJECT 117 — PLANT TOPOLOGY (spatial map) styles, .pt-* namespace.
+
+   The bright "cinematic spatial computing" register for the plant twin routes
+   (/console/simulation/plant/refinery · /console/simulation/plant/steel).
+   Scoped to this file only; the global token layer lives in console.css and is
+   never touched here.
+
+   Structure comes from air and typography: white plates, hairline --line
+   borders, soft --shadow-* elevation. Colour is functional and always paired
+   with text so it is never the only signal.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------- page head */
+
+.pt-pagehead { margin-bottom: 14px; }
+
+/* ------------------------------------------------------------------ layout */
+
+/* Two columns on purpose: the spatial map is the hero, so it takes every pixel
+   the control rail does not need. Context lives in the rail. */
+.pt-layout {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  gap: 14px;
+  height: calc(100vh - 250px);
+  min-height: 560px;
+}
+
+.pt-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.pt-mapwrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  box-shadow: var(--shadow-md);
+}
+
+.pt-maphead {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.pt-maphead__stats {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pt-mapbody {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.pt-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.pt-legend > span { display: inline-flex; align-items: center; gap: 5px; }
+
+.pt-legend i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--ink-3);
+}
+
+.pt-legend i.is-ok { background: var(--green); }
+.pt-legend i.is-warn { background: var(--amber); }
+.pt-legend i.is-crit { background: var(--red); }
+
+/* -------------------------------------------------------- spatial map shell */
+
+.pt-spatial-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.pt-spatial {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background:
+    radial-gradient(ellipse 55% 45% at 6% -4%, rgba(37, 99, 235, 0.05), transparent 62%),
+    radial-gradient(ellipse 45% 40% at 100% 104%, rgba(124, 58, 237, 0.04), transparent 62%);
+}
+
+.pt-spatial__band {
+  position: relative;
+  width: var(--band-w, 100%);
+  height: var(--band-h, 100%);
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.032) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+/* flow lines sit behind the unit plates */
+.pt-flow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.pt-flow__pipe {
+  fill: none;
+  stroke: rgba(37, 99, 235, 0.22);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+}
+
+.pt-flow__pipe.is-live {
+  stroke: rgba(37, 99, 235, 0.34);
+  stroke-dasharray: 3 9;
+  animation: pt-flow-dash 1.6s linear infinite;
+}
+
+.pt-flow__pipe.is-off { stroke: rgba(100, 116, 139, 0.16); }
+
+.pt-flow__pipe.is-leak { stroke: rgba(220, 38, 38, 0.55); stroke-width: 1.5; }
+
+.pt-flow__dot { fill: var(--red); }
+
+@keyframes pt-flow-dash { to { stroke-dashoffset: -24; } }
+
+/* ------------------------------------------------------------------- stages */
+
+.pt-stage {
+  position: absolute;
+  left: var(--sx);
+  top: var(--sy);
+  width: var(--sw);
+  z-index: 1;
+}
+
+.pt-stage__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0 4px 8px;
+}
+
+.pt-stage__index {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--blue);
+  background: rgba(37, 99, 235, 0.08);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.pt-stage__name {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pt-stage__count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--ink-3);
+}
+
+.pt-stage__rule {
+  height: 1px;
+  margin: 0 4px 12px;
+  background: linear-gradient(90deg, var(--line-2), var(--line) 60%, transparent);
+}
+
+.pt-stage__units {
+  position: relative;
+  height: var(--units-h, auto);
+}
+
+/* -------------------------------------------------------------- unit plates */
+
+.pt-unit {
+  position: absolute;
+  left: var(--ux);
+  top: var(--uy);
+  width: var(--uw);
+  height: var(--uh);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 10px 11px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink-1);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease;
+}
+
+.pt-unit:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--line-2); }
+
+.pt-unit.is-selected {
+  border-color: rgba(37, 99, 235, 0.55);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12), var(--shadow-md);
+}
+
+.pt-unit.is-anomaly { border-color: rgba(245, 158, 11, 0.55); }
+.pt-unit[data-state="critical"],
+.pt-unit[data-state="failed"] { border-color: rgba(220, 38, 38, 0.5); }
+.pt-unit[data-affected="true"] { outline: 1px dashed rgba(245, 158, 11, 0.5); outline-offset: 3px; }
+
+.pt-unit__glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 42px;
+  color: var(--ink-1);
+}
+
+.pt-unit__tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink-1);
+}
+
+.pt-unit__name {
+  max-width: 100%;
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pt-unit__flag {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 999px;
+  color: #3b2606;
+  background: var(--amber);
+}
+
+.pt-unit__flag[data-tone="critical"] { color: #fff; background: var(--red); }
+
+.pt-unit__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  margin-top: auto;
+  width: 100%;
+}
+
+/* --------------------------------------------------------------- telemetry */
+
+.pt-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--ink-1);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+}
+
+.pt-pill__label { font-size: 8.5px; letter-spacing: 0.1em; color: var(--ink-3); }
+.pt-pill__val { font-weight: 700; color: var(--ink-1); }
+.pt-pill__unit { font-size: 8.5px; color: var(--ink-3); }
+.pt-pill__state { font-size: 8.5px; font-weight: 800; letter-spacing: 0.08em; }
+
+/* Anomaly: real keyframe animation on the pill itself + a text state token so
+   colour is never the only signal. The plate stays white to keep luminance high. */
+.pt-pill.is-warning {
+  border-color: rgba(245, 158, 11, 0.55);
+  animation: pt-pulse-amber 1.7s ease-in-out infinite;
+}
+.pt-pill.is-warning .pt-pill__state { color: #b45309; }
+
+.pt-pill.is-critical {
+  border-color: rgba(220, 38, 38, 0.55);
+  animation: pt-pulse-red 1.25s ease-in-out infinite;
+}
+.pt-pill.is-critical .pt-pill__state { color: #b91c1c; }
+
+@keyframes pt-pulse-amber {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0), var(--shadow-sm);
+    border-color: rgba(245, 158, 11, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.22), 0 2px 9px rgba(245, 158, 11, 0.28);
+    border-color: var(--amber);
+  }
+}
+
+@keyframes pt-pulse-red {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0), var(--shadow-sm);
+    border-color: rgba(220, 38, 38, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.22), 0 2px 9px rgba(220, 38, 38, 0.28);
+    border-color: var(--red);
+  }
+}
+
+/* ------------------------------------------------- agent link + investigation */
+
+.pt-link {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.pt-link__halo {
+  fill: none;
+  stroke: rgba(245, 158, 11, 0.22);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+
+.pt-link__path {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-dasharray: 7 7;
+  animation: pt-link-dash 900ms linear infinite;
+}
+
+.pt-link__origin {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 1.5;
+  opacity: 0.9;
+}
+
+.pt-link__marker { fill: var(--amber); }
+
+@keyframes pt-link-dash { to { stroke-dashoffset: -14; } }
+
+.pt-investigator {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: min(356px, calc(100% - 28px));
+  max-height: calc(100% - 28px);
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(calc(100% + 30px));
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 460ms cubic-bezier(0.22, 1, 0.36, 1), opacity 300ms ease;
+  z-index: 6;
+}
+
+.pt-investigator.is-open {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pt-invhead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.pt-invhead__kicker {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+
+.pt-invhead__unit { font-size: 13.5px; font-weight: 700; color: var(--ink-1); }
+
+.pt-invhead__sub {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.pt-idle { margin: 0; font-size: 12px; line-height: 1.6; color: var(--ink-2); }
+
+/* --------------------------------------------------------------- hover card */
+
+.pt-hover {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  z-index: 7;
+  max-width: 264px;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  animation: pt-fade-in 180ms ease both;
+}
+
+.pt-hover__tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--blue);
+}
+
+.pt-hover__name { font-size: 12px; color: var(--ink-1); }
+
+.pt-hover__meta {
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--ink-3);
+}
+
+@keyframes pt-fade-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+
+/* -------------------------------------------------------------- event spine */
+
+.pt-spine {
+  display: flex;
+  flex-direction: column;
+  height: 168px;
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  box-shadow: var(--shadow-sm);
+}
+
+.pt-spine__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.pt-spine .sm-events { flex: 1 1 auto; min-height: 0; }
+
+/* ------------------------------------------------------------- responsive */
+
+@media (max-width: 1280px) {
+  .pt-layout { grid-template-columns: 212px minmax(0, 1fr); }
+}
+
+@media (max-width: 1080px) {
+  .pt-layout {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    min-height: 0;
+  }
+  .pt-rail { overflow: visible; }
+  .pt-mapwrap { height: 660px; }
+}
+
+/* <= 960px — the horizontal sweep degrades to a readable vertical stack */
+@media (max-width: 960px) {
+  .pt-spatial__band {
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px;
+    background-size: 28px 28px;
+  }
+  .pt-stage {
+    position: static;
+    left: auto;
+    top: auto;
+    width: 100%;
+  }
+  .pt-stage__units {
+    height: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: 12px;
+  }
+  .pt-unit {
+    position: static;
+    left: auto;
+    top: auto;
+    width: auto;
+    height: auto;
+    min-height: 150px;
+  }
+  .pt-flow { display: none; }
+  .pt-investigator {
+    position: absolute;
+    width: min(382px, calc(100% - 20px));
+    max-height: calc(100% - 20px);
+    top: 10px;
+    right: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-pill.is-warning,
+  .pt-pill.is-critical,
+  .pt-flow__pipe.is-live,
+  .pt-link__path { animation: none; }
+  .pt-investigator { transition: opacity 200ms ease; transform: translateX(0); }
+  .pt-investigator:not(.is-open) { opacity: 0; }
+}

@@ -1,0 +1,72 @@
+name: equipment-health-review
+description: >-
+  Periodic health review for one asset. Reads the latest inspection document,
+  extracts its readings table, analyses the trend, and writes a DOCX summary
+  only if the analysis actually produced a document specification.
+version: "1"
+agent: data-analysis
+inputs:
+  - equipment_tag
+  - document_id
+steps:
+  - id: read
+    kind: tool
+    name: read_document
+    description: Load the latest inspection report for this asset
+    arguments:
+      document_id: "{{inputs.document_id}}"
+    timeout_seconds: 120
+    # A document store hiccup is worth one more attempt; a missing document id
+    # is not, and the retry manager refuses to retry that class of error.
+    retry:
+      max_attempts: 3
+      backoff_seconds: 2.0
+      backoff_multiplier: 2.0
+      max_backoff_seconds: 10.0
+
+  - id: extract
+    kind: tool
+    name: extract_table
+    description: Pull the vibration and temperature readings table
+    depends_on:
+      - read
+    arguments:
+      document_id: "{{inputs.document_id}}"
+    timeout_seconds: 180
+    # A report with no readings table is a normal outcome, not a failure: the
+    # run carries on and the analysis step below skips itself.
+    continue_on_error: true
+
+  - id: analyse
+    kind: agent
+    name: data-analysis
+    description: Design and interpret the trend analysis for these readings
+    depends_on:
+      - extract
+    arguments:
+      task: "Analyse the reading trend for {{inputs.equipment_tag}} and flag any exceedance"
+      equipment_tag: "{{inputs.equipment_tag}}"
+    timeout_seconds: 300
+    when: "steps.extract.status == 'succeeded'"
+
+  - id: report
+    kind: tool
+    name: create_docx
+    description: Render the health review document from the agent's specification
+    depends_on:
+      - analyse
+    arguments:
+      filename: "health-review-{{inputs.equipment_tag}}.docx"
+    timeout_seconds: 300
+    # The data-analysis agent only emits `spec` when it genuinely designed a
+    # document. Without this guard the generator would be handed nothing and
+    # fail with a validation error that looks like a bug rather than a
+    # deliberate no-op.
+    when: "steps.analyse.output.spec"
+
+  - id: verify
+    kind: verify
+    name: verifier
+    description: Confirm the document's claims trace to the extracted readings
+    depends_on:
+      - analyse

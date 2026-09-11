@@ -1,0 +1,50 @@
+name: compressor-health-review
+description: >-
+  Recycle-gas compressor health review as run on the hydrotreater units.
+  Retrieves manual and history evidence, has the operations agent read the
+  trend, and escalates to maintenance only when the operations read is
+  grounded in retrieved evidence.
+version: "1"
+agent: operations
+inputs:
+  - equipment_tag
+steps:
+  - id: retrieve
+    kind: retrieve
+    name: retrieval
+    description: Manual sections, baseline readings and prior work orders
+    arguments:
+      query: "{{inputs.equipment_tag}} recycle gas compressor vibration bearing temperature baseline"
+      top_k: 12
+    timeout_seconds: 120
+
+  - id: operating_read
+    kind: agent
+    name: operations
+    description: Interpret the current operating point against the baseline
+    depends_on:
+      - retrieve
+    arguments:
+      task: "Summarise the current operating condition of {{inputs.equipment_tag}} against its baseline"
+      equipment_tag: "{{inputs.equipment_tag}}"
+    timeout_seconds: 300
+    when: "steps.retrieve.output.evidence > 0"
+
+  - id: maintenance_view
+    kind: agent
+    name: maintenance
+    description: Maintenance interpretation and recommended intervention
+    depends_on:
+      - operating_read
+    arguments:
+      task: "Recommend maintenance action for {{inputs.equipment_tag}} based on the operating read"
+      equipment_tag: "{{inputs.equipment_tag}}"
+    timeout_seconds: 300
+    when: "steps.operating_read.output.grounded"
+
+  - id: verify
+    kind: verify
+    name: verifier
+    description: Check both agent outputs against the retrieved evidence
+    depends_on:
+      - operating_read

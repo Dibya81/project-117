@@ -1,0 +1,53 @@
+name: shift-handover-report
+description: >-
+  Assemble a shift handover note for one unit. Retrieval and the operations
+  agent are mandatory; the rendered PDF is optional, because a handover that
+  exists as text is still a usable handover.
+version: "1"
+agent: operations
+inputs:
+  - unit
+  - shift
+steps:
+  - id: retrieve
+    kind: retrieve
+    name: retrieval
+    description: Alarms, work orders and readings for the unit this shift
+    arguments:
+      query: "{{inputs.unit}} shift {{inputs.shift}} alarms work orders readings"
+      top_k: 12
+    timeout_seconds: 120
+
+  - id: summarise
+    kind: agent
+    name: operations
+    description: Write the handover summary from the retrieved evidence
+    depends_on:
+      - retrieve
+    arguments:
+      task: "Write the {{inputs.shift}} shift handover summary for unit {{inputs.unit}}"
+      unit: "{{inputs.unit}}"
+      shift: "{{inputs.shift}}"
+    timeout_seconds: 300
+    when: "steps.retrieve.output.evidence > 0"
+
+  - id: render
+    kind: tool
+    name: create_pdf
+    description: Render the handover note as a PDF for the control room
+    depends_on:
+      - summarise
+    arguments:
+      filename: "handover-{{inputs.unit}}-{{inputs.shift}}.pdf"
+    timeout_seconds: 300
+    when: "steps.summarise.output.spec"
+    # The text summary is the deliverable that matters. If the renderer is
+    # unavailable the run is reported as `partial`, never as succeeded.
+    continue_on_error: true
+
+  - id: verify
+    kind: verify
+    name: verifier
+    description: Confirm the handover cites the alarms and orders it mentions
+    depends_on:
+      - summarise

@@ -1,0 +1,112 @@
+[
+  {
+    "id": "d-1",
+    "title": "IR-204 \u2014 C-3 Compressor Vibration Inspection",
+    "type": "inspection_report",
+    "equipmentId": "C-3",
+    "revision": "1.0",
+    "pages": 6,
+    "updated": "2026-09-06",
+    "author": "Reliability Engineering",
+    "tags": [
+      "vibration",
+      "bearing",
+      "C-3"
+    ],
+    "path": "inspection-reports/IR-204_compressor_inspection.md"
+  },
+  {
+    "id": "d-2",
+    "title": "SOP-07.3 rev4 \u2014 Rotating Equipment Vibration Response",
+    "type": "sop",
+    "equipmentId": "C-3",
+    "revision": "rev4",
+    "pages": 9,
+    "updated": "2026-05-22",
+    "author": "Maintenance Standards",
+    "tags": [
+      "sop",
+      "vibration",
+      "rotating"
+    ],
+    "path": "sop/SOP-07.3_rev4.md"
+  },
+  {
+    "id": "d-3",
+    "title": "Elliott 29M9-6 Compressor Manual \u2014 Alarm Limits (excerpt)",
+    "type": "manual",
+    "equipmentId": "C-3",
+    "revision": "E",
+    "pages": 12,
+    "updated": "2024-02-14",
+    "author": "Elliott Group",
+    "tags": [
+      "manual",
+      "limits",
+      "C-3"
+    ],
+    "path": "manuals/C-3_compressor_manual_excerpt.md"
+  },
+  {
+    "id": "d-4",
+    "title": "C-3 Vibration Baseline \u2014 90-day rolling",
+    "type": "dataset",
+    "equipmentId": "C-3",
+    "revision": "2026-09",
+    "pages": 2,
+    "updated": "2026-09-07",
+    "author": "Condition Monitoring",
+    "tags": [
+      "baseline",
+      "vibration"
+    ],
+    "path": "documents/vibration_baseline_C-3.md"
+  },
+  {
+    "id": "d-5",
+    "title": "IR-198 \u2014 C-3 Drive-End Bearing Replacement",
+    "type": "inspection_report",
+    "equipmentId": "C-3",
+    "revision": "1.0",
+    "pages": 4,
+    "updated": "2025-03-16",
+    "author": "Maintenance Execution",
+    "tags": [
+      "bearing",
+      "history",
+      "C-3"
+    ],
+    "path": "inspection-reports/IR-198_bearing_replacement.md"
+  },
+  {
+    "id": "d-6",
+    "title": "ME-198 \u2014 Maintenance Record, C-3 Alignment Check",
+    "type": "maintenance_record",
+    "equipmentId": "C-3",
+    "revision": "1.0",
+    "pages": 3,
+    "updated": "2025-11-02",
+    "author": "Maintenance Execution",
+    "tags": [
+      "alignment",
+      "history"
+    ],
+    "path": "documents/ME-198_maintenance_record.md"
+  },
+  {
+    "id": "d-7",
+    "title": "SOP-11.2 \u2014 Lockout / Tagout for Rotating Equipment",
+    "type": "sop",
+    "equipmentId": null,
+    "revision": "rev2",
+    "pages": 7,
+    "updated": "2026-01-30",
+    "author": "Safety",
+    "tags": [
+      "sop",
+      "safety",
+      "loto"
+    ],
+    "path": "sop/SOP-11.2_lockout_tagout.md"
+  }
+]

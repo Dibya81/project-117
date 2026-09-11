@@ -1,0 +1,63 @@
+name: maintenance-investigation
+description: >-
+  Full maintenance investigation: evidence, assessment, safety review and a
+  written record. The longest of the example workflows and the one that shows
+  guards, retries and tolerated failure together.
+version: "1"
+agent: maintenance
+inputs:
+  - equipment_tag
+  - symptom
+steps:
+  - id: retrieve
+    kind: retrieve
+    name: retrieval
+    description: Manuals, prior work orders and readings for this asset
+    arguments:
+      query: "{{inputs.equipment_tag}} {{inputs.symptom}}"
+      top_k: 12
+    timeout_seconds: 120
+
+  - id: assess
+    kind: agent
+    name: maintenance
+    description: Probable cause and recommended intervention
+    depends_on:
+      - retrieve
+    arguments:
+      task: "Investigate {{inputs.symptom}} on {{inputs.equipment_tag}}"
+      equipment_tag: "{{inputs.equipment_tag}}"
+      symptom: "{{inputs.symptom}}"
+    timeout_seconds: 300
+    when: "steps.retrieve.output.evidence > 0"
+
+  - id: safety_review
+    kind: agent
+    name: safety
+    description: Safety implications of the recommended intervention
+    depends_on:
+      - assess
+    arguments:
+      task: "Assess safety implications of the recommendation for {{inputs.equipment_tag}}"
+      equipment_tag: "{{inputs.equipment_tag}}"
+    timeout_seconds: 300
+    when: "steps.assess.output.grounded"
+
+  - id: record
+    kind: tool
+    name: create_docx
+    description: Write the investigation record
+    depends_on:
+      - assess
+    arguments:
+      filename: "investigation-{{inputs.equipment_tag}}.docx"
+    timeout_seconds: 300
+    when: "steps.assess.output.spec"
+    continue_on_error: true
+
+  - id: verify
+    kind: verify
+    name: verifier
+    description: Check the investigation against its evidence
+    depends_on:
+      - assess

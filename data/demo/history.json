@@ -1,0 +1,57 @@
+[
+  {
+    "id": "h-1",
+    "equipmentId": "C-3",
+    "date": "2026-09-06",
+    "type": "inspection",
+    "title": "Vibration survey \u2014 18% above baseline",
+    "summary": "DE bearing 6.8 mm/s overall, 1x dominant; daily monitoring started.",
+    "actor": "Reliability Engineering",
+    "documentId": "d-1",
+    "workOrderId": "WO-8852"
+  },
+  {
+    "id": "h-2",
+    "equipmentId": "C-3",
+    "date": "2025-11-02",
+    "type": "maintenance",
+    "title": "Hot alignment check \u2014 within tolerance",
+    "summary": "Coupling offset 0.06 mm against 0.10 mm tolerance; no correction.",
+    "actor": "Maintenance Execution",
+    "documentId": "d-6",
+    "workOrderId": null
+  },
+  {
+    "id": "h-3",
+    "equipmentId": "C-3",
+    "date": "2025-03-16",
+    "type": "repair",
+    "title": "DE bearing replaced",
+    "summary": "OEM spare fitted; post-repair vibration 5.4 mm/s; re-baselined at 5.69 mm/s.",
+    "actor": "Maintenance Execution",
+    "documentId": "d-5",
+    "workOrderId": "WO-6120"
+  },
+  {
+    "id": "h-4",
+    "equipmentId": "P-1042",
+    "date": "2026-09-04",
+    "type": "alarm",
+    "title": "Discharge pressure above limit",
+    "summary": "18.5 bar against 17.0 bar limit; investigation opened (WO-8841).",
+    "actor": "Operations Shift B",
+    "documentId": null,
+    "workOrderId": "WO-8841"
+  },
+  {
+    "id": "h-5",
+    "equipmentId": "V-2210",
+    "date": "2026-09-03",
+    "type": "alarm",
+    "title": "High level alarm 87%",
+    "summary": "Level above 80% setpoint; priority escalated under APR-218.",
+    "actor": "Operations Shift A",
+    "documentId": null,
+    "workOrderId": "WO-8837"
+  }
+]
