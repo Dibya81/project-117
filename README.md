@@ -8,6 +8,15 @@ document, database row and log line stays on the machine.
 
 It was built for **SIH 2026 problem statement 26117**.
 
+**Verified in this tree:** 153 tests passing · `ruff` clean · `tsc` clean for
+both TypeScript projects · `next build` exits 0 across 20 routes · the landing
+page's 121-frame sequence still scrubs · 14 console routes render with zero
+console or page errors. `pyright` is **not** clean — the remaining typing debt
+is listed under [Testing & quality](#testing--quality) rather than hidden.
+
+Jump to: [Architecture](#architecture) · [Quickstart](#quickstart) ·
+[Environment variables](#environment-variables) · [Testing & quality](#testing--quality)
+
 ## What it does
 
 In one closed loop, running entirely on-premise:
@@ -158,15 +167,17 @@ without it — but any call that needs a model role will return
 # 1. Python environment (from the repository root)
 uv sync
 
-# 2. (optional) local models — pick the ones you set in .env
-ollama pull nomic-embed-text
-ollama pull qwen2.5:14b-instruct-q4_K_M
+# 2. local models — a set that fits a 16 GB machine (see the table below)
+ollama pull nomic-embed-text:latest     # 274 MB  embedding
+ollama pull llama3:latest               # 4.7 GB  reasoning
+ollama pull deepseek-coder:6.7b         # 3.8 GB  coding
+ollama pull mistral:latest              # 4.4 GB  domain
 
 # 3. configuration
 cp .env.example .env
-#    When running from the repository root, the default
-#    P117_WORKFLOWS_DIR=../workflows/definitions resolves outside the repo.
-#    Set P117_WORKFLOWS_DIR=workflows/definitions in .env.
+#    The example carries the reference set above, commented out — uncomment it
+#    or set the roles yourself. Every role is unconfigured by default and fails
+#    loudly (503 model_unavailable) rather than silently guessing a model.
 
 # 4. start the backend on :8000
 uv run uvicorn backend.api.src.main:create_app --factory --host 127.0.0.1 --port 8000
@@ -180,8 +191,28 @@ pnpm dev            # = pnpm --filter web dev = next dev -p 3017
 # open http://127.0.0.1:3017/console/simulation
 ```
 
-**Ports and CORS.** These are the real ports read from the code:
+### Choosing models for a 16 GB machine
 
+The reference set targets an Apple M4 with 16 GB of unified memory, where the
+OS, the KV cache and the resident embedding server all share one pool:
+
+| Role | Model | Weights | Why |
+|---|---|---|---|
+| `reasoning` | `llama3:latest` (8B) | 4.7 GB | The workhorse; fast enough for an operator console. |
+| `coding` | `deepseek-coder:6.7b` | 3.8 GB | Writes the sandbox scripts the analysis agent designs. |
+| `domain` | `mistral:latest` (7B) | 4.4 GB | Maintenance and operations wording. |
+| `embedding` | `nomic-embed-text:latest` | 274 MB | Feeds LanceDB; small and always resident. |
+| `vision` | *unset* | — | No vision model pulled. Set one only for on-device image understanding. |
+| `reranker` | *unset* | — | Needs `uv sync --extra rerank` (torch alone ~2 GB) **and** local weights. |
+
+A 14B instruct model at Q4 (~9 GB) was considered and rejected: it leaves too
+little headroom once everything else is resident, and it swaps under sustained
+load. Parameter count is not the goal — a machine that stays responsive matters
+more than a slightly larger model. These are configuration, never hard-coded:
+point the roles at what you have actually pulled and confirm with `ollama list`
+or `GET /api/models`.
+
+**Ports and CORS.** These are the real ports read from the code:
 * Next.js console — **3017**: `apps/web/package.json:6` → `"dev": "next dev -p 3017"`.
 * Backend — **8000**: `backend/config.py:43` → `api_port: int = 8000`.
 * Vite workbench — **5173**: `frontend/vite.config.ts:20` → `server: { port: 5173 }`.
