@@ -4,8 +4,9 @@
  * single awaitable call so swapping to live backend endpoints is a mechanical
  * change inside this file, never in a component.
  */
-import type { ConsoleRole, HistoryEvent } from "@/types/console";
-import type { WorkOrder } from "@/types";
+import type { ConsoleRole, EquipmentDetailData, HistoryEvent } from "@/types/console";
+import type { Equipment, HealthState, WorkOrder } from "@/types";
+import type { EquipmentRecord } from "@/lib/api";
 import type { PlantDef, SimEvent } from "@/lib/sim/types";
 import {
   AGENTS,
@@ -166,19 +167,136 @@ function recordSimMilestone(ev: SimEvent): void {
   );
 }
 
+/**
+ * Adapt a backend equipment record to the console's view model.
+ *
+ * WHY a mapper rather than a cast: the two shapes genuinely differ, and the
+ * console needs exactly two things the API does not carry.
+ *
+ *   * `status` lives in the console's own HealthState vocabulary.
+ *   * `position` — the plant dataset has no geospatial data, so this is a
+ *     deterministic placement derived from the asset's area group. It makes the
+ *     schematic legible; it does not claim a real location, and the type says so.
+ *
+ * Everything else passes straight through. `keySignals` is *richer* than the
+ * mock's sensor list — it carries a live value, its baseline and its limit — so
+ * the readings shown are real instrument state, not invented numbers. Where the
+ * backend reports no limit, no threshold is invented.
+ */
+function toEquipment(r: EquipmentRecord, areaIndex: number, order: number): Equipment {
+  const status: HealthState =
+    r.status === "healthy"
+      ? "ok"
+      : r.status === "warning"
+        ? "warning"
+        : r.status === "critical"
+          ? "critical"
+          : "unknown";
+
+  const grid = Math.max(0, areaIndex);
+  return {
+    id: r.id,
+    name: r.name,
+    kind: r.type as Equipment["kind"],
+    zone: r.area || r.unit || "Unassigned",
+    status,
+    position: [grid * 6, (order % 4) * 3, 0],
+    sensors: (r.keySignals ?? []).map((s, i) => {
+      // A unit can carry redundant instruments for the same measurement, so the
+      // signal name alone is NOT unique — keying on it produced duplicate React
+      // keys for the second pressure transmitter. The index disambiguates, and
+      // the label says which of the pair it is rather than hiding the redundancy.
+      const sameSignalBefore = (r.keySignals ?? []).slice(0, i).filter((o) => o.signal === s.signal).length;
+      return {
+        key: `${s.signal}-${i}`,
+        label: sameSignalBefore === 0 ? s.signal : `${s.signal} (${sameSignalBefore + 1})`,
+        unit: s.unit,
+        value: s.value,
+        // `limit` is the backend's own threshold for the signal; when it is
+        // absent nothing is guessed.
+        ...(typeof s.limit === "number" && s.limit !== s.baseline
+          ? { warnAbove: s.limit }
+          : {}),
+      };
+    }),
+    last_inspection: r.lastInspection,
+    insight: r.summary,
+  };
+}
+
 export const consoleData = {
   equipment: {
-    list: () => ok(EQUIPMENT),
+    // The real plant: 58 units served from the SQLite store by /api/equipment,
+    // not the six-row synthetic set the console used to read.
+    list: () =>
+      api.equipment.list().then((r) => {
+        // Area order fixes each asset's placement so the schematic is stable
+        // across reloads rather than reshuffling.
+        const areas = [...new Set(r.items.map((e) => e.area || e.unit || "Unassigned"))].sort();
+        return r.items.map((e, i) => toEquipment(e, areas.indexOf(e.area || e.unit || "Unassigned"), i));
+      }),
     /**
      * Resolve an equipment tag to its record.
      *
      * The console names units by their narrative tag (C-3); the simulation
      * register names the same machine differently (C-1071). A URL can arrive
-     * with either, so an unknown tag is looked up in the crosswalk and served
-     * as its canonical twin — annotated with the mapping rather than silently
-     * pretending the two tags are the same string.
+     * with either, so the real API is tried first, then the narrative crosswalk
+     * — annotated with the mapping rather than silently pretending the two tags
+     * are the same string.
      */
-    detail: async (id: string) => {
+    detail: async (id: string): Promise<EquipmentDetailData | null> => {
+      try {
+        const r = await api.equipment.get(id);
+        if (r) {
+          const view = toEquipment(r, 0, 0);
+          // Telemetry and maintenance come from the backend's own endpoints; an
+          // empty series is reported as empty rather than invented, and the
+          // dataset genuinely carries no persisted time series (see the type).
+          const history = await api.equipment.history(id).catch(() => null);
+          const maintenance = Array.isArray((history as { items?: unknown[] })?.items)
+            ? ((history as { items: Record<string, unknown>[] }).items ?? []).map((h, i) => ({
+                id: String(h.id ?? `h-${i}`),
+                title: String(h.title ?? h.summary ?? "Maintenance record"),
+                at: String(h.at ?? h.date ?? ""),
+                by: String(h.by ?? h.actor ?? "maintenance"),
+              }))
+            : [];
+          return {
+            id: view.id,
+            name: view.name,
+            kind: view.kind,
+            zone: view.zone,
+            status: view.status,
+            insight: view.insight,
+            readings: view.sensors.map((s) => ({
+              key: s.key,
+              label: s.label,
+              unit: s.unit,
+              value: s.value,
+              ...(s.warnAbove !== undefined ? { warnAbove: s.warnAbove } : {}),
+            })),
+            kpis: [
+              { label: "Criticality", value: String(r.criticality ?? "—") },
+              { label: "Manufacturer", value: r.manufacturer || "—" },
+              { label: "Model", value: r.model || "—" },
+              { label: "Installed", value: String(r.installedYear ?? "—") },
+              { label: "Last inspection", value: r.lastInspection || "—" },
+              { label: "Next inspection", value: r.nextInspection || "—" },
+            ],
+            telemetry: [],
+            maintenance,
+            documents: [],
+            // Nothing below is invented: the backend exposes no per-asset event
+            // history, relation list or open-work-order join yet, so these are
+            // reported empty rather than filled with plausible-looking rows.
+            history: [],
+            related: [],
+            open_work_orders: [],
+          };
+        }
+      } catch {
+        /* not a register id — fall through to the narrative overlay */
+      }
       const direct = equipmentDetail(id);
       if (direct) return direct;
       const entry = crosswalkForRegister(id);

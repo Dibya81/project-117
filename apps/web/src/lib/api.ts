@@ -78,13 +78,25 @@ function authHeaders(): Record<string, string> {
 // console can render live rows without a translation layer. These replaced the
 // hand-written mock records the console used to read from lib/mock/.
 
+/** One live instrument reading as the backend reports it. */
+export interface EquipmentSignal {
+  signal: string;
+  value: number;
+  unit: string;
+  baseline: number;
+  limit: number;
+  deltaPercent: number;
+  state: string;
+}
+
 export interface EquipmentRecord {
   id: string;
   name: string;
   type: string;
   unit: string;
   area: string;
-  criticality: number;
+  /** A word ("medium", "high"), not a number — the earlier annotation was wrong. */
+  criticality: string;
   status: string;
   manufacturer: string;
   model: string;
@@ -94,7 +106,8 @@ export interface EquipmentRecord {
   sopId: string | null;
   manualId: string | null;
   tags: string[];
-  keySignals: string[];
+  /** Real instrument readings (objects), not plain strings. */
+  keySignals: EquipmentSignal[];
   summary: string;
 }
 
