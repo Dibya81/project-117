@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * AgentResponseConsole — the core demo surface.
+ * AgentResponseConsole — the agent response surface: three lanes, live SSE.
  *
  * A slide-in panel docked to the right 40% of the viewport. It renders three
  * parallel lanes (Perception → Operations + Diagnostics) that advance ONLY on

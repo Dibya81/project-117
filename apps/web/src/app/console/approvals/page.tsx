@@ -2,8 +2,9 @@
 
 /**
  * Approvals — the human-in-the-loop queue.
- * Pending AI-proposed actions with risk, reason and evidence; decisions are
- * instant, animated, and reversible-looking (mock adapter persists in-memory).
+ * Pending AI-proposed actions with risk, reason and evidence. Decisions are
+ * persisted by the backend operations store, so they survive a reload and are
+ * recorded in the audit log.
  */
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";

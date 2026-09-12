@@ -177,8 +177,7 @@ export interface GraphEdge {
 
 /* --------------------------------------------------------------------------
  * API transport contracts — mirror the backend Pydantic schemas
- * (backend/api/src/schemas/*). lib/api.ts is the only consumer; keeping them
- * here lets the mock adapter satisfy the same surface.
+ * (backend/api/src/schemas/*). lib/api.ts is the only consumer.
  * ------------------------------------------------------------------------ */
 
 /** GET /health */
@@ -304,20 +303,4 @@ export interface WorkflowDefinition {
     type: string;
     requires_approval?: boolean;
   }[];
-}
-
-/** Websocket frame pushed over /api/jobs/ws. */
-export interface ServerEvent {
-  type:
-    | "job.state"
-    | "job.step"
-    | "tool.call"
-    | "verification.result"
-    | "telemetry.tick"
-    | "alert.created"
-    | "approval.requested"
-    | "agent.status"
-    | (string & {});
-  payload?: Record<string, unknown>;
-  at?: ISODate;
 }
