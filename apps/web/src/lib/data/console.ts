@@ -5,8 +5,8 @@
  * change inside this file, never in a component.
  */
 import type { ConsoleRole, EquipmentDetailData, HistoryEvent } from "@/types/console";
-import type { Equipment, HealthState, WorkOrder } from "@/types";
-import type { EquipmentRecord } from "@/lib/api";
+import type { ApprovalRequest, Equipment, HealthState, WorkOrder } from "@/types";
+import type { EquipmentRecord, WorkOrderRecord, ApprovalRecord } from "@/lib/api";
 import type { PlantDef, SimEvent } from "@/lib/sim/types";
 import {
   AGENTS,
@@ -224,6 +224,58 @@ function toEquipment(r: EquipmentRecord, areaIndex: number, order: number): Equi
   };
 }
 
+/**
+ * Adapt a backend work-order record to the console's view model.
+ *
+ * The vocabulary is narrowed rather than cast: the API is the authority on
+ * priority and status, but an unexpected value must not be smuggled into the
+ * UI as if it were valid, so anything unrecognised falls back to a safe default
+ * (priority medium, status open) instead of being asserted through.
+ *
+ * `evidence` is reported empty. The API returns plain strings, while the
+ * console's Citation expects a structured source reference; inventing that
+ * structure would fabricate provenance the backend never sent.
+ */
+function toWorkOrder(r: WorkOrderRecord): WorkOrder {
+  const PRIORITIES = ["low", "medium", "high", "critical"] as const;
+  const STATUSES = ["draft", "open", "in_progress", "on_hold", "completed", "cancelled"] as const;
+  return {
+    id: r.id,
+    equipment_id: r.equipmentId ?? "",
+    title: r.title,
+    priority: (PRIORITIES as readonly string[]).includes(r.priority)
+      ? (r.priority as WorkOrder["priority"])
+      : "medium",
+    status: (STATUSES as readonly string[]).includes(r.status)
+      ? (r.status as WorkOrder["status"])
+      : "open",
+    assignee: r.assignee ?? "unassigned",
+    evidence: [],
+    recommended_action: r.description || undefined,
+  };
+}
+
+/** Adapt a backend approval record to the console's view model. */
+function toApproval(r: ApprovalRecord): ApprovalRequest {
+  const RISKS = ["low", "medium", "high"] as const;
+  return {
+    id: r.id,
+    action: r.title || r.type,
+    risk: (RISKS as readonly string[]).includes(r.risk)
+      ? (r.risk as ApprovalRequest["risk"])
+      : "medium",
+    requested_by: r.requestedBy,
+    equipment_id: r.relatedId ?? undefined,
+    reason: r.summary,
+    evidence: [],
+    created_at: r.requestedAt,
+    status:
+      r.status === "approved" || r.status === "rejected"
+        ? (r.status as ApprovalRequest["status"])
+        : "pending",
+  };
+}
+
 export const consoleData = {
   equipment: {
     // The real plant: 58 units served from the SQLite store by /api/equipment,
@@ -348,38 +400,30 @@ export const consoleData = {
     },
   },
   workOrders: {
-    // Orders raised during this session are real records in an in-memory store:
-    // they appear in the list and resolve on their own detail route. The
-    // previous implementation minted an id and dropped it, so "Create work
-    // order" looked like it worked and left nothing behind.
-    list: () => ok([...createdWorkOrders, ...WORK_ORDERS]),
-    get: (id: string) => ok([...createdWorkOrders, ...WORK_ORDERS].find((w) => w.id === id) ?? null),
-    create: (input: { title: string; equipment_id: string; priority: string; assignee: string }) => {
-      const id = `WO-${8900 + createdWorkOrders.length + 1}`;
-      const record: WorkOrder = {
-        id,
-        equipment_id: input.equipment_id,
-        title: input.title,
-        priority: (["low", "medium", "high", "urgent"].includes(input.priority)
-          ? input.priority
-          : "high") as WorkOrder["priority"],
-        status: "open",
-        assignee: input.assignee,
-        evidence: [],
-        recommended_action: input.title,
-      };
-      createdWorkOrders.unshift(record);
-      return ok(record);
-    },
+    // Real orders from the operations store. The session-only list is gone:
+    // orders created here are persisted by the backend, so there is one source
+    // of truth and a created order survives a reload.
+    list: () => api.workOrders.list().then((r) => r.items.map(toWorkOrder)),
+    get: (id: string) => api.workOrders.get(id).then(toWorkOrder),
+    create: (input: { title: string; equipment_id: string; priority: string; assignee: string }) =>
+      api.workOrders
+        .create({
+          title: input.title,
+          equipmentId: input.equipment_id || null,
+          priority: input.priority,
+          assignee: input.assignee || null,
+          origin: "console",
+        })
+        .then(toWorkOrder),
   },
   approvals: {
-    list: () => ok(APPROVALS),
-    pending: () => ok(APPROVALS.filter((a) => a.status === "pending")),
-    decide: (id: string, decision: "approved" | "rejected") => {
-      const found = APPROVALS.find((a) => a.id === id);
-      if (found) found.status = decision;
-      return ok(found ?? null);
-    },
+    list: () => api.approvals.list().then((r) => r.items.map(toApproval)),
+    pending: () =>
+      api.approvals
+        .list()
+        .then((r) => r.items.filter((a) => a.status === "pending").map(toApproval)),
+    decide: (id: string, decision: "approved" | "rejected") =>
+      api.approvals.decide(id, decision).then(toApproval),
   },
   graph: { get: () => ok({ nodes: GRAPH_NODES, edges: GRAPH_EDGES }) },
   history: {
