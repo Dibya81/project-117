@@ -31,6 +31,8 @@ from urllib.parse import urlparse
 
 import httpx
 
+from backend.security.network.network_monitor import record_decision
+
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from backend.config import Settings
 
@@ -92,6 +94,17 @@ class EgressPolicy:
         # the host check.
         return True
 
+    def is_local(self, host: str | None) -> bool:
+        """True when ``host`` is loopback.
+
+        The distinction matters for reporting, not for policy: ``allows``
+        admits loopback so the backend can reach Ollama, vLLM and OpenSandbox,
+        but a request to ``127.0.0.1`` has not left the machine and must never
+        be counted as an external call. Without this split, "external calls:
+        400" would really mean "we talked to our own model server 400 times".
+        """
+        return (host or "").lower() in self._LOCAL_HOSTS
+
     def check(self, url: str) -> None:
         """Raise ``EgressBlocked`` unless the URL is permitted."""
         if not self.allows(url):
@@ -135,15 +148,31 @@ class EgressGuardTransport(httpx.AsyncBaseTransport):
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         url = str(request.url)
+        host = request.url.host
+        # Observation, not policy: the monitor is what turns "zero external
+        # egress" from a claim in a docstring into a number an operator can
+        # read. It is recorded here, in the one place every outbound call must
+        # pass through, so a new call site cannot go uncounted.
+        local = self._policy.is_local(host)
         if not self._policy.allows(url):
             # Log the host only. A URL may carry a query, and a query can
             # carry content - that must never reach the log.
             logger.warning(
                 "egress blocked: host=%s scheme=%s",
-                request.url.host,
+                host,
                 request.url.scheme,
             )
+            record_decision(
+                host=host,
+                scheme=request.url.scheme,
+                decision="blocked",
+                reason="denied by egress policy",
+                local=local,
+            )
             raise EgressBlocked(url)
+        record_decision(
+            host=host, scheme=request.url.scheme, decision="allowed", local=local
+        )
         return await self._inner.handle_async_request(request)
 
     async def aclose(self) -> None:
@@ -167,13 +196,25 @@ class EgressGuardSyncTransport(httpx.BaseTransport):
 
     def handle_request(self, request: httpx.Request) -> httpx.Response:
         url = str(request.url)
+        host = request.url.host
+        local = self._policy.is_local(host)
         if not self._policy.allows(url):
             logger.warning(
                 "egress blocked: host=%s scheme=%s",
-                request.url.host,
+                host,
                 request.url.scheme,
             )
+            record_decision(
+                host=host,
+                scheme=request.url.scheme,
+                decision="blocked",
+                reason="denied by egress policy",
+                local=local,
+            )
             raise EgressBlocked(url)
+        record_decision(
+            host=host, scheme=request.url.scheme, decision="allowed", local=local
+        )
         return self._inner.handle_request(request)
 
     def close(self) -> None:

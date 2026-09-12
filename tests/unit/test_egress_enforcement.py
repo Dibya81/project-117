@@ -198,3 +198,79 @@ def test_policy_is_built_from_settings(tmp_path):
     assert policy.allows("https://historian.plant.local/api")  # case-insensitive
     assert policy.allows("https://dms.internal/api")
     assert not policy.allows("https://api.openai.com/v1/chat/completions")
+
+
+# --- observation -----------------------------------------------------------
+#
+# Enforcement without observation is still unverifiable: the Security view says
+# "external calls: 0" and there is no way to tell a quiet machine from a monitor
+# nobody feeds. These tests pin the wiring from the guard transport to the
+# process monitor, and pin the loopback/external split - counting our own Ollama
+# traffic as "external" would inflate the exact number that proves the
+# sovereignty claim.
+
+
+@pytest.fixture()
+def clean_monitor():
+    from backend.security.network import network_monitor
+
+    network_monitor.MONITOR.reset()
+    yield network_monitor.MONITOR
+    network_monitor.MONITOR.reset()
+
+
+async def test_guard_records_blocked_external_attempts(clean_monitor):
+    async with httpx.AsyncClient(transport=_guarded()) as client:
+        with pytest.raises(EgressBlocked):
+            await client.get("https://api.openai.com/v1/models")
+
+    assert clean_monitor.totals()["external_blocked"] == 1
+    assert clean_monitor.totals()["external_allowed"] == 0
+    assert "api.openai.com" in clean_monitor.summary()["blocked_hosts"]
+
+
+async def test_local_traffic_is_not_counted_as_external(clean_monitor):
+    async with httpx.AsyncClient(transport=_guarded()) as client:
+        await client.get("http://127.0.0.1:11434/v1/models")
+        await client.get("http://localhost:11434/v1/models")
+
+    totals = clean_monitor.totals()
+    assert totals["local_allowed"] == 2
+    assert totals["external_allowed"] == 0
+    assert clean_monitor.summary()["external_allowed"] == 0
+
+
+def test_sync_guard_records_local_and_external(clean_monitor):
+    transport = EgressGuardSyncTransport(DENY, httpx.MockTransport(_would_let_it_out))
+    with httpx.Client(transport=transport) as client:
+        assert client.get("http://127.0.0.1:11434/v1/models").status_code == 200
+        with pytest.raises(EgressBlocked):
+            client.get("https://huggingface.co/api/models")
+
+    totals = clean_monitor.totals()
+    assert totals["local_allowed"] == 1
+    assert totals["external_blocked"] == 1
+    assert totals["external_allowed"] == 0
+
+
+def test_health_reports_real_egress_counts(client, clean_monitor):
+    """The false-zero regression: a monitor nobody feeds reads as a clean machine.
+
+    Deltas rather than absolutes, because the health probe itself reaches Ollama
+    over loopback and that call is legitimately recorded.
+    """
+    from backend.security.network.network_monitor import record_decision
+
+    first = client.get("/health").json()["network"]
+
+    record_decision(
+        host="api.openai.com", scheme="https", decision="blocked", local=False
+    )
+    record_decision(host="127.0.0.1", scheme="http", decision="allowed", local=True)
+
+    second = client.get("/health").json()["network"]
+    assert second["external_blocked"] == first["external_blocked"] + 1
+    # Loopback traffic must never be promoted into the external figure.
+    assert second["external_allowed"] == first["external_allowed"]
+    assert second["totals"]["local_allowed"] > first["totals"]["local_allowed"]
+    assert second["scope"] == "this process only"

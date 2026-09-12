@@ -7,6 +7,7 @@ uploads-directory writability, and registered services.
 
 from __future__ import annotations
 
+import shutil
 import time
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from sqlalchemy import text
 from backend import __version__
 from backend.api.src.deps import get_settings
 from backend.models.gateway import ModelGateway
+from backend.security.network.network_monitor import summary as network_summary
 
 router = APIRouter(tags=["health"])
 
@@ -47,9 +49,36 @@ async def health(request: Request) -> dict:
         "database": database,
         "llm": llm,
         "uploads_writable": uploads_writable,
+        # Measured, not asserted: the console's system-posture panel needs a
+        # storage figure, and the alternative to measuring it is inventing one.
+        # A fabricated number reads as a real measurement to an operator, which
+        # is worse than reporting that the measurement is unavailable.
+        "storage": _storage_usage(settings.uploads_dir),
+        # The real egress posture: the policy from configuration, and the
+        # process-local record of every outbound decision the guard transport
+        # made. Until this was wired the monitor was dead code, so any
+        # "external calls" figure would have been a false zero.
+        "egress": "denied" if settings.egress_default_deny else "allowlist",
+        "network": network_summary(recent=5),
         "services": {
             "opensandbox": {"configured": bool(settings.open_sandbox_base_url)},
         },
+    }
+
+
+def _storage_usage(uploads_dir: Path) -> dict:
+    """Disk figures for the volume this service actually writes to."""
+    target = uploads_dir if uploads_dir.exists() else uploads_dir.parent
+    try:
+        usage = shutil.disk_usage(target)
+    except OSError:  # pragma: no cover - platform dependent
+        return {"available": False, "path": str(target)}
+    return {
+        "available": True,
+        "path": str(target),
+        "used_gb": round(usage.used / 1024**3, 2),
+        "total_gb": round(usage.total / 1024**3, 2),
+        "free_gb": round(usage.free / 1024**3, 2),
     }
 
 

@@ -91,7 +91,10 @@ export interface SystemPosture {
   model_gateway: "local" | "degraded" | "offline";
   sandbox: "isolated" | "unavailable";
   egress: "denied" | "allowlisted";
+  /** Outbound calls that actually left this machine, in the last 24h. */
   external_calls_24h: number;
+  /** Outbound attempts the egress guard refused, in the last 24h. */
+  egress_blocked_24h: number;
   database: "ok" | "error";
   storage_used_gb: number;
   storage_total_gb: number;

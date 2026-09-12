@@ -12,7 +12,6 @@ import type {
   LearnedRule,
   ModelStatus,
   NotificationItem,
-  SystemPosture,
   WorkspaceSession,
   WorkspaceTask,
 } from "@/types/console";
@@ -229,17 +228,6 @@ export const MODELS: ModelStatus[] = [
   { role: "vision", model: "llava:13b", status: "available" },
   { role: "reranker", model: "bge-reranker-v2-m3", status: "available" },
 ];
-
-export const POSTURE: SystemPosture = {
-  model_gateway: "local",
-  sandbox: "isolated",
-  egress: "denied",
-  external_calls_24h: 0,
-  database: "ok",
-  storage_used_gb: 41.2,
-  storage_total_gb: 256,
-  version: "0.19.0",
-};
 
 export const AUDIT: AuditEvent[] = [
   { id: "au-1", at: t(8), actor: "maintenance-agent", action: "artifact.verified", tool: "generate_report", model: "qwen2.5:32b", job_id: "job-88" },

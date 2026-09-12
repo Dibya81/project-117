@@ -13,6 +13,12 @@ def test_health_reports_ok(client):
     assert "llm" in body
     assert body["llm"]["running"] is False
     assert "services" in body
+    # Posture figures must be measured, not invented.
+    storage = body["storage"]
+    assert storage["available"] is True
+    assert storage["total_gb"] > 0
+    assert 0 <= storage["used_gb"] <= storage["total_gb"]
+    assert body["egress"] in {"denied", "allowlist"}
 
 
 def test_root_identifies_service(client):

@@ -205,6 +205,38 @@ export interface HealthResponse {
     providers?: Record<string, { running?: boolean }>;
   };
   services?: Record<string, { configured?: boolean }>;
+  /** Measured disk figures for the volume the backend writes to. */
+  storage?: {
+    available?: boolean;
+    path?: string;
+    used_gb?: number;
+    total_gb?: number;
+    free_gb?: number;
+  };
+  egress?: "denied" | "allowlist";
+  /**
+   * The process-local record of outbound decisions the egress guard made.
+   * `external_allowed` is the figure that matters: destinations off this
+   * machine that were actually reached. Loopback traffic to a local model
+   * server is counted under `totals.local_*` and is deliberately not promoted
+   * into the external figure.
+   */
+  network?: {
+    since?: number;
+    scope?: string;
+    external_allowed?: number;
+    external_blocked?: number;
+    totals?: {
+      allowed?: number;
+      blocked?: number;
+      external_allowed?: number;
+      external_blocked?: number;
+      local_allowed?: number;
+      local_blocked?: number;
+    };
+    blocked_hosts?: string[];
+    allowed_hosts?: string[];
+  };
 }
 
 /** POST /api/chat — mirrors ChatRequest. */

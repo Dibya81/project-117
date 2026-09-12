@@ -41,6 +41,7 @@ def check_and_record(policy: EgressPolicy, url: str) -> None:
         scheme=parsed.scheme,
         decision="allowed" if allowed else "blocked",
         reason=None if allowed else "denied by egress policy",
+        local=policy.is_local(parsed.hostname),
     )
     if not allowed:
         raise EgressBlocked(url)

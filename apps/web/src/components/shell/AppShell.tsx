@@ -18,13 +18,43 @@ import { Aurora } from "@/components/fx/Aurora";
 import { JourneyProvider, JourneyBar } from "@/lib/journey";
 import { RoleProvider } from "@/lib/role";
 import { consoleData } from "@/lib/data/console";
-import type { AgentDescriptor } from "@/types";
+import type { AgentDescriptor, HealthState } from "@/types";
 import type { NotificationItem, SystemPosture } from "@/types/console";
 
 import "@/styles/console.css";
 import "@/styles/sim.css";
 
 const LIVE_STATES = new Set(["QUEUED", "PLANNING", "RETRIEVING", "EXECUTING", "VERIFYING"]);
+
+/**
+ * Maps a measured posture field to a status tone. A missing posture means the
+ * reading has not arrived, which is "unknown" — never a default of "ok".
+ */
+function postureTone(
+  posture: SystemPosture | null,
+  field: "model_gateway" | "sandbox" | "egress" | "calls" | "blocked",
+): HealthState {
+  if (!posture) return "unknown";
+  switch (field) {
+    case "model_gateway":
+      return posture.model_gateway === "local"
+        ? "ok"
+        : posture.model_gateway === "degraded"
+          ? "warning"
+          : "critical";
+    case "sandbox":
+      return posture.sandbox === "isolated" ? "ok" : "critical";
+    case "egress":
+      return posture.egress === "denied" ? "ok" : "warning";
+    case "calls":
+      return posture.external_calls_24h === 0 ? "ok" : "warning";
+    case "blocked":
+      // A blocked attempt is the guard succeeding, so it is never a failure
+      // state — but a rising count is worth seeing, so it is not "ok" either
+      // once it is non-zero.
+      return posture.egress_blocked_24h === 0 ? "ok" : "warning";
+  }
+}
 
 /**
  * The console paints a bright workspace, but `html/body` colours come from the
@@ -124,20 +154,31 @@ export function AppShell({ children }: { children: ReactNode }) {
               PROJECT <b>117</b>
             </button>
             <Rail expanded={expanded} approvalsPending={approvalsPending} runningTasks={runningTasks} />
-            {/* Sovereignty posture — fills the rail's lower space with the
-                product's core promise instead of leaving a black void. */}
+            {/* Sovereignty posture — real readings from /health, never a
+                hardcoded green. Before the first reading arrives every row
+                reads "unknown" rather than asserting a state we have not
+                measured. */}
             <div className="cs-rail__posture" aria-label="Sovereignty posture">
               <span className="cs-rail__posture-title">Sovereignty posture</span>
               {(
                 [
-                  ["Model gateway", posture?.model_gateway ?? "local"],
-                  ["Sandbox", posture?.sandbox ?? "isolated"],
-                  ["Egress", posture?.egress ?? "denied"],
-                  ["External calls · 24h", String(posture?.external_calls_24h ?? 0)],
+                  ["Model gateway", posture ? posture.model_gateway : "unknown", postureTone(posture, "model_gateway")],
+                  ["Sandbox", posture ? posture.sandbox : "unknown", postureTone(posture, "sandbox")],
+                  ["Egress", posture ? posture.egress : "unknown", postureTone(posture, "egress")],
+                  [
+                    "External calls · 24h",
+                    posture ? String(posture.external_calls_24h) : "—",
+                    postureTone(posture, "calls"),
+                  ],
+                  [
+                    "Blocked egress · 24h",
+                    posture ? String(posture.egress_blocked_24h) : "—",
+                    postureTone(posture, "blocked"),
+                  ],
                 ] as const
-              ).map(([label, value]) => (
+              ).map(([label, value, tone]) => (
                 <span key={label} className="cs-rail__posture-row">
-                  <StatusDot state="ok" />
+                  <StatusDot state={tone} />
                   <span className="cs-rail__posture-label">{label}</span>
                   <span className="cs-rail__posture-value">{value}</span>
                 </span>

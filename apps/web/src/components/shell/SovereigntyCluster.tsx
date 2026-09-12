@@ -3,7 +3,20 @@
 /** Sovereignty cluster — the trust whisper in the top bar. */
 import { useEffect, useRef, useState } from "react";
 import { StatusDot } from "@/components/ui/primitives";
+import type { HealthState } from "@/types";
 import type { SystemPosture } from "@/types/console";
+
+/**
+ * The cluster reads the same measured posture the rest of the console does.
+ * It previously printed a fixed "MODELS: LOCAL / SANDBOX: ISOLATED / EGRESS:
+ * DENIED" regardless of the actual state — a permanent green claim in the
+ * chrome of every page. Before the first reading lands the honest answer is
+ * "unknown", so that is what it shows.
+ */
+function gatewayTone(p: SystemPosture | null): HealthState {
+  if (!p) return "unknown";
+  return p.model_gateway === "local" ? "ok" : p.model_gateway === "degraded" ? "warning" : "critical";
+}
 
 export function SovereigntyCluster({ posture }: { posture: SystemPosture | null }) {
   const [open, setOpen] = useState(false);
@@ -18,12 +31,11 @@ export function SovereigntyCluster({ posture }: { posture: SystemPosture | null 
     return () => window.removeEventListener("click", onClick);
   }, [open]);
 
-  const p = posture ?? {
-    model_gateway: "local",
-    sandbox: "isolated",
-    egress: "denied",
-    external_calls_24h: 0,
-  };
+  const p = posture;
+  const sandboxTone: HealthState = !p ? "unknown" : p.sandbox === "isolated" ? "ok" : "critical";
+  const egressTone: HealthState = !p ? "unknown" : p.egress === "denied" ? "ok" : "warning";
+  const callsTone: HealthState = !p ? "unknown" : p.external_calls_24h === 0 ? "ok" : "warning";
+  const blockedTone: HealthState = !p ? "unknown" : p.egress_blocked_24h === 0 ? "ok" : "warning";
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -33,10 +45,16 @@ export function SovereigntyCluster({ posture }: { posture: SystemPosture | null 
         aria-expanded={open}
         aria-label="Sovereignty status — data stays inside this environment"
       >
-        <span><StatusDot state="ok" /><span>MODELS: LOCAL</span></span>
-        <span><StatusDot state="ok" /><span>SANDBOX: ISOLATED</span></span>
-        <span>EGRESS: DENIED</span>
-        <span>EXTERNAL: {p.external_calls_24h}</span>
+        <span>
+          <StatusDot state={gatewayTone(p)} />
+          <span>MODELS: {p ? p.model_gateway.toUpperCase() : "UNKNOWN"}</span>
+        </span>
+        <span>
+          <StatusDot state={sandboxTone} />
+          <span>SANDBOX: {p ? p.sandbox.toUpperCase() : "UNKNOWN"}</span>
+        </span>
+        <span>EGRESS: {p ? p.egress.toUpperCase() : "UNKNOWN"}</span>
+        <span>EXTERNAL: {p ? p.external_calls_24h : "—"}</span>
       </button>
       {open && (
         <div
@@ -52,10 +70,11 @@ export function SovereigntyCluster({ posture }: { posture: SystemPosture | null 
             </p>
             {(
               [
-                ["Model gateway", p.model_gateway, "ok"],
-                ["Sandbox", p.sandbox, "ok"],
-                ["Network egress", p.egress, "ok"],
-                ["External AI calls (24h)", String(p.external_calls_24h), "ok"],
+                ["Model gateway", p ? p.model_gateway : "unknown", gatewayTone(p)],
+                ["Sandbox", p ? p.sandbox : "unknown", sandboxTone],
+                ["Network egress", p ? p.egress : "unknown", egressTone],
+                ["External AI calls (24h)", p ? String(p.external_calls_24h) : "unknown", callsTone],
+                ["Blocked egress attempts", p ? String(p.egress_blocked_24h) : "unknown", blockedTone],
               ] as const
             ).map(([label, value, tone]) => (
               <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5 }}>

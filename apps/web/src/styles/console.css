@@ -1405,6 +1405,11 @@
 .cs-text-green  { color: var(--green); }
 .cs-text-violet { color: #b79cff; }
 .cs-text-ember  { color: var(--orange); }
+/* Semantic aliases. Six call sites already asked for cs-text-ok, which no rule
+   ever defined — the class was silently doing nothing, so "positive" labels
+   rendered in the default ink. Defining the alias makes the intent real. */
+.cs-text-ok     { color: var(--ok); }
+.cs-text-warn   { color: var(--amber); }
 
 /* --- panel glow variant --- */
 .cs-panel--glow { box-shadow: 0 0 0 1px rgba(37,99,235,0.18), 0 8px 40px rgba(15,23,42,0.090); }

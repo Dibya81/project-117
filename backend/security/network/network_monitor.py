@@ -43,6 +43,10 @@ class EgressDecision:
     decision: Decision
     at: float
     reason: str | None = None
+    #: True when the destination was loopback. A local model server is not
+    #: "external", and conflating the two inflates the very number that proves
+    #: the sovereignty claim.
+    local: bool = False
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -51,6 +55,7 @@ class EgressDecision:
             "decision": self.decision,
             "at": self.at,
             "reason": self.reason,
+            "local": self.local,
         }
 
 
@@ -64,6 +69,13 @@ class NetworkMonitor:
         self._history: deque[EgressDecision] = deque(maxlen=history)
         self._allowed: dict[str, int] = {}
         self._blocked: dict[str, int] = {}
+        # Four counters rather than two: the security view must be able to say
+        # "how much tried to leave" separately from "how much did not leave but
+        # still had to be stopped".
+        self._external_allowed = 0
+        self._external_blocked = 0
+        self._local_allowed = 0
+        self._local_blocked = 0
         self._started = time.time()
 
     def record(
@@ -73,6 +85,7 @@ class NetworkMonitor:
         scheme: str | None,
         decision: Decision,
         reason: str | None = None,
+        local: bool = False,
     ) -> EgressDecision:
         entry = EgressDecision(
             host=(host or "?").lower(),
@@ -80,21 +93,40 @@ class NetworkMonitor:
             decision=decision,
             at=time.time(),
             reason=reason,
+            local=local,
         )
         with self._lock:
             self._history.append(entry)
             target = self._allowed if decision == "allowed" else self._blocked
             target[entry.host] = target.get(entry.host, 0) + 1
+            if local:
+                if decision == "allowed":
+                    self._local_allowed += 1
+                else:
+                    self._local_blocked += 1
+            elif decision == "allowed":
+                self._external_allowed += 1
+            else:
+                self._external_blocked += 1
         return entry
 
-    def allowed(self, host: str | None, scheme: str | None = None) -> EgressDecision:
-        return self.record(host=host, scheme=scheme, decision="allowed")
+    def allowed(self, host: str | None, scheme: str | None = None, *, local: bool = False) -> EgressDecision:
+        return self.record(host=host, scheme=scheme, decision="allowed", local=local)
 
     def blocked(
-        self, host: str | None, scheme: str | None = None, reason: str | None = None
+        self,
+        host: str | None,
+        scheme: str | None = None,
+        reason: str | None = None,
+        *,
+        local: bool = False,
     ) -> EgressDecision:
         return self.record(
-            host=host, scheme=scheme, decision="blocked", reason=reason or "denied by egress policy"
+            host=host,
+            scheme=scheme,
+            decision="blocked",
+            reason=reason or "denied by egress policy",
+            local=local,
         )
 
     def recent(self, limit: int = 20) -> list[dict[str, Any]]:
@@ -115,6 +147,10 @@ class NetworkMonitor:
             return {
                 "allowed": sum(self._allowed.values()),
                 "blocked": sum(self._blocked.values()),
+                "external_allowed": self._external_allowed,
+                "external_blocked": self._external_blocked,
+                "local_allowed": self._local_allowed,
+                "local_blocked": self._local_blocked,
             }
 
     def summary(self, *, recent: int = 10) -> dict[str, Any]:
@@ -124,6 +160,12 @@ class NetworkMonitor:
             "since": self._started,
             "scope": "this process only",
             "totals": totals,
+            # The figure the console reports as "external calls": destinations
+            # off this machine that were actually reached. Blocked attempts are
+            # reported separately, because a guard that stopped something is
+            # evidence the guard works, not evidence of a leak.
+            "external_allowed": totals["external_allowed"],
+            "external_blocked": totals["external_blocked"],
             "blocked_hosts": sorted(counts["blocked"]),
             "allowed_hosts": sorted(counts["allowed"]),
             "recent": self.recent(recent),
@@ -135,6 +177,10 @@ class NetworkMonitor:
             self._history.clear()
             self._allowed.clear()
             self._blocked.clear()
+            self._external_allowed = 0
+            self._external_blocked = 0
+            self._local_allowed = 0
+            self._local_blocked = 0
             self._started = time.time()
 
 
@@ -152,6 +198,7 @@ def record_decision(
     scheme: str | None,
     decision: Decision,
     reason: str | None = None,
+    local: bool = False,
 ) -> None:
     """Record against the process-wide monitor. Never raises.
 
@@ -159,7 +206,9 @@ def record_decision(
     so every error here is swallowed deliberately.
     """
     try:
-        MONITOR.record(host=host, scheme=scheme, decision=decision, reason=reason)
+        MONITOR.record(
+            host=host, scheme=scheme, decision=decision, reason=reason, local=local
+        )
     except Exception:  # noqa: BLE001 - observability must never break traffic
         pass
 

@@ -5,7 +5,7 @@
  * The sovereignty posture panel is the centerpiece: proof nothing leaves.
  */
 import { useEffect, useState } from "react";
-import { Panel, Progress, Ring, SkeletonRows, StatusDot, Tabs, Tag, timeAgo } from "@/components/ui/primitives";
+import { ErrorState, Panel, Progress, Ring, SkeletonRows, StatusDot, Tabs, Tag, timeAgo } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { consoleData } from "@/lib/data/console";
 import type { AdminUser, AuditEvent, ModelStatus, SystemPosture } from "@/types/console";
@@ -39,6 +39,9 @@ export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [models, setModels] = useState<ModelStatus[] | null>(null);
   const [posture, setPosture] = useState<SystemPosture | null>(null);
+  /** True only when the posture request actually failed — an endless skeleton
+   *  would read as "still loading" forever. */
+  const [postureError, setPostureError] = useState(false);
   const [audit, setAudit] = useState<AuditEvent[] | null>(null);
   const [auditFilter, setAuditFilter] = useState("");
   /**
@@ -49,18 +52,27 @@ export default function AdminPage() {
   const [runtime, setRuntime] = useState<HealthResponse | null | undefined>(undefined);
 
   useEffect(() => {
-    consoleData.admin.users().then(setUsers);
-    consoleData.admin.models().then(setModels);
+    // `alive` guards every setState, not just the health probe: this page makes
+    // five independent requests and any of them can resolve after unmount.
+    let alive = true;
+    consoleData.admin.users().then((v) => { if (alive) setUsers(v); });
+    consoleData.admin.models().then((v) => { if (alive) setModels(v); });
     // Probe the real model runtime. A failure is reported as offline — it is
     // never softened into "probably fine".
-    let alive = true;
     api
       .health()
       .then((h) => { if (alive) setRuntime(h); })
       .catch(() => { if (alive) setRuntime(null); });
+    // These two used to sit *after* the cleanup `return`, which made them
+    // unreachable: posture and audit were never fetched and the Security,
+    // Audit and System tabs rendered an endless skeleton. The blank panels
+    // were the symptom; the misplaced `return` was the cause.
+    consoleData.admin
+      .posture()
+      .then((p) => { if (alive) setPosture(p); })
+      .catch(() => { if (alive) setPostureError(true); });
+    consoleData.admin.audit().then((a) => { if (alive) setAudit(a); });
     return () => { alive = false; };
-    consoleData.admin.posture().then(setPosture);
-    consoleData.admin.audit().then(setAudit);
   }, []);
 
   return (
@@ -96,12 +108,27 @@ export default function AdminPage() {
                 <div className="cs-grid-2">
                   {(
                     [
-                      ["Model gateway", posture.model_gateway, "All inference on local models (Ollama → vLLM). No external AI endpoints configured.", "cpu"],
-                      ["Execution sandbox", posture.sandbox, "Code runs in an isolated sandbox: no network, no host filesystem, resource-capped.", "lock"],
-                      ["Network egress", posture.egress, "Outbound traffic denied by default; nothing phones home. Allowlist changes are audited.", "shield"],
-                      ["External AI calls · 24h", String(posture.external_calls_24h), "Hard zero. Confidential documents never leave this machine.", "globe"],
+                      ["Model gateway", posture.model_gateway, "All inference on local models (Ollama → vLLM). No external AI endpoints configured.", "cpu", posture.model_gateway === "local" ? "ok" : posture.model_gateway === "degraded" ? "warn" : "crit"],
+                      ["Execution sandbox", posture.sandbox, "Code runs in an isolated sandbox: no network, no host filesystem, resource-capped.", "lock", posture.sandbox === "isolated" ? "ok" : "crit"],
+                      ["Network egress", posture.egress, "Outbound traffic denied by default; nothing phones home. Allowlist changes are audited.", "shield", posture.egress === "denied" ? "ok" : "warn"],
+                      [
+                        "External calls · process lifetime",
+                        String(posture.external_calls_24h),
+                        posture.external_calls_24h === 0
+                          ? "Measured zero. Every outbound request passes the egress guard, which records the destination host. Loopback traffic to the local model server is counted separately and is not external."
+                          : `${posture.external_calls_24h} outbound request(s) reached a non-loopback host. See the audit log for what initiated them.`,
+                        "globe",
+                        posture.external_calls_24h === 0 ? "ok" : "warn",
+                      ],
+                      [
+                        "Blocked egress attempts",
+                        String(posture.egress_blocked_24h),
+                        "Requests the policy refused before they could leave. A non-zero count is the guard working, not a breach.",
+                        "shield",
+                        "ok",
+                      ],
                     ] as const
-                  ).map(([label, value, detail, icon], i) => (
+                  ).map(([label, value, detail, icon, tone], i) => (
                     <div
                       key={label}
                       className="cs-agentcard"
@@ -110,7 +137,10 @@ export default function AdminPage() {
                       <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 8 }}>
                         <Icon name={icon} size={14} />
                         <strong style={{ fontSize: 13 }}>{label}</strong>
-                        <span className="cs-mono cs-text-ok" style={{ marginLeft: "auto", fontSize: 11, textTransform: "uppercase" }}>
+                        <span
+                          className={`cs-mono ${tone === "ok" ? "cs-text-ok" : tone === "warn" ? "cs-text-warn" : ""}`}
+                          style={{ marginLeft: "auto", fontSize: 11, textTransform: "uppercase" }}
+                        >
                           {value}
                         </span>
                       </div>
@@ -119,6 +149,8 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
+            ) : postureError ? (
+              <ErrorState message="The sovereignty posture probe failed. /health did not answer, so no posture can be reported — this is not a clean bill of health." />
             ) : (
               <SkeletonRows rows={4} />
             ))}
@@ -295,10 +327,19 @@ export default function AdminPage() {
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 9 }}>
                     <span className="cs-dim">Document store + indices</span>
                     <span className="cs-mono">
-                      {posture.storage_used_gb} / {posture.storage_total_gb} GB
+                      {posture.storage_total_gb > 0
+                        ? `${posture.storage_used_gb} / ${posture.storage_total_gb} GB`
+                        : "unavailable"}
                     </span>
                   </div>
-                  <Progress value={(posture.storage_used_gb / posture.storage_total_gb) * 100} tone="cyan" />
+                  <Progress
+                    value={
+                      posture.storage_total_gb > 0
+                        ? (posture.storage_used_gb / posture.storage_total_gb) * 100
+                        : 0
+                    }
+                    tone="cyan"
+                  />
                 </Panel>
                 <Panel title="Runtime">
                   <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 12.5 }}>

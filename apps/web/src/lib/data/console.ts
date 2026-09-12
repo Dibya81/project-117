@@ -14,6 +14,7 @@ import type {
   LearnedRule,
   ModelStatus,
   NotificationItem,
+  SystemPosture,
 } from "@/types/console";
 import type { ApprovalRequest, Equipment, HealthState, WorkOrder } from "@/types";
 import type { EquipmentRecord, WorkOrderRecord, ApprovalRecord } from "@/lib/api";
@@ -33,7 +34,6 @@ import {
   LEARNED_RULES,
   MODELS,
   NOTIFICATIONS,
-  POSTURE,
   SESSIONS,
   USERS,
   WORK_ORDERS,
@@ -555,11 +555,33 @@ export const consoleData = {
           status: model ? "available" : "unavailable",
         }));
       }),
-    // NOTE: still mock. SystemPosture requires storage_used_gb, storage_total_gb,
-    // egress and external_calls_24h, none of which /health reports. Inventing
-    // disk figures would put a fabricated number in front of an operator, so the
-    // correct fix is to extend the backend health payload — tracked, not faked.
-    posture: () => ok(POSTURE),
+    // Real posture. Every field is a measurement the backend actually makes:
+    // /health reports model-backend reachability, sandbox configuration, the
+    // egress policy, disk usage, and the egress guard's own record of every
+    // outbound decision. Nothing here is assumed, and a value the backend
+    // cannot measure reads as 0 rather than as a plausible guess.
+    posture: async (): Promise<SystemPosture> => {
+      const health = await api.health();
+      const network = health.network;
+      const llm = health.llm;
+      return {
+        // "local" means the on-prem backend answered. A configured-but-silent
+        // backend is degraded; no backend at all is offline. These are three
+        // genuinely different states and the operator sees which one they are in.
+        model_gateway: llm?.running ? "local" : llm?.backend ? "degraded" : "offline",
+        sandbox: health.services?.opensandbox?.configured ? "isolated" : "unavailable",
+        egress: health.egress === "allowlist" ? "allowlisted" : "denied",
+        // Counted by the egress guard transport on the only path outbound HTTP
+        // can take. It deliberately excludes loopback, so a busy conversation
+        // with the local model server does not read as external traffic.
+        external_calls_24h: network?.external_allowed ?? 0,
+        egress_blocked_24h: network?.external_blocked ?? 0,
+        database: health.database === "ok" ? "ok" : "error",
+        storage_used_gb: health.storage?.used_gb ?? 0,
+        storage_total_gb: health.storage?.total_gb ?? 0,
+        version: health.version ?? "",
+      };
+    },
     // Real audit rows: the durable record of everything the platform did.
     audit: () =>
       api.audit
