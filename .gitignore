@@ -59,7 +59,13 @@ data/*.db-shm
 data/*.db-journal
 data/lancedb/
 data/artifacts/
-logs/
+# Anchored, not a bare `logs/`: unanchored, that pattern also matched
+# backend/observability/logs/ — a real Python package whose __init__.py was
+# silently dropped from the repository, so a fresh clone could not import it.
+# Runtime logs go to stdout (see backend/logging_config.py); these two paths
+# exist only so a stray log directory can never be committed.
+/logs/
+data/logs/
 *.log
 index_store/
 lancedb/

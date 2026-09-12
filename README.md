@@ -165,7 +165,12 @@ without it — but any call that needs a model role will return
 
 ```bash
 # 1. Python environment (from the repository root)
-uv sync
+uv sync                 # preferred: uses pyproject.toml + uv.lock
+
+#    No uv, or installing with plain pip? A pinned requirements.txt is
+#    committed and generated from the same lock file:
+#      python3 -m venv .venv && . .venv/bin/activate
+#      pip install -r requirements.txt
 
 # 2. local models — a set that fits a 16 GB machine (see the table below)
 ollama pull nomic-embed-text:latest     # 274 MB  embedding
@@ -619,6 +624,7 @@ limitation rather than repaired:
 | `packages/` | Shared package placeholders — not implemented. |
 | `infrastructure/docker/` | Backend and sandbox Dockerfiles. |
 | `pyproject.toml` | Python project, dependencies, ruff/pytest/pyright config. |
+| `requirements.txt` | Pinned backend deps generated from `uv.lock`, for plain `pip install`. |
 | `package.json`, `pnpm-workspace.yaml` | pnpm workspace (`apps/*`, `packages/*`). |
 | `docker-compose.yml` | Phase-1 compose stack (backend + optional Ollama). |
 | `Makefile` | Convenience targets wrapping the commands above (`make help`). |
