@@ -101,6 +101,10 @@ class Settings(BaseSettings):
         ".md",
         ".html",
         ".htm",
+        # Presentation and spreadsheet formats: the committed refinery corpus
+        # includes both, and Docling converts them natively.
+        ".pptx",
+        ".xlsx",
         ".png",
         ".jpg",
         ".jpeg",
@@ -155,7 +159,19 @@ class Settings(BaseSettings):
     chunk_size_tokens: int = 1500
     chunk_overlap_sentences: int = 1
     # Extensions eligible for indexing (superset allowed for upload).
-    ingestible_extensions: set[str] = {".pdf", ".docx", ".txt", ".md", ".html", ".htm"}
+    # Formats the ingestion pipeline (Docling + localGPT) can actually convert.
+    # 3 of the 8 committed refinery corpus documents are PPTX/XLSX, so leaving
+    # them out meant a quarter of the real corpus was rejected at upload.
+    ingestible_extensions: set[str] = {
+        ".pdf",
+        ".docx",
+        ".pptx",
+        ".xlsx",
+        ".txt",
+        ".md",
+        ".html",
+        ".htm",
+    }
 
     # --- hybrid retrieval (Phase 4 — localGPT adapter) -------------------
     # Reranking re-scores the fused candidate list with the configured
