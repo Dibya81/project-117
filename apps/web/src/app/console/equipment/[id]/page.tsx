@@ -51,6 +51,25 @@ export default function EquipmentDetailPage() {
 
   const tone = data.status === "ok" ? "ok" : data.status === "warning" ? "warn" : "crit";
 
+  /** The live instrument readings for this asset. */
+  const readings = data.readings ?? [];
+
+  /**
+   * An anomaly exists only when a real reading has crossed a real threshold.
+   *
+   * The chain below used to read `data.insight ? "pattern detected" : "none"`,
+   * and `insight` is the backend's descriptive summary — present for every
+   * asset ("Offloading Pump A is a pump in Crude Receiving; criticality
+   * medium…"). So every healthy unit was labelled as having a detected anomaly
+   * pattern, in red, at the top of its own page.
+   */
+  const breached = readings.filter(
+    (r) => r.warnAbove != null && r.value >= r.warnAbove,
+  );
+  const anomaly = breached.length
+    ? `${breached.length} reading${breached.length === 1 ? "" : "s"} above threshold`
+    : "none";
+
   /** Sensor snapshot for the twin diagram. */
   const twinSensors = data.telemetry.map((t) => ({
     key: t.key,
@@ -63,8 +82,8 @@ export default function EquipmentDetailPage() {
 
   /** Chain of evidence — sensor reading to the action it produced. */
   const chain: { label: string; value: string; color: string }[] = [
-    { label: "Sensor", value: data.kpis[0] ? `${data.kpis[0].label} ${data.kpis[0].value}` : "live", color: "var(--cyan)" },
-    { label: "Anomaly", value: data.insight ? "pattern detected" : "none", color: "var(--crit)" },
+    { label: "Sensors", value: `${readings.length} instrumented point${readings.length === 1 ? "" : "s"}`, color: "var(--cyan)" },
+    { label: "Anomaly", value: anomaly, color: breached.length ? "var(--crit)" : "var(--ink-2)" },
     { label: "Evidence", value: `${data.documents.length} documents linked`, color: "var(--violet)" },
     { label: "AI finding", value: data.insight ? "see insight below" : "—", color: "var(--cyan)" },
     { label: "Action", value: data.open_work_orders[0] ?? "no open work order", color: "var(--warn)" },
@@ -125,7 +144,7 @@ export default function EquipmentDetailPage() {
           <Tabs
             tabs={[
               { id: "overview", label: "Overview" },
-              { id: "sensors", label: "Sensors", count: data.telemetry.length },
+              { id: "sensors", label: "Sensors", count: readings.length },
               { id: "maintenance", label: "Maintenance", count: data.maintenance.length },
               { id: "documents", label: "Documents", count: data.documents.length },
               { id: "history", label: "History", count: data.history.length },

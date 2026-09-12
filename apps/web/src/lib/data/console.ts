@@ -361,7 +361,11 @@ export const consoleData = {
      */
     detail: async (id: string): Promise<EquipmentDetailData | null> => {
       try {
-        const r = await api.equipment.get(id);
+        const envelope = await api.equipment.get(id);
+        // Unwrap the envelope. Passing it straight to toEquipment meant `r.name`,
+        // `r.model` and `r.keySignals` were all undefined, so the detail page
+        // rendered "UNKNOWN" and "—" for a real, fully-populated asset.
+        const r = envelope.equipment;
         if (r) {
           const view = toEquipment(r);
           // Telemetry and maintenance come from the backend's own endpoints; an

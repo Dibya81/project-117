@@ -357,11 +357,28 @@ export const api = {
   equipment: {
     list: (params: { area?: string; status?: string; q?: string } = {}) =>
       request<ListEnvelope<EquipmentRecord>>(`/api/equipment${query(params)}`),
-    get: (id: string) => request<EquipmentRecord>(`/api/equipment/${encodeURIComponent(id)}`),
+    /**
+     * The detail endpoint returns an envelope, not the bare record:
+     * `{equipment, openWorkOrders, workOrders, documents, history, source}`.
+     * This was typed as `EquipmentRecord`, so the adapter read `name`, `model`
+     * and `sensors` straight off the envelope and every field on the detail
+     * page rendered as "—".
+     */
+    get: (id: string) =>
+      request<{
+        equipment: EquipmentRecord;
+        openWorkOrders: Record<string, unknown>[];
+        workOrders: Record<string, unknown>[];
+        documents: Record<string, unknown>[];
+        history: Record<string, unknown>[];
+        source: string;
+      }>(`/api/equipment/${encodeURIComponent(id)}`),
     telemetry: (id: string) =>
       request<Record<string, unknown>>(`/api/equipment/${encodeURIComponent(id)}/telemetry`),
     history: (id: string) =>
-      request<Record<string, unknown>>(`/api/equipment/${encodeURIComponent(id)}/history`),
+      request<{ equipmentId: string; items: Record<string, unknown>[]; count: number; source: string }>(
+        `/api/equipment/${encodeURIComponent(id)}/history`,
+      ),
   },
 
   workOrders: {
