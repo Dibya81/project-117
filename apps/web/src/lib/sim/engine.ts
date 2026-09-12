@@ -9,6 +9,7 @@
  * instead and this module is never constructed.
  */
 import { isProcessRelation, relationOf } from "./relations";
+import { alternateSensorsFor, declaredRedundancyIds } from "./recovery";
 import type {
   AgentEvidence,
   AgentTask,
@@ -59,6 +60,9 @@ type Listener = (ev: SimEvent) => void;
 
 export class SimEngine {
   readonly plant: PlantDef;
+  /** The deterministic seed this engine was built with. Exposed so a reset can
+   *  rebuild an identical twin rather than silently reseeding the plant. */
+  readonly seed: number;
   t = 0;
   readonly tickS = 1;
   private rng: Rng;
@@ -81,8 +85,23 @@ export class SimEngine {
   private seq = 0;
   private listeners = new Set<Listener>();
 
+  // --- session-only out-of-service state ---------------------------------
+  // Operator changes (a sensor taken out of service, a sensor deleted) live
+  // here and nowhere else. Nothing is written to the plant definition or to
+  // the database, and a page reload builds a brand-new engine from the
+  // committed dataset — which is exactly the promise the console makes:
+  // "changes are temporary; reloading restores the plant to normal".
+  //
+  // Deletion is tracked as an overlay rather than by splicing the shared
+  // PlantDef, because that object is also read by other views; filtering
+  // through one accessor keeps "gone" meaning the same thing everywhere.
+  private disabledSensors = new Set<string>();
+  private removedSensors = new Set<string>();
+  private disabledEquipment = new Set<string>();
+
   constructor(plant: PlantDef, seed = 117) {
     this.plant = plant;
+    this.seed = seed;
     this.rng = new Rng(seed);
     for (const e of plant.equipment) {
       this.eq.set(e.id, { capacity: e.capacity, state: e.state, faults: new Set() });
@@ -296,6 +315,7 @@ export class SimEngine {
     const rt = this.eq.get(equipmentId)!;
     rt.capacity = 0;
     rt.state = "disabled";
+    this.disabledEquipment.add(equipmentId);
     this.emit("equipment.disabled", { equipment_id: equipmentId });
   }
 
@@ -304,11 +324,87 @@ export class SimEngine {
     const rt = this.eq.get(equipmentId)!;
     rt.capacity = 0;
     rt.state = "disabled";
+    this.disabledEquipment.add(equipmentId);
     for (const c of this.plant.connections) {
       if (c.source === equipmentId || c.target === equipmentId) c.enabled = false;
     }
     this.emit("equipment.removed", { equipment_id: equipmentId, broken_paths: affected });
     return affected;
+  }
+
+  // --- sensor out-of-service (session scope) ------------------------------
+
+  /** Whether a sensor is out of service this session, and how. */
+  sensorOutOfService(sensorId: string): "disabled" | "removed" | null {
+    if (this.removedSensors.has(sensorId)) return "removed";
+    if (this.disabledSensors.has(sensorId)) return "disabled";
+    return null;
+  }
+
+  /** An asset's sensors that still exist — a deleted sensor is genuinely gone. */
+  visibleSensors(equipmentId: string) {
+    const eq = this.plant.equipment.find((e) => e.id === equipmentId);
+    if (!eq) return [];
+    return eq.sensors.filter((s) => !this.removedSensors.has(s.id));
+  }
+
+  disableSensor(sensorId: string): void {
+    const rt = this.sensors.get(sensorId);
+    if (!rt) throw new Error(`unknown sensor '${sensorId}'`);
+    this.disabledSensors.add(sensorId);
+    // An out-of-service transmitter is indistinguishable from a failed one to
+    // everything downstream: the value freezes and quality goes bad. That is
+    // what the agent pipeline reacts to, so the recovery path it reasons about
+    // is the real one and not a UI-only fiction.
+    rt.failed = true;
+    rt.quality = "bad";
+    this.emit("sensor.disabled", {
+      sensor_id: sensorId,
+      equipment_id: this.sensorOwner.get(sensorId) ?? null,
+    });
+  }
+
+  removeSensor(sensorId: string): void {
+    const rt = this.sensors.get(sensorId);
+    if (!rt) throw new Error(`unknown sensor '${sensorId}'`);
+    const owner = this.sensorOwner.get(sensorId) ?? null;
+    this.removedSensors.add(sensorId);
+    this.disabledSensors.delete(sensorId);
+    rt.failed = true;
+    rt.quality = "bad";
+    // Emit the redundancy context now: once the sensor is gone, "what can
+    // still measure this point?" is the question the recovery panel answers.
+    this.emit("sensor.removed", {
+      sensor_id: sensorId,
+      equipment_id: owner,
+      alternates: this.alternateSensors(sensorId).map((s) => s.id),
+    });
+  }
+
+  restoreSensor(sensorId: string): void {
+    if (this.removedSensors.has(sensorId)) {
+      throw new Error(
+        `sensor '${sensorId}' was deleted this session; only a plant reset brings it back`,
+      );
+    }
+    if (!this.sensors.has(sensorId)) throw new Error(`unknown sensor '${sensorId}'`);
+    this.disabledSensors.delete(sensorId);
+    this.repairSensor(sensorId);
+    this.emit("sensor.restored", { sensor_id: sensorId });
+  }
+
+  /** How many operator changes are live this session (console indicator). */
+  sessionChanges(): { disabledSensors: number; removedSensors: number; disabledEquipment: number } {
+    return {
+      disabledSensors: this.disabledSensors.size,
+      removedSensors: this.removedSensors.size,
+      disabledEquipment: this.disabledEquipment.size,
+    };
+  }
+
+  sessionChangeCount(): number {
+    const c = this.sessionChanges();
+    return c.disabledSensors + c.removedSensors + c.disabledEquipment;
   }
 
   repairSensor(sensorId: string): void {
@@ -367,37 +463,20 @@ export class SimEngine {
 
   /** Explicit REDUNDANCY partners declared in the topology, if any. */
   declaredRedundancy(sensorId: string): string[] {
-    const out: string[] = [];
-    for (const c of this.plant.connections) {
-      if (relationOf(c) !== "REDUNDANCY") continue;
-      if (c.source === sensorId) out.push(c.target);
-      else if (c.target === sensorId) out.push(c.source);
-    }
-    return out;
+    return declaredRedundancyIds(this.plant, sensorId);
   }
 
+  /**
+   * Instruments that can still read the point `sensorId` was reading.
+   *
+   * Delegates to the shared pure rule in `recovery.ts` so the engine and the
+   * console's recovery panel can never disagree about what a valid fallback is.
+   * Sensors that are themselves out of service this session are excluded.
+   */
   alternateSensors(sensorId: string) {
-    const model = this.sensorModel.get(sensorId)!;
-    const eq = this.plant.equipment.find((e) => e.id === model.equipment_id)!;
-    // Declared redundancy first: if the engineer said "this is the backup",
-    // that beats anything inferred from measurement type or proximity.
-    const declared = this.declaredRedundancy(sensorId)
-      .map((id) => this.sensorModel.get(id))
-      .filter((s): s is NonNullable<typeof s> => Boolean(s));
-    const alts: typeof eq.sensors = [...declared];
-    for (const s of eq.sensors) {
-      if (s.id !== sensorId && s.measurement === model.measurement && !alts.some((a) => a.id === s.id)) {
-        alts.push(s);
-      }
-    }
-    for (const nbId of [...(this.upstream.get(eq.id) ?? []), ...(this.downstream.get(eq.id) ?? [])]) {
-      const nb = this.plant.equipment.find((e) => e.id === nbId)!;
-      alts.push(...nb.sensors.filter((s) => s.measurement === model.measurement));
-    }
-    if (model.measurement === "pressure") {
-      alts.push(...eq.sensors.filter((s) => (s.measurement === "flow" || s.measurement === "vibration") && s.id !== sensorId));
-    }
-    return alts;
+    return alternateSensorsFor(this.plant, sensorId, (id) => this.sensorOutOfService(id) !== null).map(
+      (a) => a.sensor,
+    );
   }
 
   private areaOf(equipmentId: string): string {
@@ -686,7 +765,12 @@ export class SimEngine {
       }
     }
     const sensors: SimSnapshot["sensors"] = {};
-    for (const [id, r] of this.sensors) sensors[id] = { value: r.value, quality: r.quality, failed: r.failed };
+    for (const [id, r] of this.sensors) {
+      // A deleted sensor is absent from telemetry, not merely zeroed — the
+      // snapshot is what every live view renders from.
+      if (this.removedSensors.has(id)) continue;
+      sensors[id] = { value: r.value, quality: r.quality, failed: r.failed };
+    }
     return {
       t: this.t,
       equipment,
@@ -698,7 +782,10 @@ export class SimEngine {
 
   /** Live-read helpers for the renderer (no React state needed per tick). */
   sensorValue(sensorId: string): { value: number; quality: TelemetryQuality } {
-    const rt = this.sensors.get(sensorId)!;
+    const rt = this.sensors.get(sensorId);
+    // Renderers may still hold a stale reference for one frame after a delete;
+    // report bad quality rather than throwing mid-paint.
+    if (!rt) return { value: 0, quality: "bad" };
     return { value: rt.value, quality: rt.quality };
   }
   equipmentState(equipmentId: string): { state: AssetState; capacity: number } {

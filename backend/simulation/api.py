@@ -217,6 +217,49 @@ def remove(plant_id: str, equipment_id: str, principal: Principal = Depends(get_
     return {"equipment_id": equipment_id, "state": "removed", "broken_paths": broken}
 
 
+@router.post("/plants/{plant_id}/sensors/{sensor_id}/disable")
+def disable_sensor(plant_id: str, sensor_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    svc = _svc()
+    try:
+        return svc.disable_sensor(plant_id, sensor_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/plants/{plant_id}/sensors/{sensor_id}/remove")
+def remove_sensor(plant_id: str, sensor_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    svc = _svc()
+    try:
+        return svc.remove_sensor(plant_id, sensor_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/plants/{plant_id}/sensors/{sensor_id}/restore")
+def restore_sensor(plant_id: str, sensor_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    svc = _svc()
+    try:
+        svc.restore_sensor(plant_id, sensor_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"sensor_id": sensor_id, "state": "restored"}
+
+
+@router.post("/plants/{plant_id}/reset")
+def reset(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    """Return the plant to its pristine definition, discarding every
+    in-memory operator change (a reload must find normal, not a session)."""
+    svc = _svc()
+    plant = svc.store.load_plant_definition(plant_id)
+    if plant is None:
+        try:
+            plant = datasets.load_plant(plant_id)
+        except datasets.DatasetError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+    rt = svc.reset(plant_id, plant)
+    return {"plant": plant_id, "reset": True, "equipment": len(rt.engine.plant.equipment)}
+
+
 @router.post("/plants/{plant_id}/incidents/{incident_id}/decision")
 def decide(plant_id: str, incident_id: str, body: DecisionRequest, principal: Principal = Depends(get_principal)) -> dict:
     svc = _svc()

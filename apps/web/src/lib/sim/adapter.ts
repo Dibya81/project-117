@@ -76,6 +76,18 @@ export interface SimAdapter {
   injectFailure(plantId: string, equipmentId: string, modeId: string): Promise<void>;
   disable(plantId: string, equipmentId: string): Promise<void>;
   remove(plantId: string, equipmentId: string): Promise<void>;
+  /** Take one sensor out of service (session-scoped; reset restores it).
+   *  `incidentId` is the agent run raised for the loss, or null if none. */
+  disableSensor(plantId: string, sensorId: string): Promise<{ incidentId: string | null }>;
+  /** Delete one sensor. Terminal for the session — reset brings it back. */
+  removeSensor(plantId: string, sensorId: string): Promise<{ incidentId: string | null }>;
+  /** Return a disabled sensor to service. */
+  restoreSensor(plantId: string, sensorId: string): Promise<void>;
+  /**
+   * Return the plant to its committed definition, discarding every operator
+   * change made this session. This is what makes a reload restore normal.
+   */
+  resetPlant(plantId: string): Promise<void>;
   decide(plantId: string, incidentId: string, approved: boolean): Promise<void>;
   snapshot(plantId: string): Promise<SimSnapshot>;
   tasks(plantId: string, incidentId: string): Promise<{ tasks: AgentTask[]; plan: IncidentPlan }>;
@@ -190,6 +202,76 @@ class EmbeddedAdapter implements SimAdapter {
     this.engine(plantId).removeEquipment(equipmentId);
   }
 
+  async disableSensor(plantId: string, sensorId: string): Promise<{ incidentId: string | null }> {
+    const eng = this.engine(plantId);
+    eng.disableSensor(sensorId);
+    return { incidentId: this.raiseSensorIncident(plantId, sensorId, "disable") };
+  }
+
+  async removeSensor(plantId: string, sensorId: string): Promise<{ incidentId: string | null }> {
+    const eng = this.engine(plantId);
+    // Capture the model's tags BEFORE deleting, so the incident is named after
+    // the instrument that was actually lost rather than a bare id.
+    const incidentId = this.raiseSensorIncident(plantId, sensorId, "remove");
+    eng.removeSensor(sensorId);
+    return { incidentId };
+  }
+
+  /**
+   * A lost transmitter is an anomaly, not a config change, so it engages the
+   * same agents a fault injection does. The incident carries `originSensor`,
+   * which is what makes the pipeline's redundancy reasoning run against the
+   * point that was actually lost — the same path the backend takes.
+   */
+  private raiseSensorIncident(
+    plantId: string,
+    sensorId: string,
+    action: "disable" | "remove",
+  ): string | null {
+    const eng = this.engine(plantId);
+    let tag = sensorId;
+    let equipmentId: string | null = null;
+    for (const eq of eng.plant.equipment) {
+      const s = eq.sensors.find((x) => x.id === sensorId);
+      if (s) {
+        tag = s.tag;
+        equipmentId = eq.id;
+        break;
+      }
+    }
+    if (!equipmentId) return null;
+    // Do not stack duplicates: one open incident per lost instrument.
+    const open = [...eng.incidents.values()].find(
+      (i) => i.origin_sensor === sensorId && i.status !== "resolved",
+    );
+    if (open) return open.id;
+    const incident = eng.createIncident({
+      title: `${action === "remove" ? "Instrument deleted" : "Loss of measurement"} — ${tag}`,
+      severity: action === "remove" ? "critical" : "warning",
+      originEquipment: equipmentId,
+      originSensor: sensorId,
+      failureMode: null,
+    });
+    setTimeout(() => eng.runAgentPipeline(incident.id), 400);
+    return incident.id;
+  }
+
+  async restoreSensor(plantId: string, sensorId: string): Promise<void> {
+    this.engine(plantId).restoreSensor(sensorId);
+  }
+
+  async resetPlant(plantId: string): Promise<void> {
+    // Embedded mode has no server to ask, so reset means "throw the engine
+    // away and rebuild it from the definition we were given on load" — the
+    // same thing a page reload does, without the reload.
+    const existing = this.engines.get(plantId);
+    if (!existing) return;
+    this.engines.delete(plantId);
+    const fresh = new SimEngine(structuredClone(existing.plant), existing.seed);
+    fresh.markPaused();
+    this.engines.set(plantId, fresh);
+  }
+
   async decide(plantId: string, incidentId: string, approved: boolean): Promise<void> {
     const eng = this.engine(plantId);
     eng.decide(incidentId, approved, () => eng.tick());
@@ -263,6 +345,29 @@ class LiveAdapter implements SimAdapter {
   }
   remove(plantId: string, equipmentId: string) {
     return this.req(`/plants/${plantId}/equipment/${equipmentId}/remove`, { method: "POST" }).then(() => undefined);
+  }
+  async disableSensor(plantId: string, sensorId: string): Promise<{ incidentId: string | null }> {
+    const r = await this.req<{ incident_id?: string | null }>(
+      `/plants/${plantId}/sensors/${sensorId}/disable`,
+      { method: "POST" },
+    );
+    return { incidentId: r.incident_id ?? null };
+  }
+  async removeSensor(plantId: string, sensorId: string): Promise<{ incidentId: string | null }> {
+    const r = await this.req<{ incident_id?: string | null }>(
+      `/plants/${plantId}/sensors/${sensorId}/remove`,
+      { method: "POST" },
+    );
+    return { incidentId: r.incident_id ?? null };
+  }
+  restoreSensor(plantId: string, sensorId: string) {
+    return this.req(`/plants/${plantId}/sensors/${sensorId}/restore`, { method: "POST" }).then(() => undefined);
+  }
+  resetPlant(plantId: string) {
+    // Server-side the engine lives in RAM for the life of the process, so a
+    // browser reload alone would keep an operator's changes. Resetting is what
+    // makes "reload restores normal" true in live mode.
+    return this.req(`/plants/${plantId}/reset`, { method: "POST" }).then(() => undefined);
   }
   decide(plantId: string, incidentId: string, approved: boolean) {
     return this.req(`/plants/${plantId}/incidents/${incidentId}/decision`, { method: "POST", body: JSON.stringify({ approved }) }).then(() => undefined);

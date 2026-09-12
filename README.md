@@ -437,6 +437,35 @@ A five-minute golden path. Both the console and the backend must be running
    a maintenance work order for the failed asset and takes you to
    `/console/work-orders/{id}`.
 
+### Taking an instrument out of service
+
+Each row under **Live sensors** in the unit panel carries two controls:
+
+* **⏸ out of service** — the transmitter is marked failed (value frozen, quality
+  bad), an incident is raised against that exact sensor, and the agent pipeline
+  runs on it. The **recovery panel** slides in on the right showing the affected
+  circuit, the agents working through it in pipeline order, and the
+  instruments that can still read the point. That fallback list is not
+  decorative: it is the same redundancy rule the engine uses to decide whether
+  the process is still readable, ordered declared-redundancy first, then
+  same-measurement, then adjacent-unit, then process correlates. If nothing can
+  read it, the panel says so rather than pointing at a second dead transmitter.
+* **✕ delete** — the sensor is genuinely removed: it leaves the list, the
+  schematic stops drawing it, and it is absent from telemetry and snapshots.
+
+**Every operator change is temporary.** Nothing is written to the plant
+definition or the database. A chip in the top bar counts the session's changes
+and offers **Reset plant**; reloading the page does the same thing. In live mode
+the engine lives in the backend's memory for the life of the process, so the
+console explicitly resets the plant on load — otherwise a reload would still
+show the previous session's disabled transmitter. Client-side navigation
+between console pages keeps your work; only a reload discards it.
+
+The builder has the same session semantics, plus a **★ Saved** library: keep one
+instrumented unit or one relation (a redundancy pair, say) and drop copies back
+onto the canvas later. A saved connection is stored by end tags and relation, so
+it can still be re-applied after the units have been rebuilt.
+
 Headless equivalent (no browser), against a running backend:
 
 ```bash
@@ -553,6 +582,18 @@ limitation rather than repaired:
 * **`P117_WORKFLOWS_DIR` defaulted to `../workflows/definitions`**, which
   resolves outside the checkout from the documented repo-root CWD, so a fresh
   clone started with an empty workflow registry.
+* **The simulation canvas had a dead zone.** The floating zoom cluster is
+  translucent and sits over the process map, and its panel swallowed every
+  pointer event aimed at a symbol underneath it — a unit positioned there could
+  not be selected at all. The cluster is now transparent to clicks except for
+  its own buttons.
+* **A reload did not always restore the plant.** In development React 18
+  StrictMode invokes effects twice; the "already prepared" guard was a boolean
+  set *before* the asynchronous reset finished, so the second invocation skipped
+  the reset and read the plant definition while the first reset was still in
+  flight. A deleted sensor therefore survived the reload that was supposed to
+  remove it. The guard is now the shared reset *promise*, so a second caller
+  awaits the same reset instead of racing past it.
 * **Two side repos are optional and not installed here**: the vendored localGPT
   retrieval stack (`vendor/localGPT`) and LightRAG (`uv sync --extra graphrag`).
   When they are absent, retrieval degrades **visibly** to the in-repo lexical

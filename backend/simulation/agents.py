@@ -261,7 +261,9 @@ def build_pipeline(engine: SimulationEngine, incident: Incident, t0: float) -> t
         and engine.sensors[sid].quality == TelemetryQuality.GOOD
         and (engine.sensors[sid].value >= m.critical_max or engine.sensors[sid].value <= m.critical_min)
         for sid, m in engine.sensor_model.items()
-        if m.equipment_id in [origin, *affected]
+        # a sensor removed from the running plant is absent from `sensors` but
+        # still has a model entry (that is what makes a reset able to rebuild it)
+        if sid in engine.sensors and m.equipment_id in [origin, *affected]
     )
     sf.evidence.append(Evidence(
         id=f"{sf.id}-E1", source_type="policy", source_id="safe-envelope",

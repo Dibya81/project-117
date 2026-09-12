@@ -24,13 +24,41 @@ import {
 } from "@/components/sim/SchematicCanvas";
 import { AgentCommandCenter } from "@/components/sim/AgentCommandCenter";
 import { AssessmentPanel } from "@/components/sim/AssessmentPanel";
+import { SensorRecoveryPanel, type RecoveryFocus } from "@/components/sim/SensorRecoveryPanel";
 import { simAdapter, asEmbedded } from "@/lib/sim/adapter";
 import { useSimulation } from "@/lib/sim/store";
 import { useJourney } from "@/lib/journey";
 import { useRouter } from "next/navigation";
 import { consoleData } from "@/lib/data/console";
-import type { EquipmentDef, PlantDef, ScenarioDef, SimSnapshot } from "@/lib/sim/types";
+import { recoveryCircuit } from "@/lib/sim/recovery";
+import type { AgentTask, EquipmentDef, PlantDef, ScenarioDef, SensorDef, SimSnapshot } from "@/lib/sim/types";
 import "@/styles/plant.css";
+
+/**
+ * One reset per plant for the lifetime of this page load.
+ *
+ * Stores the PROMISE, not a boolean. React 18 StrictMode invokes effects twice
+ * in development, and a boolean flag set *before* the request finished let the
+ * second invocation skip the reset and read the plant definition while the
+ * first reset was still in flight — which is exactly how a deleted sensor came
+ * back still missing after a reload. Awaiting the shared promise removes the
+ * race, so the definition is only ever read once the plant is pristine.
+ *
+ * A full browser reload re-evaluates this module, so the map starts empty and
+ * the plant is reset — which is what makes operator changes temporary. A
+ * client-side navigation keeps the module alive, so work in progress survives
+ * moving between console pages; only a reload discards it.
+ */
+const plantReset = new Map<string, Promise<void>>();
+
+function ensurePlantIsFresh(plantId: string): Promise<void> {
+  const inFlight = plantReset.get(plantId);
+  if (inFlight) return inFlight;
+  const started = simAdapter.resetPlant(plantId).catch(() => undefined);
+  plantReset.set(plantId, started);
+  return started;
+}
+
 
 /** §38 SIMULATION HEALTH INDICATOR — documented heuristic, not a validated model. */
 function plantHealth(plant: PlantDef, runtime: CanvasRuntime, alarmCount: number): number {
@@ -87,6 +115,17 @@ export default function PlantTwinPage() {
   const [busyScenario, setBusyScenario] = useState<string | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  // Session-only sensor state. Deliberately NOT persisted anywhere: the plant
+  // definition is never mutated, so a reload re-reads the committed dataset and
+  // the plant returns to normal. This overlay is what every view filters
+  // through, so "removed" means the same thing on the map, in this list, and in
+  // the recovery panel.
+  const [sensorState, setSensorState] = useState<Record<string, "disabled" | "removed">>({});
+  const [recovery, setRecovery] = useState<RecoveryFocus | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  /** Unit-level disable/remove, counted so the session chip tells the truth. */
+  const [equipmentChanges, setEquipmentChanges] = useState(0);
+
   const sim = useSimulation(plant ? plantId : null);
   const embedded = asEmbedded(simAdapter);
 
@@ -95,17 +134,27 @@ export default function PlantTwinPage() {
     let live = true;
     setPlant(null);
     setRuntime(null);
-    simAdapter
-      .loadPlant(plantId)
-      .then(async ({ plant, scenarios }) => {
-        if (!live) return;
-        setPlant(plant);
-        setScenarios(scenarios);
-        setRuntime(emptyRuntime(plant));
-        await simAdapter.start(plantId);
-        visit({ id: plant.id, label: plant.name, kind: "equipment", href: `/console/simulation/plant/${plant.id}` });
-      })
-      .catch((e) => setLoadError(String(e)));
+    setSensorState({});
+    setEquipmentChanges(0);
+    setRecovery(null);
+    (async () => {
+      // Reset BEFORE reading the definition, never after.
+      //
+      // In live mode the snapshot carries the plant definition itself, and
+      // taking a sensor out of service mutates that definition in the running
+      // engine. Reading first cached the mutated plant, so a deleted sensor
+      // stayed missing after a reload even though the backend was already
+      // restored. The ordering — and awaiting the shared reset promise — is the
+      // fix; see `ensurePlantIsFresh`.
+      await ensurePlantIsFresh(plantId);
+      const { plant, scenarios } = await simAdapter.loadPlant(plantId);
+      if (!live) return;
+      setPlant(plant);
+      setScenarios(scenarios);
+      setRuntime(emptyRuntime(plant));
+      await simAdapter.start(plantId);
+      visit({ id: plant.id, label: plant.name, kind: "equipment", href: `/console/simulation/plant/${plant.id}` });
+    })().catch((e) => setLoadError(String(e)));
     return () => {
       live = false;
       timers.current.forEach(clearTimeout);
@@ -145,6 +194,110 @@ export default function PlantTwinPage() {
     void simAdapter.injectFailure(plantId, equipmentId, modeId);
   };
 
+  /** Whether a sensor is out of service this session, and how. */
+  const sensorOut = useCallback(
+    (id: string): "disabled" | "removed" | null => sensorState[id] ?? null,
+    [sensorState],
+  );
+
+  /** Sensors of an asset that still exist — a deleted sensor is genuinely gone. */
+  const visibleSensors = useCallback(
+    (eq: EquipmentDef) => eq.sensors.filter((s) => sensorOut(s.id) !== "removed"),
+    [sensorOut],
+  );
+
+  const sessionChangeCount = Object.keys(sensorState).length + equipmentChanges;
+
+  /**
+   * Take a sensor out of service or delete it, then open the recovery panel on
+   * the circuit that lost the measurement.
+   *
+   * The agents are engaged for real: the adapters raise an incident carrying
+   * this sensor id, which is what makes the engine's redundancy reasoning run
+   * against the point that was actually lost. The panel renders those tasks.
+   */
+  const actOnSensor = async (
+    eq: EquipmentDef,
+    sensor: SensorDef,
+    action: "disable" | "remove",
+  ) => {
+    setActionError(null);
+    // Computed against the CURRENT overlay so a sensor already out of service
+    // cannot be offered as its own fallback.
+    const circuit = plant
+      ? recoveryCircuit(plant, sensor.id, (id) => Boolean(sensorState[id]))
+      : null;
+    try {
+      const res =
+        action === "disable"
+          ? await simAdapter.disableSensor(plantId, sensor.id)
+          : await simAdapter.removeSensor(plantId, sensor.id);
+      setSensorState((m) => ({ ...m, [sensor.id]: action === "disable" ? "disabled" : "removed" }));
+
+      let tasks: AgentTask[] = [];
+      let planSteps: string[] = [];
+      if (res.incidentId) {
+        // The pipeline is raised just after the incident; poll briefly for it
+        // rather than rendering an empty panel for a run that is about to exist.
+        for (let attempt = 0; attempt < 8; attempt++) {
+          await new Promise((r) => setTimeout(r, 400));
+          try {
+            const t = await simAdapter.tasks(plantId, res.incidentId);
+            if (t.tasks.length) {
+              tasks = t.tasks;
+              planSteps = t.plan?.steps ?? [];
+              break;
+            }
+          } catch {
+            /* not ready yet */
+          }
+        }
+      }
+      setRecovery({
+        sensorId: sensor.id,
+        sensorTag: sensor.tag,
+        measurement: sensor.measurement,
+        unit: sensor.unit,
+        equipmentTag: eq.tag,
+        action,
+        circuit,
+        tasks,
+        planSteps,
+      });
+    } catch (e) {
+      setActionError(`${action === "disable" ? "Disable" : "Delete"} failed: ${String(e)}`);
+    }
+  };
+
+  const restoreSensor = async (sensorId: string) => {
+    setActionError(null);
+    try {
+      await simAdapter.restoreSensor(plantId, sensorId);
+      setSensorState((m) => {
+        const next = { ...m };
+        delete next[sensorId];
+        return next;
+      });
+      setRecovery(null);
+    } catch (e) {
+      setActionError(`Return to service failed: ${String(e)}`);
+    }
+  };
+
+  /** Discard every change made this session and rebuild from the definition. */
+  const resetPlant = async () => {
+    setActionError(null);
+    try {
+      await simAdapter.resetPlant(plantId);
+      setSensorState({});
+      setEquipmentChanges(0);
+      setRecovery(null);
+      setSelected(null);
+    } catch (e) {
+      setActionError(`Reset failed: ${String(e)}`);
+    }
+  };
+
   const runScenario = (sc: ScenarioDef) => {
     setBusyScenario(sc.id);
     sc.steps.forEach((st) => {
@@ -165,17 +318,25 @@ export default function PlantTwinPage() {
   /** The map may be narrowed to a single process area. */
   const displayPlant = useMemo(() => {
     if (!plant) return null;
-    if (!areaFocus) return plant;
+    // Deleted sensors are stripped from the definition the canvas renders, so
+    // they are genuinely gone from the schematic rather than merely hidden from
+    // one list.
+    const strip = (e: EquipmentDef): EquipmentDef => ({
+      ...e,
+      sensors: e.sensors.filter((s) => sensorOut(s.id) !== "removed"),
+    });
+    const inArea = areaFocus ? plant.equipment.filter((e) => e.area_id === areaFocus) : plant.equipment;
+    if (!areaFocus) return { ...plant, equipment: inArea.map(strip) };
     return {
       ...plant,
-      equipment: plant.equipment.filter((e) => e.area_id === areaFocus),
+      equipment: inArea.map(strip),
       connections: plant.connections.filter((c) => {
         const s = plant.equipment.find((e) => e.id === c.source);
         const t = plant.equipment.find((e) => e.id === c.target);
         return s?.area_id === areaFocus || t?.area_id === areaFocus;
       }),
     };
-  }, [plant, areaFocus]);
+  }, [plant, areaFocus, sensorOut]);
 
   /** sensorId → live reading, straight from the snapshot / engine. */
   const readings = useMemo(() => {
@@ -277,6 +438,16 @@ export default function PlantTwinPage() {
             <StatusDot state="ai" pulse={Boolean(sim.activeIncident)} />
             {sim.activeIncident ? "agents engaged" : "agents idle"}
           </span>
+          {sessionChangeCount > 0 && (
+            <button
+              className="sm-sessionchip"
+              onClick={() => void resetPlant()}
+              title="Every change here is temporary — reset now, or reload the page to restore the plant."
+            >
+              <Icon name="refresh" size={10} />
+              {sessionChangeCount} change{sessionChangeCount === 1 ? "" : "s"} · reset
+            </button>
+          )}
           <Ring value={health} size={44} tone={health > 80 ? "ok" : health > 55 ? "warn" : "crit"} label="simulation health indicator" />
           <Button variant="ghost" onClick={() => void simAdapter.pause(plantId)}>
             <Icon name="pause" size={12} /> Pause
@@ -307,22 +478,64 @@ export default function PlantTwinPage() {
               </div>
 
               <p className="cs-mono cs-dim" style={{ margin: "0 0 8px", fontSize: 9, letterSpacing: "0.26em", textTransform: "uppercase" }}>
-                Live sensors
+                Live sensors · {visibleSensors(selected).length}
               </p>
-              {selected.sensors.map((s) => {
-                const v = embedded ? embedded.engine(plantId).sensorValue(s.id) : snap?.sensors[s.id];
-                const q = v?.quality ?? "good";
+              {visibleSensors(selected).map((s) => {
+                const out = sensorOut(s.id);
+                const v = out ? undefined : embedded ? embedded.engine(plantId).sensorValue(s.id) : snap?.sensors[s.id];
+                const q = out === "disabled" ? "bad" : v?.quality ?? "good";
                 return (
-                  <div key={s.id} className="sm-sensorrow">
+                  <div key={s.id} className={`sm-sensorrow${out ? " is-down" : ""}`}>
                     <StatusDot state={q === "bad" ? "critical" : "ok"} pulse={q === "bad"} />
                     <span className="cs-mono">{s.tag}</span>
                     <span className="cs-dim" style={{ fontSize: 10 }}>{s.measurement}</span>
-                    <span className="sm-sensorrow__val" style={{ color: q === "bad" ? "var(--red)" : "var(--ink-1)" }}>
-                      {q === "bad" ? "BAD QUALITY" : `${v?.value.toFixed(1)} ${s.unit}`}
+                    {out === "disabled" ? (
+                      <span className="sm-sensorrow__flag">out of service</span>
+                    ) : (
+                      <span className="sm-sensorrow__val" style={{ color: q === "bad" ? "var(--red)" : "var(--ink-1)" }}>
+                        {q === "bad" ? "BAD QUALITY" : `${v?.value.toFixed(1)} ${s.unit}`}
+                      </span>
+                    )}
+                    <span className="sm-sensorrow__acts">
+                      {out === "disabled" ? (
+                        <button
+                          className="sm-sensorbtn"
+                          title={`Return ${s.tag} to service`}
+                          aria-label={`Return ${s.tag} to service`}
+                          onClick={() => void restoreSensor(s.id)}
+                        >
+                          <Icon name="play" size={10} />
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            className="sm-sensorbtn"
+                            title={`Take ${s.tag} out of service and engage the agents`}
+                            aria-label={`Take ${s.tag} out of service`}
+                            onClick={() => void actOnSensor(selected, s, "disable")}
+                          >
+                            <Icon name="pause" size={10} />
+                          </button>
+                          <button
+                            className="sm-sensorbtn sm-sensorbtn--danger"
+                            title={`Delete ${s.tag}`}
+                            aria-label={`Delete ${s.tag}`}
+                            onClick={() => void actOnSensor(selected, s, "remove")}
+                          >
+                            <Icon name="x" size={10} />
+                          </button>
+                        </>
+                      )}
                     </span>
                   </div>
                 );
               })}
+              {visibleSensors(selected).length < selected.sensors.length && (
+                <p className="cs-mono cs-dim" style={{ fontSize: 9.5, margin: "7px 0 0", letterSpacing: "0.1em" }}>
+                  {selected.sensors.length - visibleSensors(selected).length} sensor(s) deleted this
+                  session — reset the plant to restore them.
+                </p>
+              )}
 
               <p className="cs-mono cs-dim" style={{ margin: "14px 0 8px", fontSize: 9, letterSpacing: "0.26em", textTransform: "uppercase" }}>
                 Inject failure
@@ -339,10 +552,25 @@ export default function PlantTwinPage() {
               </div>
 
               <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                <Button variant="ghost" style={{ flex: 1, justifyContent: "center" }} onClick={() => void simAdapter.disable(plantId, selected.id)}>
+                <Button
+                  variant="ghost"
+                  style={{ flex: 1, justifyContent: "center" }}
+                  onClick={() => {
+                    void simAdapter.disable(plantId, selected.id);
+                    setEquipmentChanges((n) => n + 1);
+                  }}
+                >
                   <Icon name="pause" size={12} /> Disable
                 </Button>
-                <Button variant="reject" style={{ flex: 1, justifyContent: "center" }} onClick={() => { void simAdapter.remove(plantId, selected.id); setSelected(null); }}>
+                <Button
+                  variant="reject"
+                  style={{ flex: 1, justifyContent: "center" }}
+                  onClick={() => {
+                    void simAdapter.remove(plantId, selected.id);
+                    setEquipmentChanges((n) => n + 1);
+                    setSelected(null);
+                  }}
+                >
                   <Icon name="x" size={12} /> Remove
                 </Button>
               </div>
@@ -524,6 +752,20 @@ export default function PlantTwinPage() {
           )}
         </div>
       </div>
+
+      {/* AGENT RECOVERY — opens when a sensor is lost, anchored right so the
+          circuit stays visible behind it. */}
+      {actionError && (
+        <div className="sm-rec__empty" style={{ position: "fixed", right: 14, bottom: 14, zIndex: 61, maxWidth: 380 }}>
+          {actionError}
+        </div>
+      )}
+      <SensorRecoveryPanel
+        focus={recovery}
+        onClose={() => setRecovery(null)}
+        onRestore={() => recovery && void restoreSensor(recovery.sensorId)}
+        onReset={() => void resetPlant()}
+      />
     </>
   );
 }

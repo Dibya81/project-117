@@ -587,3 +587,340 @@
   .pt-investigator { transition: opacity 200ms ease; transform: translateX(0); }
   .pt-investigator:not(.is-open) { opacity: 0; }
 }
+
+/* ---------------------------------------------------------------------------
+   AGENT RECOVERY PANEL
+   Anchored to the right edge as an overlay so the process map stays readable
+   while the agents work. Opened by taking a sensor out of service.
+   --------------------------------------------------------------------------- */
+
+.sm-rec {
+  position: fixed;
+  top: 76px;
+  right: 14px;
+  bottom: 14px;
+  width: min(392px, calc(100vw - 28px));
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden auto;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.98));
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  animation: sm-rec-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes sm-rec-in {
+  from { opacity: 0; transform: translateX(22px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+.sm-rec__head {
+  /* Sticky so the operator can always see which circuit is being worked on
+     while scrolling the evidence below it. */
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 15px 16px 13px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.09), transparent);
+}
+
+.sm-rec__headline { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+
+.sm-rec__pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5);
+  animation: sm-rec-pulse 1.5s ease-out infinite;
+}
+
+@keyframes sm-rec-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
+  70% { box-shadow: 0 0 0 9px rgba(245, 158, 11, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+.sm-rec__kicker {
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+
+.sm-rec__close {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: border-color 160ms, color 160ms;
+}
+.sm-rec__close:hover { border-color: var(--line-2); color: var(--ink-1); }
+
+.sm-rec__title { margin: 0 0 8px; font-size: 19px; letter-spacing: -0.01em; color: var(--ink-1); }
+.sm-rec__chips { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; font-size: 10px; }
+
+.sm-rec__section { padding: 13px 16px; border-bottom: 1px solid var(--line); }
+.sm-rec__section--grow { flex: 1 1 auto; }
+
+.sm-rec__label {
+  margin: 0 0 10px;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* --- affected circuit ---------------------------------------------------- */
+
+.sm-rec__circuit { display: flex; flex-direction: column; gap: 0; }
+
+.sm-rec__node {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+}
+.sm-rec__node--down { border-color: rgba(220, 38, 38, 0.4); background: rgba(254, 242, 242, 0.8); }
+.sm-rec__node b { display: block; font-size: 12px; color: var(--ink-1); }
+.sm-rec__node span { display: block; font-size: 9.5px; margin-top: 1px; }
+
+.sm-rec__link { position: relative; height: 20px; margin-left: 19px; width: 1px; }
+.sm-rec__linkline {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 1px;
+  background: repeating-linear-gradient(180deg, var(--line-2) 0 4px, transparent 4px 8px);
+}
+.sm-rec__spark {
+  position: absolute;
+  left: -2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 7px rgba(245, 158, 11, 0.85);
+  animation: sm-rec-travel 1.5s ease-in-out infinite;
+}
+.sm-rec__spark--delay { animation-delay: 480ms; }
+
+@keyframes sm-rec-travel {
+  0% { top: -3px; opacity: 0; }
+  25% { opacity: 1; }
+  75% { opacity: 1; }
+  100% { top: 18px; opacity: 0; }
+}
+
+/* --- agent steps --------------------------------------------------------- */
+
+.sm-rec__steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.sm-rec__step {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  padding: 8px 0 8px 2px;
+  opacity: 0.35;
+  transition: opacity 240ms ease;
+}
+.sm-rec__step.is-working,
+.sm-rec__step.is-done { opacity: 1; }
+
+.sm-rec__bead {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  background: var(--panel);
+  font-size: 9px;
+  color: var(--ink-3);
+}
+.sm-rec__step.is-working .sm-rec__bead {
+  border-color: var(--amber);
+  color: var(--amber);
+  animation: sm-rec-spin 1s linear infinite;
+  border-top-color: transparent;
+}
+.sm-rec__step.is-done .sm-rec__bead {
+  border-color: rgba(16, 185, 129, 0.55);
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--green);
+  animation: none;
+}
+
+@keyframes sm-rec-spin { to { transform: rotate(360deg); } }
+
+.sm-rec__body { min-width: 0; flex: 1 1 auto; }
+.sm-rec__row { display: flex; align-items: center; gap: 8px; }
+.sm-rec__row b { font-size: 11px; color: var(--ink-1); }
+
+.sm-rec__badge {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--amber);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.sm-rec__task { margin: 3px 0 0; font-size: 12px; color: var(--ink-2); line-height: 1.5; }
+.sm-rec__tool {
+  margin: 5px 0 0;
+  font-size: 9.5px;
+  color: var(--ink-3);
+  padding-left: 8px;
+  border-left: 2px solid var(--line-2);
+}
+.sm-rec__result {
+  margin: 5px 0 0;
+  font-size: 11px;
+  color: var(--ink-1);
+  background: rgba(16, 185, 129, 0.07);
+  border-left: 2px solid rgba(16, 185, 129, 0.5);
+  padding: 5px 8px;
+  border-radius: 0 4px 4px 0;
+  animation: sm-rec-fade 300ms ease both;
+}
+
+@keyframes sm-rec-fade { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+
+/* --- recovery path ------------------------------------------------------- */
+
+.sm-rec__alts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.sm-rec__alt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 7px;
+  background: rgba(16, 185, 129, 0.06);
+  animation: sm-rec-fade 340ms ease both;
+}
+.sm-rec__alt b { display: block; font-size: 11.5px; color: var(--ink-1); }
+.sm-rec__alt span { display: block; font-size: 9.5px; margin-top: 1px; }
+
+.sm-rec__plan { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 5px; }
+.sm-rec__plan li { font-size: 10.5px; color: var(--ink-2); line-height: 1.5; }
+
+.sm-rec__empty {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  background: rgba(245, 158, 11, 0.07);
+  border-left: 2px solid rgba(245, 158, 11, 0.5);
+  padding: 8px 10px;
+  border-radius: 0 5px 5px 0;
+}
+
+/* --- footer -------------------------------------------------------------- */
+
+.sm-rec__foot {
+  /* Sticky: the panel scrolls, and the recovery actions must never scroll out
+     of reach. */
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  margin-top: auto;
+}
+
+.sm-rec__btn {
+  flex: 1 1 auto;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line-2);
+  background: #fff;
+  color: var(--ink-1);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: border-color 160ms, background 160ms;
+}
+.sm-rec__btn:hover { border-color: var(--ink-3); }
+.sm-rec__btn--ghost { background: transparent; color: var(--ink-2); }
+
+/* --- sensor row controls ------------------------------------------------- */
+
+.sm-sensorrow__acts { display: flex; gap: 4px; margin-left: auto; }
+
+.sm-sensorbtn {
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: border-color 150ms, color 150ms, background 150ms;
+}
+.sm-sensorbtn:hover { border-color: var(--line-2); color: var(--ink-1); }
+.sm-sensorbtn--danger:hover { border-color: rgba(220, 38, 38, 0.5); color: var(--red); background: rgba(254, 242, 242, 0.8); }
+
+.sm-sensorrow.is-down { background: rgba(254, 242, 242, 0.55); border-radius: 5px; }
+
+.sm-sensorrow__flag {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  color: var(--red);
+}
+
+/* --- session change indicator -------------------------------------------- */
+
+.sm-sessionchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 158, 11, 0.42);
+  background: rgba(245, 158, 11, 0.1);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--amber);
+  cursor: pointer;
+}
+.sm-sessionchip:hover { border-color: var(--amber); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sm-rec { animation: none; }
+  .sm-rec__pulse,
+  .sm-rec__spark,
+  .sm-rec__step.is-working .sm-rec__bead { animation: none; }
+}

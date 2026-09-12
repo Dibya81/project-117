@@ -21,6 +21,30 @@ import type { RelationType } from "@/lib/sim/types";
 import { BUILDER_TEMPLATES, type PlantTemplate } from "@/lib/sim/templates";
 import type { EquipmentDef, EquipmentKind, PlantDef } from "@/lib/sim/types";
 
+/**
+ * A reusable building block saved from the canvas.
+ *
+ * Saving the whole plant is a coarse unit of reuse; what an engineer actually
+ * wants to keep is smaller — one instrumented asset, or one relation between
+ * two of them ("these two are redundant"). An item stores a deep copy, so the
+ * original can be edited or deleted without touching the saved copy. A
+ * connection stores the two end tags plus the relation rather than raw ids, so
+ * it can be re-applied after the units have been re-created.
+ *
+ * Session-scoped like every other operator change: a reload clears the library.
+ */
+interface SavedItem {
+  id: string;
+  label: string;
+  detail: string;
+  kind: "item" | "connection";
+  /** Dedup key — the tag for an item, source|target|relation for a connection. */
+  key: string;
+  equipment?: EquipmentDef;
+  connection?: { sourceTag: string; targetTag: string; relation: RelationType };
+}
+
+
 const PALETTE: { group: string; icon: IconName; items: { kind: EquipmentKind; label: string }[] }[] = [
   {
     group: "Process", icon: "equipment",
@@ -70,6 +94,8 @@ export default function BuilderPage() {
   const [pending, setPending] = useState<{ source: EquipmentDef; target: EquipmentDef } | null>(null);
   const [relation, setRelation] = useState<RelationType>("MATERIAL_FLOW");
   const [savedPlants, setSavedPlants] = useState<string[]>([]);
+  const [library, setLibrary] = useState<SavedItem[]>([]);
+  const [libOpen, setLibOpen] = useState(false);
   /** Equipment tag requested by the Knowledge Universe deep link (?focus=). */
   const [focusTag, setFocusTag] = useState<string | null>(null);
   const materialised = useRef(false);
@@ -277,6 +303,99 @@ export default function BuilderPage() {
     setPending(null);
   };
 
+  // --- saved building blocks ----------------------------------------------
+
+  /** Keep a copy of one asset. Saving twice is a no-op, not a duplicate. */
+  const saveItem = (eq: EquipmentDef) => {
+    setLibrary((cur) =>
+      cur.some((x) => x.kind === "item" && x.key === eq.tag)
+        ? cur
+        : [
+            {
+              id: `lib-item-${eq.tag}`,
+              label: eq.tag,
+              detail: `${eq.name} · ${eq.sensors.length} sensors`,
+              kind: "item" as const,
+              key: eq.tag,
+              equipment: structuredClone(eq),
+            },
+            ...cur,
+          ],
+    );
+    setLibOpen(true);
+  };
+
+  /** Keep one relation, identified by its ends and its meaning. */
+  const saveConnection = (c: PlantDef["connections"][number]) => {
+    const src = equipment.find((e) => e.id === c.source);
+    const tgt = equipment.find((e) => e.id === c.target);
+    const rel = relationOf(c);
+    const key = `${c.source}|${c.target}|${rel}`;
+    setLibrary((cur) =>
+      cur.some((x) => x.kind === "connection" && x.key === key)
+        ? cur
+        : [
+            {
+              id: `lib-conn-${key}`,
+              label: `${src?.tag ?? c.source} → ${tgt?.tag ?? c.target}`,
+              detail: RELATION_BY_ID[rel]?.label ?? rel,
+              kind: "connection" as const,
+              key,
+              connection: { sourceTag: src?.tag ?? "", targetTag: tgt?.tag ?? "", relation: rel },
+            },
+            ...cur,
+          ],
+    );
+    setLibOpen(true);
+  };
+
+  /**
+   * Put a saved block back on the canvas.
+   *
+   * An asset is re-created with fresh ids and tag so the copy can never collide
+   * with the original (or with a previous copy), and is offset slightly so it
+   * does not land exactly on top of what is already there. A connection is
+   * resolved by tag against the units currently on the canvas — which is the
+   * point of storing tags: it still works after they have been rebuilt.
+   */
+  const addFromLibrary = (entry: SavedItem) => {
+    if (entry.kind === "item" && entry.equipment) {
+      const n = seq;
+      const tag = `${entry.equipment.tag}-C${n}`;
+      setEquipment((cur) => [
+        ...cur,
+        {
+          ...structuredClone(entry.equipment!),
+          id: `e-${tag}`,
+          tag,
+          sensors: entry.equipment!.sensors.map((s) => ({ ...s, id: `${s.id}-c${n}`, equipment_id: `e-${tag}` })),
+          x: entry.equipment!.x + 40,
+          y: entry.equipment!.y + 40,
+        },
+      ]);
+      setSeq((v) => v + 1);
+      setSaveState({ tone: "ok", text: `Added ${tag} from saved items` });
+      return;
+    }
+    if (entry.kind === "connection" && entry.connection) {
+      const { sourceTag, targetTag, relation: rel } = entry.connection;
+      const src = equipment.find((e) => e.tag === sourceTag);
+      const tgt = equipment.find((e) => e.tag === targetTag);
+      if (!src || !tgt) {
+        setSaveState({
+          tone: "err",
+          text: `Cannot add ${sourceTag} → ${targetTag}: both units must be on the canvas`,
+        });
+        return;
+      }
+      setConnections((cur) => [...cur, makeConnection(src.id, tgt.id, connSeq, rel)]);
+      setConnSeq((v) => v + 1);
+      setSaveState({ tone: "ok", text: `Added ${sourceTag} → ${targetTag}` });
+    }
+  };
+
+  const dropFromLibrary = (id: string) => setLibrary((cur) => cur.filter((x) => x.id !== id));
+
   const run = async () => {
     if (equipment.length === 0) return;
     const p = assemblePlant(equipment, connections);
@@ -431,8 +550,61 @@ export default function BuilderPage() {
               <Icon name="refresh" size={13} /> Stop &amp; edit
             </Button>
           )}
+          <Button
+            variant={libOpen ? "primary" : "ghost"}
+            onClick={() => setLibOpen((v) => !v)}
+            title="Building blocks saved from this canvas"
+          >
+            ★ Saved {library.length > 0 ? `(${library.length})` : ""}
+          </Button>
         </div>
       </div>
+
+      {/* ---- saved building blocks: one unit, or one connection ---- */}
+      {libOpen && (
+        <aside className="sm-float sm-float--library" aria-label="Saved building blocks">
+          <header className="sm-lib__head">
+            <span className="sm-lib__title">Saved blocks</span>
+            <span className="cs-mono cs-dim" style={{ fontSize: 9 }}>{library.length} kept</span>
+            <button className="sm-panel__close" onClick={() => setLibOpen(false)} aria-label="Close saved blocks">×</button>
+          </header>
+          {library.length === 0 ? (
+            <p className="sm-lib__empty">
+              Nothing saved yet. Select a unit and choose <b>Save this unit for reuse</b>, or press
+              the <b>★</b> beside any connection in the unit panel. Saved blocks live in this
+              session only — a reload clears them.
+            </p>
+          ) : (
+            <ul className="sm-lib__list">
+              {library.map((entry) => (
+                <li key={entry.id} className="sm-lib__row">
+                  <span className={`sm-lib__kind sm-lib__kind--${entry.kind}`}>
+                    {entry.kind === "item" ? "UNIT" : "LINK"}
+                  </span>
+                  <div className="sm-lib__meta">
+                    <b className="cs-mono">{entry.label}</b>
+                    <span className="cs-mono cs-dim">{entry.detail}</span>
+                  </div>
+                  <button
+                    className="sm-lib__add"
+                    onClick={() => addFromLibrary(entry)}
+                    title="Add a copy to the canvas"
+                  >
+                    Add
+                  </button>
+                  <button
+                    className="sm-panel__unlink"
+                    onClick={() => dropFromLibrary(entry.id)}
+                    aria-label={`Forget saved ${entry.label}`}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+      )}
 
       {/* ---- floating asset palette, right ---- */}
       <aside className={`sm-float sm-float--dock${dockOpen ? " is-open" : ""}`} aria-label="Asset palette">
@@ -536,6 +708,14 @@ export default function BuilderPage() {
                       <span className={`sm-link sm-link--${relationOf(c)}`}>{meta?.label ?? relationOf(c)}</span>
                       <span className="sm-panel__link-target">{c.source === selected.id ? "→" : "←"} {other?.tag ?? otherId}</span>
                       <button
+                        className="sm-panel__save"
+                        onClick={() => saveConnection(c)}
+                        title="Save this connection to reuse it later"
+                        aria-label={`Save ${meta?.label ?? ""} link to ${other?.tag ?? otherId}`}
+                      >
+                        ★
+                      </button>
+                      <button
                         className="sm-panel__unlink"
                         onClick={() => setConnections((cur) => cur.filter((x) => x.id !== c.id))}
                         aria-label={`Remove ${meta?.label ?? ""} link to ${other?.tag ?? otherId}`}
@@ -608,6 +788,9 @@ export default function BuilderPage() {
                   <Icon name="workflow" size={12} /> Pipe from {selected.tag}
                 </Button>
               )}
+              <Button variant="ghost" onClick={() => saveItem(selected)}>
+                <Icon name="plus" size={12} /> Save this unit for reuse
+              </Button>
               <Button
                 variant="reject"
                 onClick={() => {

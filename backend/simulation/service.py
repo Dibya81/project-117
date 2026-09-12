@@ -135,6 +135,24 @@ class SimulationService:
         rt.running = False
         rt.emit("simulation.paused", {"plant": plant_id})
 
+    def reset(self, plant_id: str, plant: Plant, seed: int = 117) -> PlantRuntime:
+        """Discard the running plant and rebuild it from the pristine dataset.
+
+        Operator mutations live only in the runtime, so dropping the runtime is
+        what makes a reload genuinely restore normal. The stale runtime's
+        measurement-loss incidents are closed first: the store has no delete
+        API, and leaving them open would contradict the reset."""
+        old = self._plants.pop(plant_id, None)
+        if old is not None:
+            self._close_sensor_incidents(old)
+        rt = self.register(plant, seed=seed)
+        self.store.audit(
+            event_type="plant.reset", actor="operator", plant_id=plant_id, target=plant_id,
+            sim_t=rt.engine.t, result=f"{len(plant.equipment)} equipment",
+            runtime=self.roster.runtime_label(),
+        )
+        return rt
+
     # ----------------------------------------------------------------- tick
 
     def step(self, plant_id: str) -> dict:
@@ -214,6 +232,118 @@ class SimulationService:
         affected = rt.engine.remove_equipment(equipment_id)
         rt.emit("equipment.removed", {"equipment_id": equipment_id, "broken_paths": affected})
         return affected
+
+    # --------------------------------------------------------------- sensors
+
+    def disable_sensor(self, plant_id: str, sensor_id: str) -> dict:
+        """Take a sensor out of service, then put the agents on the resulting
+        measurement loss — a dead transmitter is an anomaly, not a config edit."""
+        rt = self.runtime(plant_id)
+        context = self._sensor_redundancy(rt.engine, sensor_id)
+        rt.engine.disable_sensor(sensor_id)
+        rt.emit("sensor.disabled", {"sensor_id": sensor_id})
+        self.store.audit(event_type="sensor.disabled", actor="operator", plant_id=plant_id,
+                         sim_t=rt.engine.t, action="disable_sensor", target=sensor_id)
+        tag = rt.engine.sensor_model[sensor_id].tag
+        incident_id = self._raise_sensor_incident(
+            rt, sensor_id, AlarmSeverity.WARNING, f"Loss of measurement — {tag}",
+        )
+        return {**context, "incident_id": incident_id}
+
+    def remove_sensor(self, plant_id: str, sensor_id: str) -> dict:
+        """Delete a sensor outright and engage the agents on the loss.
+
+        Redundancy is read *before* the point leaves the running plant: the
+        console renders what still covers the measurement."""
+        rt = self.runtime(plant_id)
+        context = self._sensor_redundancy(rt.engine, sensor_id)
+        rt.engine.remove_sensor(sensor_id)
+        rt.emit("sensor.removed", {"sensor_id": sensor_id})
+        self.store.audit(event_type="sensor.removed", actor="operator", plant_id=plant_id,
+                         sim_t=rt.engine.t, action="remove_sensor", target=sensor_id,
+                         payload=context)
+        tag = rt.engine.sensor_model[sensor_id].tag
+        incident_id = self._raise_sensor_incident(
+            rt, sensor_id, AlarmSeverity.CRITICAL, f"Instrument deleted — {tag}",
+        )
+        return {**context, "incident_id": incident_id}
+
+    def restore_sensor(self, plant_id: str, sensor_id: str) -> None:
+        rt = self.runtime(plant_id)
+        rt.engine.restore_sensor(sensor_id)
+        rt.emit("sensor.restored", {"sensor_id": sensor_id})
+        self.store.audit(event_type="sensor.restored", actor="operator", plant_id=plant_id,
+                         sim_t=rt.engine.t, action="restore_sensor", target=sensor_id)
+
+    def _sensor_redundancy(self, engine: SimulationEngine, sensor_id: str) -> dict:
+        """What still reads a point the operator is removing.
+
+        Reuses ``engine.alternate_sensors`` — the same reasoning the agent
+        pipeline uses — and keeps only points that can actually read, so the UI
+        never offers a substitute that is itself dead."""
+        model = engine.sensor_model[sensor_id]  # KeyError → 404 at the API
+        alternates = [
+            s.id for s in engine.alternate_sensors(sensor_id)
+            if s.id in engine.sensors
+            and engine.sensor_out_of_service(s.id) is None
+            and not engine.sensors[s.id].failed
+        ]
+        return {
+            "sensor_id": sensor_id,
+            "equipment_id": model.equipment_id,
+            "measurement": model.measurement.value,
+            "alternates": alternates,
+            "affected": engine.neighbors(model.equipment_id, depth=2)["affected"],
+        }
+
+    def _open_sensor_incident(self, rt: PlantRuntime, sensor_id: str) -> Incident | None:
+        """A not-yet-resolved incident already tracking this sensor.
+
+        Re-raising would stack a second task DAG and a second approval on the
+        same loss, so the console would show the agents twice."""
+        return next(
+            (i for i in rt.engine.incidents.values()
+             if i.origin_sensor == sensor_id and i.status != IncidentStatus.RESOLVED),
+            None,
+        )
+
+    def _raise_sensor_incident(self, rt: PlantRuntime, sensor_id: str, severity: AlarmSeverity,
+                               title: str) -> str | None:
+        """Raise the measurement-loss incident and run the real agent pipeline.
+
+        Same machinery as ``inject_failure`` (create_incident → store → event →
+        ``_run_agents``); an open incident for the same point is reused instead
+        of duplicated."""
+        existing = self._open_sensor_incident(rt, sensor_id)
+        if existing is not None:
+            return existing.id
+        model = rt.engine.sensor_model[sensor_id]
+        incident = rt.engine.create_incident(
+            title=title,
+            severity=severity,
+            origin_equipment=model.equipment_id,
+            origin_sensor=sensor_id,
+            failure_mode=None,
+        )
+        self.store.upsert_incident(incident)
+        rt.emit("incident.created", incident.model_dump())
+        self.store.audit(
+            event_type="incident.created", actor="orchestrator", plant_id=rt.engine.plant.id,
+            incident_id=incident.id, sim_t=rt.engine.t, target=model.equipment_id,
+            result=incident.severity.value, runtime=self.roster.runtime_label(),
+            payload={"affected": incident.affected, "origin_sensor": sensor_id},
+        )
+        self._run_agents(rt, incident)
+        return incident.id
+
+    def _close_sensor_incidents(self, rt: PlantRuntime) -> None:
+        """Resolve measurement-loss incidents before their runtime is dropped."""
+        for incident in rt.engine.incidents.values():
+            if incident.origin_sensor is None or incident.status == IncidentStatus.RESOLVED:
+                continue
+            incident.status = IncidentStatus.RESOLVED
+            incident.resolved_at = rt.engine.t
+            self.store.upsert_incident(incident)
 
     # --------------------------------------------------------- agent pipeline
 

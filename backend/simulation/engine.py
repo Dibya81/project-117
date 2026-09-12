@@ -89,6 +89,12 @@ class SimulationEngine:
             for s in e.sensors:
                 self.sensors[s.id] = SensorRuntime(s.nominal)
                 self.sensor_model[s.id] = s
+        #: Session-scoped operator mutations. They are RAM-only by design — the
+        #: dataset stays pristine, so a reset or a process restart rebuilds the
+        #: plant and these sets are discarded with the runtime.
+        self._disabled_sensors: set[str] = set()
+        self._removed_sensors: set[str] = set()
+        self._disabled_equipment: set[str] = set()
         # topology: equipment id -> downstream equipment ids (pipes only)
         self.downstream: dict[str, list[str]] = {}
         self.upstream: dict[str, list[str]] = {}
@@ -278,7 +284,8 @@ class SimulationEngine:
             # trip the nearest gas/leak detector in the same area
             det = next(
                 (s for s, m in self.sensor_model.items()
-                 if m.is_detector and self._area_of(m.equipment_id) == eq_model.area_id),
+                 if m.is_detector and s in self.sensors
+                 and self._area_of(m.equipment_id) == eq_model.area_id),
                 None,
             )
             if det:
@@ -296,6 +303,7 @@ class SimulationEngine:
         rt = self.eq[equipment_id]
         rt.capacity = 0.0
         rt.state = AssetState.DISABLED
+        self._disabled_equipment.add(equipment_id)
 
     def remove_equipment(self, equipment_id: str) -> list[str]:
         """Remove from the simulation graph; return broken-path targets."""
@@ -303,10 +311,68 @@ class SimulationEngine:
         rt = self.eq[equipment_id]
         rt.capacity = 0.0
         rt.state = AssetState.DISABLED
+        self._disabled_equipment.add(equipment_id)
         for c in self.plant.connections:
             if c.source == equipment_id or c.target == equipment_id:
                 c.enabled = False
         return affected
+
+    # --------------------------------------------------------------- sensors
+
+    def disable_sensor(self, sensor_id: str) -> None:
+        """Out of service, not gone: the point stays in the graph so it can be
+        restored in place, but its reading must not be trusted."""
+        rt = self.sensors[sensor_id]
+        rt.failed = True
+        rt.quality = TelemetryQuality.BAD
+        self._disabled_sensors.add(sensor_id)
+
+    def remove_sensor(self, sensor_id: str) -> None:
+        """Remove from the running plant: telemetry, snapshot and every list
+        built from the plant lose it. Only a reset brings it back."""
+        self.sensors.pop(sensor_id)  # KeyError on unknown id, as equipment does
+        model = self.sensor_model[sensor_id]
+        for e in self.plant.equipment:
+            if e.id == model.equipment_id:
+                e.sensors = [s for s in e.sensors if s.id != sensor_id]
+                break
+        # A removed point cannot carry an active alarm; the next tick would
+        # clear it anyway, but snapshot() may be read before that tick.
+        self.alarms.pop(f"ALM-{sensor_id}", None)
+        self._disabled_sensors.discard(sensor_id)
+        self._removed_sensors.add(sensor_id)
+
+    def restore_sensor(self, sensor_id: str) -> None:
+        """Undo a disable. A removed sensor is deliberately not resurrected:
+        it is absent from the plant definition, so only a reset can rebuild it
+        consistently."""
+        if sensor_id in self._removed_sensors:
+            raise KeyError(
+                f"sensor {sensor_id} was removed; it only returns via a plant reset"
+            )
+        rt = self.sensors[sensor_id]
+        self._disabled_sensors.discard(sensor_id)
+        rt.failed = False
+        rt.quality = TelemetryQuality.GOOD
+        rt.value = self.sensor_model[sensor_id].nominal
+
+    def sensor_out_of_service(self, sensor_id: str) -> str | None:
+        """``"disabled"`` | ``"removed"`` | ``None`` for the console badge."""
+        if sensor_id in self._removed_sensors:
+            return "removed"
+        if sensor_id in self._disabled_sensors:
+            return "disabled"
+        return None
+
+    def session_change_counts(self) -> dict[str, int]:
+        """RAM-only operator mutations since the runtime was built. This is the
+        console's "a reload will discard this" indicator, so it counts what the
+        engine actually tracks, not what was requested."""
+        return {
+            "disabled_sensors": len(self._disabled_sensors),
+            "removed_sensors": len(self._removed_sensors),
+            "disabled_equipment": len(self._disabled_equipment),
+        }
 
     def repair_sensor(self, sensor_id: str) -> None:
         rt = self.sensors[sensor_id]
@@ -320,6 +386,7 @@ class SimulationEngine:
         rt.capacity = capacity
         rt.state = AssetState.NORMAL
         rt.faults.clear()
+        self._disabled_equipment.discard(equipment_id)
         for c in self.plant.connections:
             if c.source == equipment_id or c.target == equipment_id:
                 c.enabled = True
@@ -327,9 +394,10 @@ class SimulationEngine:
         # Latched detectors must be reset once the leak path is repaired,
         # otherwise the 0/1 point stays tripped forever and verification can
         # never close the incident (observed on every `leak` failure mode).
+        # A removed detector has no runtime left to reset — skip it.
         area = self._area_of(equipment_id)
         for sid, m in self.sensor_model.items():
-            if m.is_detector and self._area_of(m.equipment_id) == area:
+            if m.is_detector and sid in self.sensors and self._area_of(m.equipment_id) == area:
                 self.sensors[sid].value = 0.0
                 self.sensors[sid].quality = TelemetryQuality.GOOD
 

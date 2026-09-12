@@ -887,7 +887,9 @@
 .sm-link--MATERIAL_FLOW, .sm-link--FEEDS, .sm-link--OUTPUT_TO { color: #0f766e; border-color: rgba(15, 118, 110, 0.35); }
 .sm-panel__link-target { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sm-panel__unlink {
-  margin-left: auto;
+  /* 4px, not auto: the save control now shares this row, so `auto` on both
+     would push them apart instead of grouping them at the right edge. */
+  margin-left: 4px;
   border: 0;
   background: none;
   color: var(--ink-3);
@@ -948,7 +950,13 @@
   background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(14px);
   box-shadow: var(--shadow-sm);
+  /* The cluster floats over the map, and its translucent panel used to swallow
+     clicks aimed at a symbol underneath it — a unit sitting here could not be
+     selected at all. Only the controls themselves take the pointer now, so the
+     panel around them is transparent to clicks. */
+  pointer-events: none;
 }
+.sc-zoom > * { pointer-events: auto; }
 .sc-zoom button {
   width: 26px;
   height: 24px;
@@ -1034,3 +1042,86 @@
 }
 .sm-sensor__body dd { margin: 0; font-size: 11.5px; color: var(--ink-1); word-break: break-all; }
 .sm-sensors__hint { margin: 7px 0 0; font-size: 10.5px; line-height: 1.5; color: var(--ink-3); }
+
+/* ---------------------------------------------------------------------------
+   SAVED BUILDING BLOCKS
+   A whole plant is a coarse unit to rebuild; the useful unit of reuse is one
+   instrumented asset or one relation. Sits under the top-left controls.
+   --------------------------------------------------------------------------- */
+
+.sm-float--library {
+  top: 176px;
+  left: 18px;
+  width: 306px;
+  max-height: min(46vh, 380px);
+  overflow-y: auto;
+}
+
+.sm-lib__head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.sm-lib__title { font-size: 13px; font-weight: 600; }
+.sm-lib__head .cs-dim { margin-left: auto; }
+
+.sm-lib__empty {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.sm-lib__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.sm-lib__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  animation: sm-lib-in 200ms ease both;
+}
+
+@keyframes sm-lib-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+
+.sm-lib__kind {
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.16em;
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--line-2);
+  color: var(--ink-3);
+  flex: 0 0 auto;
+}
+.sm-lib__kind--connection { border-color: rgba(37, 99, 235, 0.4); color: var(--blue); }
+
+.sm-lib__meta { min-width: 0; flex: 1 1 auto; }
+.sm-lib__meta b { display: block; font-size: 11px; color: var(--ink-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sm-lib__meta span { display: block; font-size: 9px; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.sm-lib__add {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border-radius: 5px;
+  border: 1px solid var(--line-2);
+  background: #fff;
+  color: var(--ink-1);
+  font: inherit;
+  font-size: 10.5px;
+  cursor: pointer;
+  transition: border-color 150ms, color 150ms;
+}
+.sm-lib__add:hover { border-color: var(--blue); color: var(--blue); }
+
+.sm-panel__save {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  padding: 0 2px;
+  cursor: pointer;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1;
+  transition: color 150ms;
+}
+.sm-panel__save:hover { color: var(--amber); }
