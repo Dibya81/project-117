@@ -2329,3 +2329,50 @@
   border-color: rgba(15, 23, 42, 0.12);
   box-shadow: 0 6px 22px rgba(15, 23, 42, 0.1);
 }
+
+/* --- motion vocabulary ----------------------------------------------------
+   Five verbs, five animations, each bound to a real event by lib/motion.ts.
+   The console sets data-motion on its root; if no event expresses a verb the
+   attribute is "idle" and nothing moves. Durations come from --motion-duration
+   so the reduced-motion decision is made once, in one place. */
+
+@keyframes p117-motion-flow {
+  from { background-position: 0 0; }
+  to   { background-position: 240px 0; }
+}
+@keyframes p117-motion-handoff {
+  0%   { transform: translateX(-6px); opacity: 0.55; }
+  60%  { transform: translateX(0);    opacity: 1; }
+  100% { transform: translateX(0);    opacity: 1; }
+}
+@keyframes p117-motion-emerge {
+  from { transform: translateY(8px) scale(0.97); opacity: 0; }
+  to   { transform: translateY(0)   scale(1);    opacity: 1; }
+}
+@keyframes p117-motion-resolve {
+  0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+  100% { box-shadow: 0 0 0 14px rgba(16, 185, 129, 0); }
+}
+@keyframes p117-motion-escalate {
+  0%, 100% { border-color: var(--line); }
+  25%, 75% { border-color: rgba(220, 38, 38, 0.65); }
+}
+
+/* A travelling sheen marks telemetry in motion. */
+.arc-panel[data-motion="flow"] .arc-lane {
+  background-image: linear-gradient(90deg, transparent 0 70%, rgba(37, 99, 235, 0.09) 85%, transparent 100%);
+  background-size: 240px 100%;
+  animation: p117-motion-flow var(--motion-duration, 1400ms) linear infinite;
+}
+.arc-panel[data-motion="handoff"] .arc-lane { animation: p117-motion-handoff var(--motion-duration, 620ms) var(--motion-easing, ease-out) both; }
+.arc-panel[data-motion="emerge"]  .arc-lane { animation: p117-motion-emerge  var(--motion-duration, 760ms) var(--motion-easing, ease-out) both; }
+.arc-panel[data-motion="resolve"] .arc-lane { animation: p117-motion-resolve var(--motion-duration, 480ms) ease-out both; }
+.arc-panel[data-motion="escalate"] .arc-lane { animation: p117-motion-escalate var(--motion-duration, 900ms) ease-in-out 2; }
+
+/* Reduced motion: the cue still fires, it simply arrives instantly. Removing
+   the animation entirely would hide that an event happened, which is
+   information loss, not a courtesy. */
+@media (prefers-reduced-motion: reduce) {
+  .arc-panel[data-motion] .arc-lane { animation-duration: 1ms; }
+  .arc-panel[data-motion="flow"] .arc-lane { animation: none; background-image: none; }
+}

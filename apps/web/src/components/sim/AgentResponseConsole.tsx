@@ -20,6 +20,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Icon } from "@/components/ui/Icon";
 import type { StreamStatus } from "@/lib/sim/adapter";
+import { cueFor, cueStyle } from "@/lib/motion";
 import { isResponseEvent, reduceResponseJobs, type ResponseJob } from "@/lib/sim/response";
 import type { SimEvent } from "@/lib/sim/types";
 
@@ -128,6 +129,20 @@ export function AgentResponseConsole({
   const sourceEvents = mock ? mockEvents : events;
   const jobs = useMemo(() => reduceResponseJobs(sourceEvents), [sourceEvents]);
 
+  /**
+   * The most recent thing the system is actually doing, in the shared motion
+   * vocabulary. Null when no event expresses a verb — a console with no news
+   * does not animate, which is the point of binding motion to events rather
+   * than to a clock.
+   */
+  const cue = useMemo(() => {
+    for (let i = sourceEvents.length - 1; i >= 0; i -= 1) {
+      const c = cueFor(sourceEvents[i]);
+      if (c) return c;
+    }
+    return null;
+  }, [sourceEvents]);
+
   const activeJob: ResponseJob | null = useMemo(() => {
     if (!jobs.length) return null;
     return jobs.find((j) => j.jobId === activeJobId) ?? jobs[jobs.length - 1];
@@ -177,6 +192,11 @@ export function AgentResponseConsole({
       className={`arc-panel${open ? " is-open" : ""}`}
       data-testid="agent-response-console"
       data-open="true"
+      // The active verb and its timing ride on the element, so every surface
+      // inside animates with one vocabulary and one reduced-motion decision.
+      data-motion={cue?.verb ?? "idle"}
+      data-motion-subject={cue?.subject ?? undefined}
+      style={cue ? cueStyle(cue.verb) : undefined}
       aria-label="Agent response console"
     >
       {mock && (
