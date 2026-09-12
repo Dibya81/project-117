@@ -6,7 +6,7 @@
  * regardless of tick volume. The engine is the truth; this is a projection.
  */
 import { useEffect, useRef, useState } from "react";
-import { simAdapter, type SimAdapter } from "./adapter";
+import { simAdapter, type SimAdapter, type StreamStatus } from "./adapter";
 import { consoleData } from "@/lib/data/console";
 import type { SimEngine } from "./engine";
 import type { AgentTask, Incident, IncidentPlan, SimEvent } from "./types";
@@ -21,6 +21,8 @@ export interface SimUIState {
   plan: IncidentPlan | null;
   alarms: number;
   tick: number; // bumps to re-render live values
+  /** Transport health of the SSE subscription (never inferred from events). */
+  stream: StreamStatus;
 }
 
 const EMPTY: SimUIState = {
@@ -33,6 +35,7 @@ const EMPTY: SimUIState = {
   plan: null,
   alarms: 0,
   tick: 0,
+  stream: { state: "connecting", attempts: 0 },
 };
 
 export function useSimulation(plantId: string | null, adapter: SimAdapter = simAdapter) {
@@ -48,13 +51,30 @@ export function useSimulation(plantId: string | null, adapter: SimAdapter = simA
       const eng: SimEngine | undefined =
         adapter.transport === "embedded" ? (adapter as unknown as { engine: (id: string) => SimEngine }).engine(plantId) : undefined;
 
-      const unsubscribe = adapter.subscribe(plantId, (ev) => {
-        if (disposed) return;
-        eventsRef.current = [...eventsRef.current.slice(-400), ev];
-        // Operational milestones become organizational memory; the adapter
-        // filters out agent.task_* chatter so history cannot be flooded.
-        consoleData.history.record(ev);
-      });
+      const unsubscribe = adapter.subscribe(
+        plantId,
+        (ev) => {
+          if (disposed) return;
+          // Reconnects replay from the last seen seq, so this should never
+          // duplicate; the guard makes that a guarantee rather than a hope.
+          const last = eventsRef.current[eventsRef.current.length - 1];
+          if (last && ev.seq <= last.seq) return;
+          eventsRef.current = [...eventsRef.current.slice(-400), ev];
+          // Operational milestones become organizational memory; the adapter
+          // filters out agent.task_* chatter so history cannot be flooded.
+          consoleData.history.record(ev);
+        },
+        (status) => {
+          if (disposed) return;
+          setState((prev) =>
+            prev.stream.state === status.state &&
+            prev.stream.attempts === status.attempts &&
+            prev.stream.detail === status.detail
+              ? prev
+              : { ...prev, stream: status },
+          );
+        },
+      );
 
       // 4 Hz projection of engine truth into React
       rafRef.current = setInterval(() => {
@@ -73,6 +93,7 @@ export function useSimulation(plantId: string | null, adapter: SimAdapter = simA
               plan: active ? eng.plans.get(active.id) ?? null : null,
               alarms: eng.alarms.size,
               tick: prev.tick + 1,
+              stream: prev.stream,
             };
           }
           // live mode: rebuild projection from the event log + snapshot polling

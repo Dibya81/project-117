@@ -25,6 +25,13 @@ import type {
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8000";
 
 /**
+ * Consecutive stream failures after which the console declares mock mode.
+ * Three is the documented threshold: transient blips reconnect silently, but
+ * an orchestrator that never answers is surfaced, not hidden.
+ */
+export const MOCK_RETRY_LIMIT = 3;
+
+/**
  * Minimal GET against the simulation API.
  *
  * The embedded adapter has no request helper of its own because it used to read
@@ -91,7 +98,11 @@ export interface SimAdapter {
   loadPlant(id: string): Promise<{ plant: PlantDef; scenarios: ScenarioDef[] }>;
   start(id: string): Promise<void>;
   pause(id: string): Promise<void>;
-  injectFailure(plantId: string, equipmentId: string, modeId: string): Promise<void>;
+  /**
+   * Inject a fault. Resolves to the backend incident id (the job id every
+   * response event is bucketed under), or null when the transport cannot say.
+   */
+  injectFailure(plantId: string, equipmentId: string, modeId: string): Promise<string | null>;
   disable(plantId: string, equipmentId: string): Promise<void>;
   remove(plantId: string, equipmentId: string): Promise<void>;
   /** Take one sensor out of service (session-scoped; reset restores it).
@@ -109,7 +120,32 @@ export interface SimAdapter {
   decide(plantId: string, incidentId: string, approved: boolean): Promise<void>;
   snapshot(plantId: string): Promise<SimSnapshot>;
   tasks(plantId: string, incidentId: string): Promise<{ tasks: AgentTask[]; plan: IncidentPlan }>;
-  subscribe(plantId: string, cb: (ev: SimEvent) => void): () => void;
+  /**
+   * Subscribe to the plant event stream. `onStatus` reports transport health
+   * so the console can distinguish a live orchestrator from one that never
+   * connected — it must never be inferred from the data itself.
+   */
+  subscribe(
+    plantId: string,
+    cb: (ev: SimEvent) => void,
+    onStatus?: (status: StreamStatus) => void,
+  ): () => void;
+}
+
+/**
+ * Transport health, reported by the adapter (not derived from events).
+ *
+ *   connecting → the stream is being established / retried
+ *   live       → the orchestrator stream is open
+ *   mock       → the stream failed `MOCK_RETRY_LIMIT` times; the console may
+ *                run a local development sequence, behind a permanent banner.
+ */
+export type StreamState = "connecting" | "live" | "mock";
+
+export interface StreamStatus {
+  state: StreamState;
+  attempts: number;
+  detail?: string;
 }
 
 /** Backend-only capabilities (persistence). Absent in mock mode by design. */
@@ -199,7 +235,7 @@ class EmbeddedAdapter implements SimAdapter {
     this.engine(id).markPaused();
   }
 
-  async injectFailure(plantId: string, equipmentId: string, modeId: string): Promise<void> {
+  async injectFailure(plantId: string, equipmentId: string, modeId: string): Promise<string | null> {
     const eng = this.engine(plantId);
     const changed = eng.injectFailure(equipmentId, modeId);
     const eq = eng.plant.equipment.find((e) => e.id === equipmentId)!;
@@ -213,6 +249,7 @@ class EmbeddedAdapter implements SimAdapter {
     });
     // the pipeline runs against real engine state, then waits for the human
     setTimeout(() => eng.runAgentPipeline(incident.id), 400);
+    return incident.id;
   }
 
   async disable(plantId: string, equipmentId: string): Promise<void> {
@@ -310,7 +347,14 @@ class EmbeddedAdapter implements SimAdapter {
     return { tasks, plan };
   }
 
-  subscribe(plantId: string, cb: (ev: SimEvent) => void): () => void {
+  subscribe(
+    plantId: string,
+    cb: (ev: SimEvent) => void,
+    onStatus?: (status: StreamStatus) => void,
+  ): () => void {
+    // The embedded engine is local and always available: report it as live so
+    // the console never shows the mock banner for a deliberate offline run.
+    onStatus?.({ state: "live", attempts: 0, detail: "embedded engine" });
     return this.engine(plantId).onEvent(cb);
   }
 }
@@ -361,8 +405,12 @@ class LiveAdapter implements SimAdapter {
   pause(id: string) {
     return this.req(`/plants/${id}/pause`, { method: "POST" }).then(() => undefined);
   }
-  injectFailure(plantId: string, equipmentId: string, modeId: string) {
-    return this.req(`/plants/${plantId}/equipment/${equipmentId}/failure`, { method: "POST", body: JSON.stringify({ mode_id: modeId }) }).then(() => undefined);
+  async injectFailure(plantId: string, equipmentId: string, modeId: string): Promise<string | null> {
+    const r = await this.req<{ incident?: { id?: string } }>(
+      `/plants/${plantId}/equipment/${equipmentId}/failure`,
+      { method: "POST", body: JSON.stringify({ mode_id: modeId }) },
+    );
+    return r.incident?.id ?? null;
   }
   disable(plantId: string, equipmentId: string) {
     return this.req(`/plants/${plantId}/equipment/${equipmentId}/disable`, { method: "POST" }).then(() => undefined);
@@ -432,16 +480,81 @@ class LiveAdapter implements SimAdapter {
     return this.req<{ events: Record<string, unknown>[] }>(`/audit${q}`).then((r) => r.events);
   }
 
-  subscribe(plantId: string, cb: (ev: SimEvent) => void): () => void {
-    const es = new EventSource(`${API_BASE}/api/simulation/plants/${plantId}/stream`);
-    es.onmessage = (msg) => {
+  /**
+   * The single live SSE subscription for a plant.
+   *
+   * The console consumes this through `useSimulation`; it must not open its
+   * own EventSource. Connection health is reported out-of-band so the UI can
+   * distinguish "no events yet" from "orchestrator not connected".
+   *
+   * WHY manual reconnect instead of EventSource's built-in one: we need to
+   * count *consecutive* failures, and we must keep retrying even after the
+   * mock threshold is crossed so a fresh successful connection can clear the
+   * banner. `?after=<seq>` makes the replay loss-free across reconnects.
+   */
+  subscribe(
+    plantId: string,
+    cb: (ev: SimEvent) => void,
+    onStatus?: (status: StreamStatus) => void,
+  ): () => void {
+    let lastSeq = 0;
+    let attempts = 0;
+    let es: EventSource | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let closed = false;
+    let connected = false;
+
+    const open = () => {
+      if (closed) return;
+      onStatus?.({ state: connected ? "live" : "connecting", attempts });
       try {
-        cb(JSON.parse(msg.data) as SimEvent);
-      } catch {
-        /* malformed frame */
+        es = new EventSource(`${API_BASE}/api/simulation/plants/${plantId}/stream?after=${lastSeq}`);
+      } catch (err) {
+        scheduleRetry((err as Error).message);
+        return;
       }
+      es.onopen = () => {
+        connected = true;
+        attempts = 0;
+        // A fresh successful connection is the ONLY thing that clears mock mode.
+        onStatus?.({ state: "live", attempts: 0 });
+      };
+      es.onmessage = (msg) => {
+        try {
+          const ev = JSON.parse(msg.data) as SimEvent;
+          if (typeof ev.seq === "number" && ev.seq > lastSeq) lastSeq = ev.seq;
+          cb(ev);
+        } catch {
+          /* malformed frame */
+        }
+      };
+      es.onerror = () => {
+        es?.close();
+        es = null;
+        scheduleRetry("stream error");
+      };
     };
-    return () => es.close();
+
+    const scheduleRetry = (detail: string) => {
+      if (closed) return;
+      attempts += 1;
+      if (attempts >= MOCK_RETRY_LIMIT) {
+        // Mock mode is a terminal *for this connection*: the banner stays
+        // until a real connection succeeds, but we keep retrying below.
+        onStatus?.({ state: "mock", attempts, detail: "orchestrator not connected" });
+      } else {
+        onStatus?.({ state: "connecting", attempts, detail });
+      }
+      const delay = Math.min(8000, 500 * attempts);
+      timer = setTimeout(open, delay);
+    };
+
+    open();
+    return () => {
+      closed = true;
+      if (timer) clearTimeout(timer);
+      es?.close();
+    };
   }
 }
 

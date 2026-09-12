@@ -12,7 +12,7 @@ Every command below is literal. Where a step needs network access it says so.
 | Backend (FastAPI, simulation engine, agents, sandbox client, RAG service) | yes | `backend/` |
 | Frontend (Next.js 14 console) | yes | `apps/web/` |
 | Plant datasets (refinery, steel) | yes | committed SQL seed `project-117-simulation/database/seed_plants.sql`, applied on first run |
-| Knowledge corpus for retrieval | yes | `data/knowledge/`, `data/demo/` (seeded by script) |
+| Knowledge corpus for retrieval | yes | `data/corpus/refinery/` (real PDF/DOCX/PPTX/XLSX), ingested into `data/lancedb/` by `scripts/ingest_corpus.py` |
 | **localGPT** retrieval stack | **no** | vendored separately into `vendor/localGPT` (optional) |
 | **LightRAG** graph-RAG | **no** | installed from PyPI as the `graphrag` extra (optional) |
 | Ollama models | no | pulled at runtime (optional) |
@@ -79,8 +79,8 @@ git clone https://github.com/PromtEngineer/localGPT.git vendor/localGPT
 
 `backend/rag/adapter.py` adds `vendor/localGPT` to `sys.path` when present.
 If it is absent, `LocalGPTBackend.try_build()` returns `None` and retrieval
-falls back to the in-repo lexical BM25 backend over `data/knowledge` +
-`data/demo`. The active backend is reported by
+falls back to the in-repo lexical BM25 backend over the ingested LanceDB table
+(`data/lancedb/p117_chunks`). The active backend is reported by
 `GET /api/simulation/health` (`retrieval.backend`), so the mode is never hidden.
 
 ### Supplying LightRAG
@@ -98,9 +98,12 @@ uncomment the `[tool.uv.sources]` block at the bottom of `pyproject.toml`.
 
 ```bash
 export P117_SIMULATION_DB="$PWD/data/simulation.db"   # default if unset
-python3 scripts/seed_knowledge_corpus.py              # SOP/OPS corpus for RAG
 python3 scripts/validate_plant_data.py                # exits 0; prints per-plant report
 ```
+
+The retrieval corpus (`data/corpus/refinery/`) is ingested into LanceDB with
+`./.venv/bin/python scripts/ingest_corpus.py` once the backend is running
+(see §5). It is not part of database initialisation.
 
 The simulation schema (17 tables) is created automatically on first use by
 `backend/simulation/persistence.py::SimulationStore`. Plant, zone, equipment,
@@ -226,7 +229,7 @@ pnpm install --offline     # air-gapped machine
 
 | Missing | Behaviour | Where it is visible |
 |---|---|---|
-| `vendor/localGPT` | lexical BM25 retrieval over `data/knowledge` + `data/demo` | `health.retrieval.backend = lexical-bm25` |
+| `vendor/localGPT` | lexical BM25 retrieval over the ingested LanceDB table | `health.retrieval.backend = lexical-bm25` |
 | Knowledge corpus | documentation task status `blocked`, no citation invented | task status + audit row |
 | `backend.agents` deps (pydantic-settings etc.) | deterministic evidence runtime | `health.agents.runtime`, every task's `agent_runtime` field |
 | OpenSandbox | command actions return `ACTION BLOCKED / SANDBOX UNAVAILABLE` | action row, audit row, UI |

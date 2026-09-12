@@ -2,8 +2,9 @@
 
 Every number returned here is either
 
-* **computed** from the committed dataset in ``data/demo`` (equipment counts,
-  open work orders, pending approvals) — see ``DemoStore.analytics``, or
+* **computed** from real rows — equipment from the plant dataset, work orders
+  and approvals from the local operations SQLite store — see
+  ``OperationsStore.analytics``, or
 * **measured** by the running process (request counts, latencies, tool and
   model call counters) — from the in-process ``MetricsRegistry``.
 
@@ -19,7 +20,11 @@ from backend.api.src.deps import get_metrics, get_operations, get_principal
 from backend.api.src.routes.equipment import authorize, unavailable
 from backend.observability.metrics import MetricsRegistry
 from backend.security.rbac import Principal
-from backend.storage.demo import SOURCE, DemoDataUnavailable, DemoStore
+from backend.storage.operations import (
+    OPERATIONS_SOURCE,
+    OperationsDataUnavailable,
+    OperationsStore,
+)
 from backend.tools.base import Permission
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
@@ -37,13 +42,13 @@ SERIES = (
 @router.get("/summary")
 def analytics_summary(
     principal: Principal = Depends(get_principal),
-    operations: DemoStore = Depends(get_operations),
+    operations: OperationsStore = Depends(get_operations),
     metrics: MetricsRegistry = Depends(get_metrics),
 ) -> dict:
     authorize(principal, Permission.CONNECTORS_READ)
     try:
         computed = operations.analytics()
-    except DemoDataUnavailable as exc:
+    except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
     return {
         "equipment": computed["equipment"],
@@ -52,7 +57,7 @@ def analytics_summary(
         "platform": metrics.snapshot(),
         "computedAt": computed["computedAt"],
         "sources": {
-            "operations": SOURCE,
+            "operations": OPERATIONS_SOURCE,
             "platform": "in_process_metrics",
         },
     }
@@ -62,7 +67,7 @@ def analytics_summary(
 def analytics_trends(
     series: list[str] | None = Query(default=None, description=f"subset of {list(SERIES)}"),
     principal: Principal = Depends(get_principal),
-    operations: DemoStore = Depends(get_operations),
+    operations: OperationsStore = Depends(get_operations),
 ) -> dict:
     authorize(principal, Permission.CONNECTORS_READ)
     requested = series or list(SERIES)
@@ -74,10 +79,10 @@ def analytics_trends(
         )
     try:
         trends = operations.analytics()["trends"]
-    except DemoDataUnavailable as exc:
+    except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
     return {
         "series": {name: trends.get(name, []) for name in requested},
         "available": list(SERIES),
-        "source": SOURCE,
+        "source": OPERATIONS_SOURCE,
     }

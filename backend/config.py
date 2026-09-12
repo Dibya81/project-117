@@ -24,8 +24,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # ``BaseSettings(env_file=".env")`` below only ever fed the fields declared on
 # ``Settings``. Several settings are read straight from ``os.environ`` instead
 # — ``P117_AUDIT_HTTP``, ``P117_RATE_LIMIT_*``, ``P117_SIMULATION_DB``,
-# ``P117_SIM_RETRIEVAL*``, ``P117_FILE_ROOTS``, ``P117_WORKSPACE_DIR``,
-# ``P117_DEMO_*`` — and pydantic-settings does not export ``.env`` entries into
+# ``P117_SIM_RETRIEVAL*``, ``P117_FILE_ROOTS``, ``P117_WORKSPACE_DIR`` — and pydantic-settings does not export ``.env`` entries into
 # the environment. Nothing else called ``load_dotenv`` either, so documenting
 # those variables in ``.env`` had no effect at all: the value was silently
 # ignored, which is indistinguishable from the feature being broken.
@@ -148,6 +147,14 @@ class Settings(BaseSettings):
     # the tick loop only runs when plants are registered.
     simulation_enabled: bool = True
     simulation_tick_s: float = 1.0
+
+    # Operations surfaces (equipment / work orders / approvals / analytics).
+    # Equipment is read from the real plant dataset in the simulation store
+    # above; runtime work orders and approval decisions are persisted in this
+    # local SQLite file. ``operations_plant`` is the default plant served when
+    # the caller does not pass ``?plant=`` — the other dataset stays reachable.
+    operations_db: Path = Path("./data/operations.db")
+    operations_plant: str = "refinery"
 
     # --- document ingestion (Phase 3 — localGPT adapter) -----------------
     # LanceDB directory holding vector + FTS indexes. One table per backend

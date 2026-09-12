@@ -70,10 +70,11 @@ project117/
 │   │                              the refinery/steel plant definitions
 │   └── public/                the same rows exported as JSON (workbench copy)
 │
-├── data/                      runtime + demo data (see data/README.md)
-│   ├── knowledge/  demo/      retrieval corpus (tracked)
+├── data/                      runtime + dataset data (see data/README.md)
+│   ├── corpus/  lancedb/      real document corpus + its LanceDB index
 │   ├── simulation.db          simulation SQLite store (git-ignored, seeded)
-│   ├── uploads/  lancedb/     runtime stores (git-ignored)
+│   ├── operations.db          runtime work orders / approvals (git-ignored)
+│   ├── uploads/               uploaded documents (git-ignored)
 │   └── *.db                   SQLite stores (git-ignored)
 │
 ├── scripts/                   generators, validators, smoke tests
@@ -403,8 +404,8 @@ workflow directory). A variable exported in the shell always wins over the file.
 | `P117_RATE_LIMIT_BURST` | `api/src/middleware/rate_limit.py` | per-minute value | Token-bucket size. |
 | `P117_FILE_ROOTS` | `tools/files/reader.py` | empty | Roots the file reader may read. |
 | `P117_WORKSPACE_DIR` | `tools/files/writer.py` | empty | Workspace the file writer may write to. |
-| `P117_DEMO_DIR` | `storage/demo.py` | empty | Demo-data directory override. |
-| `P117_DEMO_WRITEBACK` | `storage/demo.py` | off | Allow demo-data writeback. |
+| `P117_OPERATIONS_DB` | `storage/operations.py` | `./data/operations.db` | Local SQLite store for runtime work orders / approvals. |
+| `P117_OPERATIONS_PLANT` | `storage/operations.py` | `refinery` | Default plant dataset served by `/api/equipment` (override per request with `?plant=steel`). |
 
 **Secrets** (declared in `backend/security/secrets/__init__.py`; redacted from
 logs and audit detail by name): `P117_DATABASE_PASSWORD`, `P117_MODEL_API_KEY`,
@@ -616,7 +617,7 @@ limitation rather than repaired:
 | `backend/` | FastAPI engine: orchestrator, agents, simulation, RAG, sandbox, verification, audit. |
 | `frontend/` | Vite + React simulation workbench. |
 | `project-117-simulation/` | Plant data package: committed SQL seed + frozen JSON exports. |
-| `data/` | Tracked demo/knowledge data plus git-ignored runtime stores (incl. the seeded simulation DB). |
+| `data/` | Tracked real document corpus plus git-ignored runtime stores (seeded simulation DB, operations SQLite, LanceDB index). |
 | `docs/` | Setup, architecture, decisions, frontend design, simulation and knowledge docs. |
 | `scripts/` | Dataset generators/validators and smoke tests. |
 | `tests/` | `unit/` and `simulation/` test suites. |

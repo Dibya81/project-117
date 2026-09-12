@@ -73,6 +73,80 @@ function authHeaders(): Record<string, string> {
   return roles ? { "X-P117-Roles": roles } : {};
 }
 
+// --- console records -------------------------------------------------------
+// Shapes mirror the FastAPI responses exactly (camelCase on the wire), so the
+// console can render live rows without a translation layer. These replaced the
+// hand-written mock records the console used to read from lib/mock/.
+
+export interface EquipmentRecord {
+  id: string;
+  name: string;
+  type: string;
+  unit: string;
+  area: string;
+  criticality: number;
+  status: string;
+  manufacturer: string;
+  model: string;
+  installedYear: number;
+  lastInspection: string;
+  nextInspection: string;
+  sopId: string | null;
+  manualId: string | null;
+  tags: string[];
+  keySignals: string[];
+  summary: string;
+}
+
+export interface WorkOrderRecord {
+  id: string;
+  title: string;
+  equipmentId: string | null;
+  priority: string;
+  status: string;
+  type: string;
+  assignee: string | null;
+  dueDate: string | null;
+  createdAt: string;
+  createdBy: string;
+  description: string;
+  evidence: string[];
+  origin: string;
+  source: string;
+}
+
+export interface ApprovalRecord {
+  id: string;
+  title: string;
+  type: string;
+  status: string;
+  risk: string;
+  requestedBy: string;
+  requestedAt: string;
+  requiredRole: string;
+  relatedId: string | null;
+  summary: string;
+  evidence: string[];
+}
+
+/** The three list endpoints share this envelope. */
+interface ListEnvelope<T> {
+  items: T[];
+  count: number;
+  source: string;
+}
+
+function query(params: Record<string, string | number | undefined | null>): string {
+  const qs = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "") as [
+      string,
+      string,
+    ][],
+  );
+  const s = qs.toString();
+  return s ? `?${s}` : "";
+}
+
 export const api = {
   health: () => request<HealthResponse>("/health"),
 
@@ -156,6 +230,64 @@ export const api = {
       );
       return request<{ events: Record<string, unknown>[] }>(`/api/audit?${qs}`);
     },
+  },
+
+  // --- console records (were mock constants in lib/mock/) ------------------
+
+  equipment: {
+    list: (params: { area?: string; status?: string; q?: string } = {}) =>
+      request<ListEnvelope<EquipmentRecord>>(`/api/equipment${query(params)}`),
+    get: (id: string) => request<EquipmentRecord>(`/api/equipment/${encodeURIComponent(id)}`),
+    telemetry: (id: string) =>
+      request<Record<string, unknown>>(`/api/equipment/${encodeURIComponent(id)}/telemetry`),
+    history: (id: string) =>
+      request<Record<string, unknown>>(`/api/equipment/${encodeURIComponent(id)}/history`),
+  },
+
+  workOrders: {
+    list: (params: { status?: string; equipmentId?: string; priority?: string } = {}) =>
+      request<ListEnvelope<WorkOrderRecord>>(`/api/work-orders${query(params)}`),
+    get: (id: string) => request<WorkOrderRecord>(`/api/work-orders/${encodeURIComponent(id)}`),
+    transitions: () => request<Record<string, unknown>>("/api/work-orders/meta/transitions"),
+    create: (payload: {
+      title: string;
+      equipmentId?: string | null;
+      priority?: string;
+      type?: string;
+      status?: string;
+      assignee?: string | null;
+      dueDate?: string | null;
+      description?: string;
+      evidence?: string[];
+      origin?: string;
+    }) =>
+      request<WorkOrderRecord>("/api/work-orders", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    update: (id: string, patch: { status?: string; assignee?: string; note?: string }) =>
+      request<WorkOrderRecord>(`/api/work-orders/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      }),
+  },
+
+  approvals: {
+    list: () =>
+      request<ListEnvelope<ApprovalRecord> & { pendingCount: number; canDecide: boolean }>(
+        "/api/approvals",
+      ),
+    get: (id: string) => request<ApprovalRecord>(`/api/approvals/${encodeURIComponent(id)}`),
+    decide: (id: string, decision: "approved" | "rejected", note = "") =>
+      request<ApprovalRecord>(`/api/approvals/${encodeURIComponent(id)}/decision`, {
+        method: "POST",
+        body: JSON.stringify({ decision, note }),
+      }),
+  },
+
+  analytics: {
+    summary: () => request<Record<string, unknown>>("/api/analytics/summary"),
+    trends: () => request<Record<string, unknown>>("/api/analytics/trends"),
   },
 };
 

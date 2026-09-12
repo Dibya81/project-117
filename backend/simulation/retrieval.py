@@ -12,9 +12,12 @@ Two backends, one interface:
   vector + FTS legs, RRF fusion, reranking). Used whenever the vendor package
   and the index are importable.
 * ``LexicalCorpusBackend`` — an on-prem BM25 index built directly over the
-  markdown corpus in ``data/knowledge`` and ``data/demo``. No embeddings, no
-  network, no vendor dependency. This is what runs when LanceDB/localGPT are
-  not installed.
+  *ingested LanceDB table* that ``scripts/ingest_corpus.py`` fills from the
+  real ``data/corpus/`` documents (PDF/DOCX/PPTX/XLSX). No embeddings, no
+  network, no vendor dependency, so it is the offline-safe leg. It no longer
+  walks a hand-maintained markdown directory (the synthetic ``data/knowledge``
+  and ``data/demo`` corpora are gone); if the LanceDB table is absent it simply
+  indexes nothing and the caller degrades visibly instead of crashing.
 
 Both return the same ``RetrievedChunk`` records (document id, chunk id,
 source path, text, metadata, citation), so the agent code never branches on
@@ -27,6 +30,7 @@ Documentation task is marked ``blocked`` — it never invents a citation.
 
 from __future__ import annotations
 
+import json
 import math
 import os
 import re
@@ -35,9 +39,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
-CORPUS_DIRS = [Path("data/knowledge"), Path("data/demo")]
-CHUNK_WORDS = 120
-CHUNK_OVERLAP = 30
+#: LanceDB index produced by the ingestion pipeline (``scripts/ingest_corpus.py``).
+#: Configurable to match ``P117_LANCEDB_DIR`` / ``P117_LANCEDB_TABLE``.
+LANCEDB_DIR = Path(os.environ.get("P117_LANCEDB_DIR", "data/lancedb"))
+LANCEDB_TABLE = os.environ.get("P117_LANCEDB_TABLE", "p117_chunks")
 _TOKEN = re.compile(r"[a-z0-9][a-z0-9\-\.]*")
 _STOP = {
     "the", "a", "an", "and", "or", "of", "to", "in", "for", "on", "is", "are", "be",
@@ -89,15 +94,63 @@ def _tokenize(text: str) -> list[str]:
     return [t for t in _TOKEN.findall(text.lower()) if t not in _STOP and len(t) > 1]
 
 
+def _load_lancedb_rows(db_path: Path, table_name: str) -> list[dict[str, Any]]:
+    """Rows from the ingested LanceDB table, or ``[]`` when it is not there.
+
+    Importing lancedb is deliberately guarded: a deployment without the vendor
+    stack must still import this module and degrade visibly (zero documents)
+    rather than crash.
+    """
+    try:
+        import lancedb  # noqa: PLC0415
+    except Exception:  # ImportError or a broken native wheel
+        return []
+    try:
+        db = lancedb.connect(str(db_path))
+        if table_name not in db.table_names():
+            return []
+        return db.open_table(table_name).to_arrow().to_pylist()
+    except Exception:  # missing table, corrupt index, unreadable directory
+        return []
+
+
+def _chunk_from_row(row: dict[str, Any]) -> RetrievedChunk:
+    document_id = str(row.get("document_id") or "")
+    chunk_index = row.get("chunk_index")
+    chunk_id = str(row.get("chunk_id") or f"{document_id}_{chunk_index}")
+    meta = row.get("metadata")
+    if isinstance(meta, str):
+        try:
+            meta = json.loads(meta)
+        except ValueError:
+            meta = {}
+    if not isinstance(meta, dict):
+        meta = {}
+    inner = meta.get("metadata") if isinstance(meta.get("metadata"), dict) else meta
+    heading = inner.get("heading_path") or []
+    title = str(heading[-1]) if heading else str(inner.get("document_name") or document_id)
+    source = str(inner.get("source") or document_id)
+    return RetrievedChunk(
+        document_id=document_id or source,
+        chunk_id=chunk_id,
+        source=source,
+        title=title or document_id,
+        text=str(row.get("text") or ""),
+        score=0.0,
+        metadata=meta,
+    )
+
+
 class LexicalCorpusBackend:
-    """BM25 over the on-disk markdown corpus. Deterministic and dependency-free."""
+    """BM25 over the ingested LanceDB corpus. Deterministic and offline."""
 
     name = "lexical-bm25"
     k1 = 1.5
     b = 0.75
 
-    def __init__(self, roots: list[Path] | None = None) -> None:
-        self.roots = roots or CORPUS_DIRS
+    def __init__(self, db_path: Path | None = None, table_name: str | None = None) -> None:
+        self.db_path = Path(db_path) if db_path else LANCEDB_DIR
+        self.table_name = table_name or LANCEDB_TABLE
         self.chunks: list[RetrievedChunk] = []
         self._tokens: list[Counter] = []
         self._lengths: list[int] = []
@@ -108,41 +161,24 @@ class LexicalCorpusBackend:
     # -- indexing
 
     def _index(self) -> None:
-        for root in self.roots:
-            if not root.exists():
+        for row in _load_lancedb_rows(self.db_path, self.table_name):
+            text = str(row.get("text") or "").strip()
+            if not text:
                 continue
-            for path in sorted(root.rglob("*.md")):
-                self._index_file(path)
-        self._avgdl = (sum(self._lengths) / len(self._lengths)) if self._lengths else 1.0
-
-    def _index_file(self, path: Path) -> None:
-        raw = path.read_text(encoding="utf-8", errors="replace")
-        meta, body = _split_front_matter(raw)
-        doc_id = meta.get("id") or path.stem
-        title = meta.get("title") or _first_heading(body) or path.stem
-        self._docs.add(doc_id)
-        words = body.split()
-        step = max(1, CHUNK_WORDS - CHUNK_OVERLAP)
-        for i in range(0, max(1, len(words)), step):
-            window = words[i : i + CHUNK_WORDS]
-            if not window:
-                continue
-            text = " ".join(window)
-            chunk = RetrievedChunk(
-                document_id=doc_id,
-                chunk_id=f"c{i // step:03d}",
-                source=str(path),
-                title=title,
-                text=text,
-                score=0.0,
-                metadata={k: v for k, v in meta.items() if k != "id"},
+            chunk = _chunk_from_row(row)
+            self._docs.add(chunk.document_id)
+            toks = Counter(
+                _tokenize(
+                    f"{chunk.title} {text} "
+                    f"{' '.join(str(v) for v in chunk.metadata.values())}"
+                )
             )
-            toks = Counter(_tokenize(f"{title} {text} {' '.join(str(v) for v in meta.values())}"))
             self.chunks.append(chunk)
             self._tokens.append(toks)
             self._lengths.append(sum(toks.values()) or 1)
             for term in toks:
                 self._df[term] += 1
+        self._avgdl = (sum(self._lengths) / len(self._lengths)) if self._lengths else 1.0
 
     # -- query
 
@@ -299,27 +335,6 @@ class SimulationRetriever:
         if not hits:
             raise RetrievalUnavailable(f"no documents matched: {query!r}")
         return query, hits
-
-
-def _split_front_matter(raw: str) -> tuple[dict[str, str], str]:
-    if not raw.startswith("---"):
-        return {}, raw
-    end = raw.find("\n---", 3)
-    if end == -1:
-        return {}, raw
-    meta: dict[str, str] = {}
-    for line in raw[3:end].strip().splitlines():
-        if ":" in line:
-            key, _, val = line.partition(":")
-            meta[key.strip()] = val.strip()
-    return meta, raw[end + 4 :]
-
-
-def _first_heading(body: str) -> str | None:
-    for line in body.splitlines():
-        if line.startswith("#"):
-            return line.lstrip("#").strip()
-    return None
 
 
 def _matches(meta: dict[str, Any], filters: dict[str, Any]) -> bool:

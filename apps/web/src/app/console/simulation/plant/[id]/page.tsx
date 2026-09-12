@@ -24,9 +24,11 @@ import {
 } from "@/components/sim/SchematicCanvas";
 import { AgentCommandCenter } from "@/components/sim/AgentCommandCenter";
 import { AssessmentPanel } from "@/components/sim/AssessmentPanel";
+import { AgentResponseConsole } from "@/components/sim/AgentResponseConsole";
 import { SensorRecoveryPanel, type RecoveryFocus } from "@/components/sim/SensorRecoveryPanel";
 import { simAdapter, asEmbedded } from "@/lib/sim/adapter";
 import { useSimulation } from "@/lib/sim/store";
+import { reduceResponseJobs } from "@/lib/sim/response";
 import { useJourney } from "@/lib/journey";
 import { useRouter } from "next/navigation";
 import { consoleData } from "@/lib/data/console";
@@ -126,8 +128,37 @@ export default function PlantTwinPage() {
   /** Unit-level disable/remove, counted so the session chip tells the truth. */
   const [equipmentChanges, setEquipmentChanges] = useState(0);
 
+  // Agent Response Console: opened by a real fault injection, bucketed by the
+  // incident id the backend returned (never guessed from event shape).
+  const [consoleOpen, setConsoleOpen] = useState(false);
+  const [consoleJobId, setConsoleJobId] = useState<string | null>(null);
+  const [focusEquipmentId, setFocusEquipmentId] = useState<string | null>(null);
+
   const sim = useSimulation(plant ? plantId : null);
   const embedded = asEmbedded(simAdapter);
+
+  /**
+   * Test/dev override for the no-response timeout (ms). Defaults to 20s; a
+   * `?stepTimeout=` query param only shortens it so the stalled-step state can
+   * be exercised without waiting. It never lengthens or invents state.
+   */
+  const stepTimeoutMs = useMemo(() => {
+    if (typeof window === "undefined") return 20_000;
+    const raw = new URLSearchParams(window.location.search).get("stepTimeout");
+    const parsed = raw ? Number(raw) : NaN;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 20_000;
+  }, []);
+
+  /** Every concurrent response job, bucketed by the event's own job id. */
+  const responseJobs = useMemo(() => reduceResponseJobs(sim.events), [sim.events]);
+  const activeResponseJob = useMemo(() => {
+    if (!responseJobs.length) return null;
+    return responseJobs.find((j) => j.jobId === consoleJobId) ?? responseJobs[responseJobs.length - 1];
+  }, [responseJobs, consoleJobId]);
+  const predictedIds = useMemo(
+    () => activeResponseJob?.prediction.map((p) => p.equipmentId) ?? [],
+    [activeResponseJob],
+  );
 
   // load dataset + boot engine
   useEffect(() => {
@@ -190,8 +221,16 @@ export default function PlantTwinPage() {
   const onSelect = useCallback((eq: EquipmentDef) => setSelected(eq), []);
   const onHover = useCallback((eq: EquipmentDef | null) => setHovered(eq), []);
 
-  const inject = (equipmentId: string, modeId: string) => {
-    void simAdapter.injectFailure(plantId, equipmentId, modeId);
+  const inject = async (equipmentId: string, modeId: string) => {
+    // The backend returns the incident id — that is the job id every response
+    // event is bucketed under, so the console never has to guess which run it
+    // is watching.
+    const incidentId = await simAdapter
+      .injectFailure(plantId, equipmentId, modeId)
+      .catch(() => null);
+    setConsoleOpen(true);
+    if (incidentId) setConsoleJobId(incidentId);
+    setFocusEquipmentId(equipmentId);
   };
 
   /** Whether a sensor is out of service this session, and how. */
@@ -303,7 +342,11 @@ export default function PlantTwinPage() {
     sc.steps.forEach((st) => {
       timers.current.push(
         setTimeout(() => {
-          void simAdapter.injectFailure(plantId, st.target, st.mode);
+          void simAdapter.injectFailure(plantId, st.target, st.mode).then((incidentId) => {
+            setConsoleOpen(true);
+            if (incidentId) setConsoleJobId(incidentId);
+            setFocusEquipmentId(st.target);
+          });
           if (st === sc.steps[sc.steps.length - 1]) setBusyScenario(null);
         }, Math.max(0, st.at_s) * 1000),
       );
@@ -414,7 +457,7 @@ export default function PlantTwinPage() {
   const selectedRt = selected ? (embedded ? embedded.engine(plantId).equipmentState(selected.id) : snap?.equipment[selected.id]) : null;
 
   return (
-    <>
+    <div className={`pt-page${consoleOpen ? " pt-page--console-open" : ""}`}>
       {/* TOP BAR */}
       <div className="cs-pagehead pt-pagehead">
         <div>
@@ -651,6 +694,16 @@ export default function PlantTwinPage() {
               readings={readings}
               anomalyId={anomalyId}
               panelOpen={Boolean(anomalyId)}
+              failover={
+                activeResponseJob?.failover
+                  ? {
+                      from: activeResponseJob.failover.fromEquipmentId,
+                      to: activeResponseJob.failover.relatedEquipmentId,
+                    }
+                  : null
+              }
+              predictedIds={predictedIds}
+              focusId={focusEquipmentId}
             >
               <div className="pt-invhead">
                 <span className="pt-invhead__kicker">
@@ -766,6 +819,21 @@ export default function PlantTwinPage() {
         onRestore={() => recovery && void restoreSensor(recovery.sensorId)}
         onReset={() => void resetPlant()}
       />
-    </>
+
+      {/* AGENT RESPONSE CONSOLE — docks right, canvas stays live on the left.
+          Everything it shows comes from the response.* events on the same SSE
+          subscription the store already owns. */}
+      <AgentResponseConsole
+        open={consoleOpen}
+        events={sim.events}
+        stream={sim.stream}
+        plantId={plantId}
+        activeJobId={activeResponseJob?.jobId ?? null}
+        onSelectJob={(jobId) => setConsoleJobId(jobId)}
+        onClose={() => setConsoleOpen(false)}
+        onFocusEquipment={(equipmentId) => setFocusEquipmentId(equipmentId)}
+        stepTimeoutMs={stepTimeoutMs}
+      />
+    </div>
   );
 }

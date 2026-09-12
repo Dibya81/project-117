@@ -58,6 +58,15 @@ export interface SchematicCanvasProps {
   anomalyId?: string | null;
   /** whether the investigation panel is open (spatial layout). */
   panelOpen?: boolean;
+  /**
+   * Failover link to draw in the spatial layout, straight from the backend's
+   * `related_equipment_id`: the failed node and the equipment it switched to.
+   */
+  failover?: { from: string; to: string } | null;
+  /** Predicted at-risk equipment ids (amber — a prediction, not a failure). */
+  predictedIds?: string[];
+  /** Equipment to pan into view (a prediction click). */
+  focusId?: string | null;
   /** investigation panel contents rendered inside the spatial overlay. */
   children?: ReactNode;
 }
@@ -623,10 +632,14 @@ function SpatialLayout({
   readings,
   anomalyId,
   panelOpen,
+  failover,
+  predictedIds,
+  focusId,
   children,
 }: SchematicCanvasProps) {
   const { stages, bandW, bandH } = useMemo(() => buildStages(plant), [plant]);
   const live = readings ?? {};
+  const predictedSet = useMemo(() => new Set(predictedIds ?? []), [predictedIds]);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -697,6 +710,17 @@ function SpatialLayout({
     };
   }, [anomalyId, panelOpen, schedule]);
 
+  /**
+   * Pan a predicted/failover unit into view. A prediction click sets focusId;
+   * a completed failover focuses the replacement asset so its blue glow is on
+   * screen without the operator hunting for it.
+   */
+  useEffect(() => {
+    const id = focusId ?? failover?.to;
+    if (!id) return;
+    unitRefs.current[id]?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [focusId, failover?.to]);
+
   return (
     <div className="pt-spatial-root" ref={rootRef} data-layout="spatial">
       <div className="pt-spatial" ref={scrollerRef} data-testid="spatial-scroller">
@@ -731,6 +755,28 @@ function SpatialLayout({
                 </g>
               );
             })}
+            {/* Real failover link: the failed node to the equipment the backend
+                actually switched to (`related_equipment_id`). */}
+            {failover &&
+              (() => {
+                const a = centers.get(failover.from);
+                const b = centers.get(failover.to);
+                if (!a || !b || failover.from === failover.to) return null;
+                const dir = Math.sign(b.x - a.x) || 1;
+                const x1 = a.x + dir * (UNIT_W / 2 + 6);
+                const x2 = b.x - dir * (UNIT_W / 2 + 6);
+                const dx = Math.max(48, Math.abs(x2 - x1) * 0.42);
+                const d = `M ${x1} ${a.y} C ${x1 + dir * dx} ${a.y}, ${x2 - dir * dx} ${b.y}, ${x2} ${b.y}`;
+                return (
+                  <g data-testid="failover-link" data-from={failover.from} data-to={failover.to}>
+                    <path className="arc-failover-link__halo" d={d} />
+                    <path className="arc-failover-link" d={d} />
+                    <circle className="arc-failover-link__pulse" r={3.4}>
+                      <animateMotion dur="1.6s" repeatCount="indefinite" path={d} />
+                    </circle>
+                  </g>
+                );
+              })()}
           </svg>
 
           {stages.map((stage, si) => (
@@ -755,6 +801,8 @@ function SpatialLayout({
                   const unitTone = stateTone(state);
                   const pills = buildPills(eq, live, unitTone);
                   const isAnomaly = anomalyId === eq.id;
+                  const isFailoverTarget = failover?.to === eq.id;
+                  const isPredicted = predictedSet.has(eq.id);
                   const anomalyTone = pills.find((p) => p.tone !== "normal")?.tone ?? "normal";
                   const flagTone: PillTone = unitTone !== "normal" ? unitTone : anomalyTone;
                   const flagged = flagTone !== "normal";
@@ -765,10 +813,14 @@ function SpatialLayout({
                       ref={(el) => {
                         unitRefs.current[eq.id] = el;
                       }}
-                      className={`pt-unit${selectedId === eq.id ? " is-selected" : ""}${isAnomaly ? " is-anomaly" : ""}`}
+                      className={`pt-unit${selectedId === eq.id ? " is-selected" : ""}${isAnomaly ? " is-anomaly" : ""}${
+                        isFailoverTarget ? " is-failover" : ""
+                      }${isPredicted ? " is-predicted" : ""}`}
                       data-unit={eq.id}
                       data-state={state}
                       data-anomaly={isAnomaly ? "true" : undefined}
+                      data-failover-target={isFailoverTarget ? "true" : undefined}
+                      data-predicted={isPredicted ? "true" : undefined}
                       data-affected={affected.includes(eq.id) ? "true" : undefined}
                       style={
                         {

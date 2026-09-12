@@ -1,9 +1,9 @@
 """Work-order endpoints (operations surface).
 
-Records come from the committed dataset in ``data/demo``; runtime creates and
-status changes are held in the process-wide overlay described in
-``backend/storage/demo.py``. Two things are enforced here rather than in the
-UI:
+Records live in the local operations SQLite store
+(``P117_OPERATIONS_DB``); there is no committed seed, so the list starts empty
+and grows only from runtime writes. Two things are enforced here rather than in
+the UI:
 
 * **permissions** — reads need ``connectors:read``, writes need
   ``connectors:write``, checked in the handler;
@@ -25,12 +25,12 @@ from backend.api.src.deps import get_audit, get_operations, get_principal
 from backend.api.src.routes.equipment import authorize, unavailable
 from backend.security.audit import AuditService
 from backend.security.rbac import Principal
-from backend.storage.demo import (
-    SOURCE,
+from backend.storage.operations import (
+    OPERATIONS_SOURCE,
     WORK_ORDER_TRANSITIONS,
-    DemoDataUnavailable,
-    DemoStateError,
-    DemoStore,
+    OperationsDataUnavailable,
+    OperationsStateError,
+    OperationsStore,
 )
 from backend.tools.base import Permission
 
@@ -78,7 +78,7 @@ def list_work_orders(
     status: str | None = Query(default=None, description="draft|open|in_progress|on_hold|completed|cancelled"),
     equipmentId: str | None = Query(default=None, max_length=40),
     principal: Principal = Depends(get_principal),
-    operations: DemoStore = Depends(get_operations),
+    operations: OperationsStore = Depends(get_operations),
 ) -> dict:
     authorize(principal, Permission.CONNECTORS_READ)
     if status and status not in WORK_ORDER_TRANSITIONS:
@@ -88,13 +88,13 @@ def list_work_orders(
         )
     try:
         rows = operations.work_orders(status=status, equipment_id=equipmentId)
-    except DemoDataUnavailable as exc:
+    except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
     return {
         "items": rows,
         "count": len(rows),
         "filters": {"status": status, "equipmentId": equipmentId},
-        "source": SOURCE,
+        "source": OPERATIONS_SOURCE,
     }
 
 
@@ -113,7 +113,7 @@ def work_order_transitions(principal: Principal = Depends(get_principal)) -> dic
 def get_work_order(
     work_order_id: str,
     principal: Principal = Depends(get_principal),
-    operations: DemoStore = Depends(get_operations),
+    operations: OperationsStore = Depends(get_operations),
 ) -> dict:
     authorize(principal, Permission.CONNECTORS_READ)
     try:
@@ -126,7 +126,7 @@ def get_work_order(
                 equipment = None
         evidence_ids = set(row.get("evidence") or [])
         documents = [doc for doc in operations.documents() if doc.get("id") in evidence_ids]
-    except DemoDataUnavailable as exc:
+    except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"work order {work_order_id} not found") from exc
@@ -137,7 +137,7 @@ def get_work_order(
         "allowedTransitions": sorted(
             WORK_ORDER_TRANSITIONS.get(str(row.get("status")), frozenset())
         ),
-        "source": SOURCE,
+        "source": OPERATIONS_SOURCE,
     }
 
 
@@ -145,7 +145,7 @@ def get_work_order(
 def create_work_order(
     payload: WorkOrderCreate,
     principal: Principal = Depends(get_principal),
-    operations: DemoStore = Depends(get_operations),
+    operations: OperationsStore = Depends(get_operations),
     audit: AuditService = Depends(get_audit),
 ) -> dict:
     authorize(principal, Permission.WORK_ORDERS_WRITE)
@@ -159,13 +159,13 @@ def create_work_order(
         if payload.equipmentId:
             operations.equipment_item(payload.equipmentId)  # 404 early on a bad tag
         row = operations.create_work_order(payload.model_dump(), actor=principal.user)
-    except DemoDataUnavailable as exc:
+    except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
     except KeyError as exc:
         raise HTTPException(
             status_code=404, detail=f"equipment {payload.equipmentId} not found"
         ) from exc
-    except DemoStateError as exc:
+    except OperationsStateError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     _record(
         audit,
@@ -180,7 +180,7 @@ def create_work_order(
             "evidence": row.get("evidence"),
         },
     )
-    return {"workOrder": row, "persistence": "in_process_overlay", "source": "runtime"}
+    return {"workOrder": row, "persistence": "local_sqlite", "source": "runtime"}
 
 
 @router.patch("/{work_order_id}")
@@ -188,7 +188,7 @@ def update_work_order(
     work_order_id: str,
     payload: WorkOrderUpdate,
     principal: Principal = Depends(get_principal),
-    operations: DemoStore = Depends(get_operations),
+    operations: OperationsStore = Depends(get_operations),
     audit: AuditService = Depends(get_audit),
 ) -> dict:
     authorize(principal, Permission.WORK_ORDERS_WRITE)
@@ -207,11 +207,11 @@ def update_work_order(
             note=payload.note,
             actor=principal.user,
         )
-    except DemoDataUnavailable as exc:
+    except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"work order {work_order_id} not found") from exc
-    except DemoStateError as exc:
+    except OperationsStateError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     _record(
         audit,
@@ -226,5 +226,5 @@ def update_work_order(
         "allowedTransitions": sorted(
             WORK_ORDER_TRANSITIONS.get(str(row.get("status")), frozenset())
         ),
-        "persistence": "in_process_overlay",
+        "persistence": "local_sqlite",
     }

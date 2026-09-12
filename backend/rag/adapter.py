@@ -38,7 +38,10 @@ from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
-_VENDOR_ROOT = Path(__file__).resolve().parents[3] / "localGPT-main"
+# Repo-relative: backend/rag/adapter.py -> parents[2] is the repo root.
+# The vendored tree lives at <repo>/vendor/localGPT (it was an out-of-repo
+# sibling before, so retrieval only worked on the author's machine).
+_VENDOR_ROOT = Path(__file__).resolve().parents[2] / "vendor" / "localGPT"
 
 
 class VendorNotAvailableError(RuntimeError):

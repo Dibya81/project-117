@@ -18,8 +18,8 @@ from backend.sandbox.service import SandboxService
 from backend.security.approvals import ApprovalPolicy
 from backend.security.audit import AuditService
 from backend.security.rbac import Principal
-from backend.storage.demo import DemoStore, get_demo_store
 from backend.storage.documents import DocumentStorage
+from backend.storage.operations import OperationsStore
 from backend.tools.registry import ToolRegistry
 from backend.verification.verifier import Verifier
 
@@ -100,17 +100,22 @@ def get_memory(request: Request) -> MemoryService:
     return request.app.state.memory
 
 
-def get_operations(request: Request) -> DemoStore:
+def get_operations(request: Request) -> OperationsStore:
     """Operations records (equipment, work orders, approvals, analytics).
 
-    Backed by the committed dataset in ``data/demo`` until a real CMMS/SAP
-    connector is configured — see ``backend/storage/demo.py`` for why every
-    payload is labelled and why a missing dataset is a 503 rather than an
-    invented row. Cached on ``app.state`` so runtime mutations (a created
-    work order, a recorded approval decision) persist across requests.
+    Equipment is rehydrated from the real plant dataset in the simulation
+    SQLite store; runtime work orders and approval decisions are persisted in
+    ``P117_OPERATIONS_DB`` (default ``data/operations.db``). See
+    ``backend/storage/operations.py``. Cached on ``app.state`` so runtime
+    mutations (a created work order, a recorded approval decision) are served
+    from the same store across requests.
     """
     store = getattr(request.app.state, "operations", None)
     if store is None:
-        store = get_demo_store()
+        settings = request.app.state.settings
+        store = OperationsStore(
+            db_path=settings.operations_db,
+            default_plant=settings.operations_plant,
+        )
         request.app.state.operations = store
     return store

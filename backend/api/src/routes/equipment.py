@@ -1,14 +1,15 @@
 """Equipment endpoints (operations surface).
 
-Serves equipment records, telemetry trends and operational history. The
-records come from the committed dataset in ``data/demo`` through
-``backend.storage.demo`` until a real CMMS/SAP/historian connector is
-configured (see ``backend/connectors/``). Two rules hold here:
+Serves equipment records, telemetry trends and operational history. Equipment
+comes from the project's real plant dataset in the simulation SQLite store —
+``refinery`` (58 assets) by default, or ``?plant=steel`` (55) — mapped onto the
+existing response fields by ``backend.storage.operations``. Two rules hold:
 
-* every payload carries ``source: "demo-dataset"`` so a caller can never
-  mistake it for connector-backed truth, and
-* a missing dataset is reported as ``503 demo_data_unavailable`` rather than
-  answered with invented rows.
+* every payload carries ``source: "plant-dataset"`` so a caller knows where the
+  record came from, and
+* a missing dataset is reported as ``503`` rather than answered with invented
+  rows. Telemetry and per-asset history have no real backing store yet and are
+  reported absent (``404`` / empty) rather than synthesized.
 
 Reads require ``connectors:read`` — an unauthenticated viewer on a shared
 deployment does not get plant data by default.
@@ -20,7 +21,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.api.src.deps import get_operations, get_principal
 from backend.security.rbac import AuthorizationError, Principal, require
-from backend.storage.demo import SOURCE, DemoDataUnavailable, DemoStore
+from backend.storage.operations import (
+    EQUIPMENT_SOURCE,
+    OperationsDataUnavailable,
+    OperationsStore,
+)
 from backend.tools.base import Permission
 
 router = APIRouter(prefix="/api/equipment", tags=["equipment"])
@@ -34,7 +39,7 @@ def authorize(principal: Principal, permission: Permission) -> None:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
 
 
-def unavailable(exc: DemoDataUnavailable) -> HTTPException:
+def unavailable(exc: OperationsDataUnavailable) -> HTTPException:
     return HTTPException(
         status_code=exc.status_code,
         detail={"code": exc.reason, "message": exc.message},
@@ -43,22 +48,25 @@ def unavailable(exc: DemoDataUnavailable) -> HTTPException:
 
 @router.get("")
 def list_equipment(
+    plant: str | None = Query(default=None, description="refinery|steel (default refinery)"),
     status: str | None = Query(default=None, description="healthy|warning|critical|maintenance"),
     criticality: str | None = Query(default=None, description="low|medium|high"),
     q: str | None = Query(default=None, max_length=120, description="id, name or unit substring"),
     principal: Principal = Depends(get_principal),
-    operations: DemoStore = Depends(get_operations),
+    operations: OperationsStore = Depends(get_operations),
 ) -> dict:
     authorize(principal, Permission.CONNECTORS_READ)
     try:
-        rows = operations.equipment(status=status, criticality=criticality, query=q)
-    except DemoDataUnavailable as exc:
+        rows = operations.equipment(plant=plant, status=status, criticality=criticality, query=q)
+    except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown plant {plant}") from exc
     return {
         "items": rows,
         "count": len(rows),
-        "filters": {"status": status, "criticality": criticality, "q": q},
-        "source": SOURCE,
+        "filters": {"plant": plant, "status": status, "criticality": criticality, "q": q},
+        "source": EQUIPMENT_SOURCE,
     }
 
 
@@ -66,7 +74,7 @@ def list_equipment(
 def get_equipment(
     equipment_id: str,
     principal: Principal = Depends(get_principal),
-    operations: DemoStore = Depends(get_operations),
+    operations: OperationsStore = Depends(get_operations),
 ) -> dict:
     authorize(principal, Permission.CONNECTORS_READ)
     try:
@@ -78,7 +86,7 @@ def get_equipment(
             for doc in operations.documents()
             if str(doc.get("equipmentId") or "").lower() == equipment_id.lower()
         ]
-    except DemoDataUnavailable as exc:
+    except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"equipment {equipment_id} not found") from exc
@@ -90,7 +98,7 @@ def get_equipment(
         "workOrders": work_orders,
         "documents": documents,
         "history": history,
-        "source": SOURCE,
+        "source": EQUIPMENT_SOURCE,
     }
 
 
@@ -99,12 +107,12 @@ def get_telemetry(
     equipment_id: str,
     signal: str | None = Query(default=None, description="restrict to a single signal"),
     principal: Principal = Depends(get_principal),
-    operations: DemoStore = Depends(get_operations),
+    operations: OperationsStore = Depends(get_operations),
 ) -> dict:
     authorize(principal, Permission.CONNECTORS_READ)
     try:
         return operations.telemetry(equipment_id, signal=signal)
-    except DemoDataUnavailable as exc:
+    except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
     except KeyError as exc:
         raise HTTPException(
@@ -117,11 +125,11 @@ def get_telemetry(
 def get_history(
     equipment_id: str,
     principal: Principal = Depends(get_principal),
-    operations: DemoStore = Depends(get_operations),
+    operations: OperationsStore = Depends(get_operations),
 ) -> dict:
     authorize(principal, Permission.CONNECTORS_READ)
     try:
         rows = operations.history(equipment_id)
-    except DemoDataUnavailable as exc:
+    except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
-    return {"equipmentId": equipment_id, "items": rows, "count": len(rows), "source": SOURCE}
+    return {"equipmentId": equipment_id, "items": rows, "count": len(rows), "source": EQUIPMENT_SOURCE}

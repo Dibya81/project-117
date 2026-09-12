@@ -26,7 +26,10 @@ from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
-_VENDOR_ROOT = Path(__file__).resolve().parents[3] / "localGPT-main"
+# Repo-relative: backend/ingestion/adapter.py -> parents[2] is the repo root.
+# The vendored tree lives at <repo>/vendor/localGPT (was an out-of-repo sibling
+# before, which made a clean checkout unable to ingest anything).
+_VENDOR_ROOT = Path(__file__).resolve().parents[2] / "vendor" / "localGPT"
 # Root-relative module path the vendored package exposes.
 _VENDOR_PACKAGE = "rag_system"
 

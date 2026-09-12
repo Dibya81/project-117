@@ -29,6 +29,14 @@ from backend.simulation.models import (
     SimulationEvent,
 )
 from backend.simulation.persistence import SimulationStore, get_store
+from backend.simulation.response import (
+    build_user_summary,
+    choose_failover,
+    failover_candidates,
+    maintenance_counts,
+    predict_next_failure,
+    resolve_department,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,9 +73,16 @@ class PlantRuntime:
         self.pending_approval: dict[str, str] = {}  # incident_id -> plan json
         self.artifacts: list[dict] = []
 
-    def emit(self, type_: str, payload: dict) -> SimulationEvent:
+    def emit(self, type_: str, payload: dict, at: float | None = None) -> SimulationEvent:
         self.seq += 1
-        ev = SimulationEvent(seq=self.seq, plant_id=self.engine.plant.id, type=type_, payload=payload, at=self.engine.t)
+        # `at` is the sim-time the event describes; it defaults to the current
+        # engine clock. Callers that emit a record for a pipeline step pass the
+        # step's own timestamp so the console shows the event's real time rather
+        # than the time the request happened to flush.
+        ev = SimulationEvent(
+            seq=self.seq, plant_id=self.engine.plant.id, type=type_, payload=payload,
+            at=self.engine.t if at is None else at,
+        )
         self.events.append(ev)
         if len(self.events) > 5000:
             del self.events[:2500]
@@ -213,6 +228,7 @@ class SimulationService:
         )
         self.store.upsert_incident(incident, fault_event_id=fault_id)
         rt.emit("incident.created", incident.model_dump())
+        self._emit_perception(rt, incident, source="fault.injected")
         self.store.audit(
             event_type="incident.created", actor="orchestrator", plant_id=plant_id,
             incident_id=incident.id, sim_t=rt.engine.t, target=equipment_id,
@@ -327,6 +343,7 @@ class SimulationService:
         )
         self.store.upsert_incident(incident)
         rt.emit("incident.created", incident.model_dump())
+        self._emit_perception(rt, incident, source="sensor.loss")
         self.store.audit(
             event_type="incident.created", actor="orchestrator", plant_id=rt.engine.plant.id,
             incident_id=incident.id, sim_t=rt.engine.t, target=model.equipment_id,
@@ -347,6 +364,126 @@ class SimulationService:
 
     # --------------------------------------------------------- agent pipeline
 
+    def _emit_perception(self, rt: PlantRuntime, incident: Incident, source: str) -> None:
+        """Lane A's opening event, emitted the moment an incident exists.
+
+        WHY a dedicated event instead of overloading ``fault.injected``: the
+        incident id is only known after ``create_incident`` runs, and the
+        console buckets every beat by that job id. The perception beat carries
+        the tag, declared fault, severity and department the console shows, so
+        lane A never has to guess or wait for the slower agent.started event.
+        """
+        engine = rt.engine
+        eq = next((e for e in engine.plant.equipment if e.id == incident.origin_equipment), None)
+        mode = next((m for m in engine.plant.failure_modes if m.id == incident.failure_mode), None)
+        sensor = engine.sensor_model.get(incident.origin_sensor) if incident.origin_sensor else None
+        department = resolve_department(engine, incident.origin_equipment)
+        rt.emit("response.perception", {
+            "job_id": incident.id,
+            "incident_id": incident.id,
+            "equipment_id": incident.origin_equipment,
+            "equipment_tag": eq.tag if eq else incident.origin_equipment,
+            "fault_type": incident.failure_mode,
+            "fault_name": mode.name if mode else None,
+            "mechanism": mode.mechanism if mode else None,
+            "severity": incident.severity.value,
+            "sensor_id": sensor.id if sensor else None,
+            "sensor_tag": sensor.tag if sensor else None,
+            "department": department["department"],
+            "department_source": department["department_source"],
+            "source": source,
+        })
+
+    def _emit_response_lanes(self, rt: PlantRuntime, incident: Incident,
+                             tasks: list[AgentTask]) -> None:
+        """Emit the parallel operations + diagnostics lane beats.
+
+        WHY these beats exist: the console's lane checklists require facts the
+        task/tool stream cannot express (department notified, the alternate the
+        engine actually chose, maintenance counts, the closing user summary).
+        Every field is derived from engine state or the pipeline's own evidence
+        by ``response.py`` — none is scripted.
+
+        Operations (lane B) and diagnostics (lane C) are dispatched together at
+        handoff, so both ``response.lane_started`` events are emitted back to
+        back before any lane beat. That is what makes the two lanes concurrent
+        in the console rather than sequentially ordered.
+        """
+        engine = rt.engine
+        eq = next((e for e in engine.plant.equipment if e.id == incident.origin_equipment), None)
+        equipment_tag = eq.tag if eq else incident.origin_equipment
+        department = resolve_department(engine, incident.origin_equipment)
+        job = {
+            "job_id": incident.id,
+            "incident_id": incident.id,
+            "equipment_id": incident.origin_equipment,
+            "equipment_tag": equipment_tag,
+            "department": department["department"],
+            "department_source": department["department_source"],
+        }
+
+        rt.emit("response.lane_started", {**job, "lane": "operations"})
+        rt.emit("response.lane_started", {**job, "lane": "diagnostics"})
+
+        # --- lane B, operations continuity / failover -----------------------
+        rt.emit("response.operations_notified", {**job, "role": "shift supervisor"})
+
+        origin_sensor = incident.origin_sensor
+        rt.emit("response.failover_evaluating", {
+            **job,
+            "origin_sensor_id": origin_sensor,
+            "candidates": failover_candidates(engine, origin_sensor),
+        })
+        chosen = choose_failover(engine, origin_sensor)
+        if chosen is not None:
+            origin_equipment = engine.sensor_model[origin_sensor].equipment_id if origin_sensor else None
+            rt.emit("response.failover_completed", {
+                **job,
+                "origin_sensor_id": origin_sensor,
+                "related_equipment_id": chosen.equipment_id,
+                "related_sensor_id": chosen.id,
+                "related_sensor_tag": chosen.tag,
+                "same_asset": chosen.equipment_id == origin_equipment,
+            })
+        # No usable alternate -> this beat is never emitted. The console reports
+        # "no response from orchestrator" after the configured timeout instead
+        # of inventing a switch.
+
+        # --- lane C, diagnostics -------------------------------------------
+        rt.emit("response.history_reviewed", {
+            **job,
+            "counts": maintenance_counts(engine, incident, tasks),
+        })
+
+        mode = next((m for m in engine.plant.failure_modes if m.id == incident.failure_mode), None)
+        sensor = engine.sensor_model.get(origin_sensor) if origin_sensor else None
+        if mode is not None and eq is not None and mode.id in eq.failure_modes:
+            explanation = mode.description or f"{equipment_tag}: {mode.name} confirmed by the evidence pack."
+        elif sensor is not None:
+            explanation = (
+                f"{sensor.tag} measurement loss on {equipment_tag} — no declared equipment "
+                "failure mode recorded."
+            )
+        else:
+            explanation = f"{equipment_tag}: fault confirmed by the evidence pack."
+        rt.emit("response.root_cause_identified", {
+            **job,
+            # A failure mode is only reported when the equipment itself declares
+            # it; sensor-loss incidents honestly report no mode.
+            "failure_mode": mode.id if mode is not None else None,
+            "failure_mode_name": mode.name if mode is not None else None,
+            "mechanism": mode.mechanism if mode is not None else None,
+            "failure_mode_declared": bool(mode is not None and eq is not None and mode.id in eq.failure_modes),
+            "explanation": explanation,
+        })
+
+        prediction = predict_next_failure(engine, incident)
+        rt.emit("response.prediction", {**job, **prediction})
+        rt.emit("response.user_notified", {
+            **job,
+            "summary": build_user_summary(equipment_tag, mode, chosen, prediction),
+        })
+
     def _run_agents(self, rt: PlantRuntime, incident: Incident) -> None:
         """Execute the deterministic multi-agent pipeline, emitting the events
         the Command Center renders. Timestamps come from sim time advanced by
@@ -358,9 +495,28 @@ class SimulationService:
         execution_id = f"EXEC-{incident.id}"
         runtime_label = self.roster.runtime_label()
         self.store.start_execution(execution_id, incident.id, incident.plant_id, runtime_label)
+        eq = next((e for e in rt.engine.plant.equipment if e.id == incident.origin_equipment), None)
+        mode = next((m for m in rt.engine.plant.failure_modes if m.id == incident.failure_mode), None)
+        department = resolve_department(rt.engine, incident.origin_equipment)
+        handoff = {
+            "from": "perception",
+            "to": ["operations", "diagnostics"],
+            "equipment_id": incident.origin_equipment,
+            "equipment_tag": eq.tag if eq else incident.origin_equipment,
+        }
         rt.emit("agent.started", {
             "execution_id": execution_id, "incident_id": incident.id,
             "runtime": runtime_label, "agents": self.roster.status()["roles"],
+            # Console-facing context: the same real incident fields the lanes
+            # key off, plus the explicit handoff that tells lane A it may grey.
+            "job_id": incident.id,
+            "equipment_id": incident.origin_equipment,
+            "equipment_tag": eq.tag if eq else incident.origin_equipment,
+            "fault_type": incident.failure_mode,
+            "fault_name": mode.name if mode else None,
+            "severity": incident.severity.value,
+            "department": department["department"],
+            "handoff": handoff,
         })
         self.store.audit(event_type="agent.started", actor="orchestrator", plant_id=incident.plant_id,
                          incident_id=incident.id, sim_t=rt.engine.t, runtime=runtime_label,
@@ -370,6 +526,11 @@ class SimulationService:
         rt.incident_tasks[incident.id] = tasks
         rt.incident_plans[incident.id] = plan
         rt.pending_approval[incident.id] = plan.model_dump_json()
+
+        # The lane beats are emitted at handoff, before the per-task record
+        # loop, because the pipeline has already dispatched every specialist
+        # agent by this point.
+        self._emit_response_lanes(rt, incident, tasks)
 
         for task in tasks:
             rt.emit("agent.task_started", task.model_dump())

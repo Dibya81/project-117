@@ -7,8 +7,9 @@ separate:
   signs off. Those live in ``/api/jobs/{id}/approve`` and are backed by the
   job state machine.
 * **operational approvals** — outage windows, priority escalations, artifact
-  releases. Those are the records served here, from the committed dataset in
-  ``data/demo`` plus the in-process decision overlay.
+  releases. Those are served here from the local operations SQLite store
+  (``P117_OPERATIONS_DB``); there is no committed seed yet, so the list starts
+  empty.
 
 Deciding an approval requires ``jobs:approve`` — checked in the handler, not
 in the UI — and every decision is written to the audit log with the acting
@@ -27,12 +28,12 @@ from backend.api.src.deps import get_audit, get_operations, get_principal
 from backend.api.src.routes.equipment import authorize, unavailable
 from backend.security.audit import AuditService
 from backend.security.rbac import Principal
-from backend.storage.demo import (
+from backend.storage.operations import (
     APPROVAL_TRANSITIONS,
-    SOURCE,
-    DemoDataUnavailable,
-    DemoStateError,
-    DemoStore,
+    OPERATIONS_SOURCE,
+    OperationsDataUnavailable,
+    OperationsStateError,
+    OperationsStore,
 )
 from backend.tools.base import Permission
 
@@ -52,7 +53,7 @@ class ApprovalDecision(BaseModel):
 def list_approvals(
     status: str | None = Query(default=None, description="pending|approved|rejected"),
     principal: Principal = Depends(get_principal),
-    operations: DemoStore = Depends(get_operations),
+    operations: OperationsStore = Depends(get_operations),
 ) -> dict:
     authorize(principal, Permission.CONNECTORS_READ)
     if status and status not in APPROVAL_TRANSITIONS:
@@ -63,7 +64,7 @@ def list_approvals(
     try:
         rows = operations.approvals(status=status)
         pending = operations.approvals(status="pending")
-    except DemoDataUnavailable as exc:
+    except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
     # Whether *this* caller may act on them, so the UI can show a decision
     # affordance only when the click would actually succeed.
@@ -73,7 +74,7 @@ def list_approvals(
         "count": len(rows),
         "pendingCount": len(pending),
         "canDecide": can_decide,
-        "source": SOURCE,
+        "source": OPERATIONS_SOURCE,
     }
 
 
@@ -81,14 +82,14 @@ def list_approvals(
 def get_approval(
     approval_id: str,
     principal: Principal = Depends(get_principal),
-    operations: DemoStore = Depends(get_operations),
+    operations: OperationsStore = Depends(get_operations),
 ) -> dict:
     authorize(principal, Permission.CONNECTORS_READ)
     try:
         row = operations.approval(approval_id)
         evidence_ids = set(row.get("evidence") or [])
         documents = [doc for doc in operations.documents() if doc.get("id") in evidence_ids]
-    except DemoDataUnavailable as exc:
+    except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"approval {approval_id} not found") from exc
@@ -97,7 +98,7 @@ def get_approval(
         "evidenceDocuments": documents,
         "allowedDecisions": sorted(APPROVAL_TRANSITIONS.get(str(row.get("status")), frozenset())),
         "canDecide": principal.has(Permission.JOBS_APPROVE),
-        "source": SOURCE,
+        "source": OPERATIONS_SOURCE,
     }
 
 
@@ -106,7 +107,7 @@ def decide_approval(
     approval_id: str,
     payload: ApprovalDecision,
     principal: Principal = Depends(get_principal),
-    operations: DemoStore = Depends(get_operations),
+    operations: OperationsStore = Depends(get_operations),
     audit: AuditService = Depends(get_audit),
 ) -> dict:
     # An approval gate is only meaningful if the approver is authorized to
@@ -119,11 +120,11 @@ def decide_approval(
             actor=principal.user,
             note=payload.note,
         )
-    except DemoDataUnavailable as exc:
+    except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"approval {approval_id} not found") from exc
-    except DemoStateError as exc:
+    except OperationsStateError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     try:
         audit.record(
@@ -141,4 +142,4 @@ def decide_approval(
         )
     except Exception:  # pragma: no cover - defensive
         logger.warning("audit write failed for approval decision", exc_info=True)
-    return {"approval": row, "persistence": "in_process_overlay"}
+    return {"approval": row, "persistence": "local_sqlite"}
