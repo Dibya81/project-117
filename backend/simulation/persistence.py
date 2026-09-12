@@ -35,6 +35,16 @@ from typing import Any
 
 DEFAULT_DB = Path(os.environ.get("P117_SIMULATION_DB", "data/simulation.db"))
 
+#: Readings kept per plant. Nothing serves this table yet, so the window is for
+#: post-hoc debugging; its purpose is to bound the file rather than to answer a
+#: query. 418 sensors write ~418 rows per persisted tick, so 50k rows is roughly
+#: 120 ticks of history.
+TELEMETRY_RETAINED_ROWS = int(os.environ.get("P117_TELEMETRY_RETAINED_ROWS", "50000"))
+
+#: Prune once every N persisted telemetry batches. Retention that ran on every
+#: insert would cost more than the insert.
+_TELEMETRY_PRUNE_EVERY = int(os.environ.get("P117_TELEMETRY_PRUNE_EVERY", "50"))
+
 #: Committed, generated SQL that installs the dataset plants (refinery, steel)
 #: and their scenarios. This is the source of truth now that the JSON datasets
 #: are gone; see ``scripts/export_plant_sql.py``.
@@ -314,6 +324,9 @@ class SimulationStore:
         self._lock = threading.RLock()
         self._db = sqlite3.connect(str(self.path), check_same_thread=False)
         self._db.row_factory = sqlite3.Row
+        # Telemetry write counter per plant, used to schedule retention without
+        # running a DELETE on every tick.
+        self._telemetry_writes: dict[str, int] = {}
         with self._lock:
             self._db.executescript(SCHEMA)
             self._db.commit()
@@ -501,7 +514,15 @@ class SimulationStore:
     # ------------------------------------------------------------ telemetry
 
     def record_telemetry(self, plant_id: str, readings: list[dict], sim_t: float) -> int:
-        """Persist a tick's readings. Returns rows written."""
+        """Persist a tick's readings. Returns rows written.
+
+        Retention runs from here because this is the only writer. It used to be
+        an unbounded sink: ``prune_telemetry`` existed but no caller, and
+        nothing reads the table, so it had grown to 742k rows (~95 MB) with no
+        way to stop. Pruning on a write counter rather than on every insert
+        keeps the common path cheap — a DELETE with a subquery per tick would
+        cost more than the insert it follows.
+        """
         now = time.time()
         rows = [
             (plant_id, r["sensor_id"], float(r["value"]), str(r["quality"]), sim_t, now)
@@ -515,14 +536,31 @@ class SimulationStore:
                 rows,
             )
             self._db.commit()
+            self._telemetry_writes[plant_id] = self._telemetry_writes.get(plant_id, 0) + 1
+            should_prune = self._telemetry_writes[plant_id] % _TELEMETRY_PRUNE_EVERY == 0
+        if should_prune:
+            self.prune_telemetry(plant_id)
         return len(rows)
 
-    def prune_telemetry(self, plant_id: str, keep: int = 50_000) -> None:
-        self._exec(
-            "DELETE FROM telemetry WHERE plant_id=? AND id NOT IN"
-            " (SELECT id FROM telemetry WHERE plant_id=? ORDER BY id DESC LIMIT ?)",
-            (plant_id, plant_id, keep),
-        )
+    def prune_telemetry(self, plant_id: str, keep: int = TELEMETRY_RETAINED_ROWS) -> int:
+        """Drop all but the most recent ``keep`` readings for a plant.
+
+        Nothing serves this table yet, so the retained window is for debugging
+        rather than for an API; it exists so the file cannot grow without bound
+        while the engine keeps running.
+        """
+        with self._lock:
+            before = self._db.execute(
+                "SELECT COUNT(*) FROM telemetry WHERE plant_id=?", (plant_id,)
+            ).fetchone()[0]
+            self._db.execute(
+                "DELETE FROM telemetry WHERE plant_id=? AND id NOT IN"
+                " (SELECT id FROM telemetry WHERE plant_id=? ORDER BY id DESC LIMIT ?)",
+                (plant_id, plant_id, keep),
+            )
+            self._db.commit()
+        return max(0, int(before) - keep)
+
 
     # --------------------------------------------------------------- domain
 

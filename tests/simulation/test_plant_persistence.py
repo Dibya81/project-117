@@ -76,3 +76,71 @@ def test_second_init_does_not_duplicate_or_clobber(tmp_path):
         assert len(second.load_scenarios("refinery")) == 14
     finally:
         second.close()
+
+
+# ---------------------------------------------------------------------------
+# Telemetry retention
+#
+# Nothing reads the telemetry table yet, but the engine writes to it every
+# persisted tick. Retention existed as a method with no caller, so the table
+# grew without bound — 742k rows and ~95 MB in the working database before this
+# was wired up. These tests pin the bound.
+# ---------------------------------------------------------------------------
+
+
+def _readings(n: int) -> list[dict]:
+    return [{"sensor_id": f"S{i}", "value": 1.0, "quality": "good"} for i in range(n)]
+
+
+def test_telemetry_is_pruned_to_the_retained_window(store: SimulationStore):
+    """The table must stay bounded, not shrink to nothing.
+
+    Retention runs every _TELEMETRY_PRUNE_EVERY batches rather than on every
+    insert, so the table legitimately overshoots the window by up to one
+    interval of writes. The bound asserted here is that overshoot, not the
+    window itself — asserting exactly TELEMETRY_RETAINED_ROWS would demand
+    per-insert pruning and fail a correct implementation.
+    """
+    from backend.simulation.persistence import (
+        _TELEMETRY_PRUNE_EVERY,
+        TELEMETRY_RETAINED_ROWS,
+    )
+
+    batch = 100
+    # Write well past the window the way the engine does, in batches.
+    batches = (TELEMETRY_RETAINED_ROWS // batch) + _TELEMETRY_PRUNE_EVERY * 2
+    for i in range(batches):
+        store.record_telemetry("refinery", _readings(batch), float(i))
+
+    rows = store._db.execute("SELECT COUNT(*) FROM telemetry").fetchone()[0]
+    bound = TELEMETRY_RETAINED_ROWS + (_TELEMETRY_PRUNE_EVERY - 1) * batch
+    assert rows <= bound, f"telemetry holds {rows} rows, above the {bound} bound"
+    # A live sink must still be receiving writes after pruning.
+    assert rows >= TELEMETRY_RETAINED_ROWS - batch, (
+        f"retention trimmed too far: {rows} rows against a {TELEMETRY_RETAINED_ROWS} window"
+    )
+
+
+def test_prune_telemetry_keeps_the_newest_readings(store: SimulationStore):
+    for i in range(4):
+        store.record_telemetry("refinery", _readings(100), float(i))
+    store.prune_telemetry("refinery", keep=150)
+
+    rows = store._db.execute("SELECT COUNT(*) FROM telemetry").fetchone()[0]
+    assert rows == 150
+    newest = store._db.execute("SELECT MAX(sim_t) FROM telemetry").fetchone()[0]
+    assert newest == 3.0, "pruning dropped the most recent readings"
+
+
+def test_prune_is_per_plant(store: SimulationStore):
+    """One plant's retention must not delete another's readings."""
+    for _ in range(3):
+        store.record_telemetry("refinery", _readings(200), 1.0)
+        store.record_telemetry("steel", _readings(200), 1.0)
+    store.prune_telemetry("refinery", keep=100)
+
+    by_plant = dict(
+        store._db.execute("SELECT plant_id, COUNT(*) FROM telemetry GROUP BY plant_id").fetchall()
+    )
+    assert by_plant["refinery"] == 100
+    assert by_plant["steel"] == 600
