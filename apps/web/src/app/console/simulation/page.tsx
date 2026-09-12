@@ -12,10 +12,9 @@ import { Panel, SkeletonRows, StatusDot, Tag } from "@/components/ui/primitives"
 import { Icon } from "@/components/ui/Icon";
 import { Tilt } from "@/components/fx/Tilt";
 import { simAdapter } from "@/lib/sim/adapter";
-import { BUILDER_TEMPLATES } from "@/lib/sim/templates";
 import { SchematicCanvas, emptyRuntime } from "@/components/sim/SchematicCanvas";
 import { assemblePlant } from "@/lib/sim/custom";
-import type { PlantListItem } from "@/lib/sim/types";
+import type { PlantDef, PlantListItem } from "@/lib/sim/types";
 
 export default function SimulationHub() {
   const router = useRouter();
@@ -41,8 +40,34 @@ export default function SimulationHub() {
 
   const refinery = plants?.find((p) => p.id === "refinery");
   const steel = plants?.find((p) => p.id === "steel");
-  const refineryTemplate = BUILDER_TEMPLATES.find((t) => t.id === "template-refinery");
-  const steelTemplate = BUILDER_TEMPLATES.find((t) => t.id === "template-steel");
+  /**
+   * The real plant definitions, for the card previews.
+   *
+   * These used to render `BUILDER_TEMPLATES`, whose refinery topology is a
+   * ten-node teaching schematic with invented tags (TK-100, P-110, DS-120). The
+   * card is labelled with the real plant's name and asset count, so it was
+   * previewing ten units that do not exist in a 58-unit plant.
+   */
+  const [defs, setDefs] = useState<Record<string, PlantDef>>({});
+  useEffect(() => {
+    let alive = true;
+    Promise.all(
+      ["refinery", "steel"].map((id) =>
+        simAdapter
+          .loadPlant(id)
+          .then((r) => [id, r.plant] as const)
+          .catch(() => null),
+      ),
+    ).then((rows) => {
+      if (!alive) return;
+      setDefs(Object.fromEntries(rows.filter(Boolean) as [string, PlantDef][]));
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const refineryDef = defs.refinery;
+  const steelDef = defs.steel;
 
   return (
     <>
@@ -117,9 +142,16 @@ export default function SimulationHub() {
                   Synthetic demonstration plant
                 </p>
                 <h2 style={{ margin: "0 0 8px", fontSize: 21, letterSpacing: "-0.01em" }}>{refinery.name}</h2>
-                {refineryTemplate && (
+                {refineryDef && (
                   <div className="sm-card-preview" aria-hidden="true">
-                    <SchematicCanvas plant={assemblePlant(refineryTemplate.equipment, refineryTemplate.connections)} runtime={emptyRuntime(assemblePlant(refineryTemplate.equipment, refineryTemplate.connections))} selectedId={null} affected={[]} onSelect={() => undefined} onHover={() => undefined} />
+                    <SchematicCanvas
+                      plant={assemblePlant(refineryDef.equipment, refineryDef.connections)}
+                      runtime={emptyRuntime(assemblePlant(refineryDef.equipment, refineryDef.connections))}
+                      selectedId={null}
+                      affected={[]}
+                      onSelect={() => undefined}
+                      onHover={() => undefined}
+                    />
                   </div>
                 )}
                 <p style={{ margin: 0, color: "var(--ink-2)", fontSize: 13, lineHeight: 1.65, maxWidth: 300 }}>
@@ -155,9 +187,16 @@ export default function SimulationHub() {
                   Synthetic demonstration plant
                 </p>
                 <h2 style={{ margin: "0 0 8px", fontSize: 21, letterSpacing: "-0.01em" }}>{steel.name}</h2>
-                {steelTemplate && (
+                {steelDef && (
                   <div className="sm-card-preview" aria-hidden="true">
-                    <SchematicCanvas plant={assemblePlant(steelTemplate.equipment, steelTemplate.connections)} runtime={emptyRuntime(assemblePlant(steelTemplate.equipment, steelTemplate.connections))} selectedId={null} affected={[]} onSelect={() => undefined} onHover={() => undefined} />
+                    <SchematicCanvas
+                      plant={assemblePlant(steelDef.equipment, steelDef.connections)}
+                      runtime={emptyRuntime(assemblePlant(steelDef.equipment, steelDef.connections))}
+                      selectedId={null}
+                      affected={[]}
+                      onSelect={() => undefined}
+                      onHover={() => undefined}
+                    />
                   </div>
                 )}
                 <p style={{ margin: 0, color: "var(--ink-2)", fontSize: 13, lineHeight: 1.65, maxWidth: 300 }}>

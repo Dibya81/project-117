@@ -33,6 +33,12 @@ export interface NotificationItem {
 
 export interface HistoryEvent {
   id: string;
+  /**
+   * Which memory stage this event belongs to. `event` is the honest fallback
+   * for a real domain event that is none of the named stages; it replaced a
+   * catch-all that funnelled everything unmapped into `recommendation`, which
+   * the history page then painted as "Verified".
+   */
   kind:
     | "anomaly"
     | "inspection"
@@ -40,7 +46,8 @@ export interface HistoryEvent {
     | "maintenance"
     | "recommendation"
     | "approval"
-    | "work_order";
+    | "work_order"
+    | "event";
   title: string;
   detail: string;
   equipment_id?: string;

@@ -287,19 +287,41 @@ function toApproval(r: ApprovalRecord): ApprovalRequest {
  * action prefix decides the category; anything unrecognised is reported as a
  * recommendation rather than being forced into a category it does not belong to.
  */
+/**
+ * True for the audit middleware's own request log.
+ *
+ * Every inbound HTTP request is audited as `http.<method>`. Those rows are a
+ * transport record, useful in the Admin audit ledger and useless as plant
+ * history — they were 76% of the operational-history feed, so the page titled
+ * "organizational memory, not an activity log" was rendering exactly that, one
+ * `/api/simulation/plants/refinery/reset` at a time.
+ */
+function isTransportAudit(action: string): boolean {
+  return action.startsWith("http.");
+}
+
+/**
+ * Map an audit action to a memory stage, without guessing.
+ *
+ * This previously fell through to `recommendation` for anything unrecognised,
+ * and the history page renders `recommendation` as "Verified" — so a raw HTTP
+ * request carried a green verification badge. Only the verification domain maps
+ * to `recommendation` now; anything real but unstaged is `event`.
+ */
+function historyKind(action: string): HistoryEvent["kind"] {
+  if (action.startsWith("approval.")) return "approval";
+  if (action.startsWith("work_order.")) return "work_order";
+  if (action.startsWith("incident.") || action.startsWith("alarm.") || action.startsWith("fault.")) {
+    return "anomaly";
+  }
+  if (action.startsWith("verification.") || action.startsWith("artifact.")) return "recommendation";
+  if (action.startsWith("simulation.") || action.startsWith("plant.")) return "maintenance";
+  return "event";
+}
+
 function toHistoryEvent(e: Record<string, unknown>): HistoryEvent {
   const action = String(e.action ?? "");
-  const kind: HistoryEvent["kind"] = action.startsWith("approval.")
-    ? "approval"
-    : action.startsWith("incident.")
-      ? "anomaly"
-      : action.startsWith("work_order.")
-        ? "work_order"
-        : action.startsWith("document.")
-          ? "inspection"
-          : action.startsWith("plant.") || action.startsWith("sensor.") || action.startsWith("equipment.")
-            ? "maintenance"
-            : "recommendation";
+  const kind = historyKind(action);
   return {
     id: String(e.id ?? ""),
     kind,
@@ -485,11 +507,20 @@ export const consoleData = {
      * Real audit rows, newest first, in front of the milestones this session
      * witnessed. The audit log is the durable record; the session list carries
      * simulation events that have not been persisted yet.
+     *
+     * The request log is filtered out: `http.*` rows are the middleware
+     * recording that a URL was called, which is not something that happened to
+     * the plant. Keeping them meant the newest 200 audit rows were 76%
+     * transport noise, and they buried the domain events they were mixed with.
      */
     list: async () => {
       const audited = await api.audit
-        .query({ limit: 200 })
-        .then((r) => (r.events ?? []).map(toHistoryEvent))
+        .query({ limit: 500 })
+        .then((r) =>
+          (r.events ?? [])
+            .filter((e) => !isTransportAudit(String(e.action ?? "")))
+            .map(toHistoryEvent),
+        )
         .catch(() => [] as HistoryEvent[]);
       return [...simHistory, ...audited];
     },

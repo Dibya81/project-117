@@ -20,9 +20,13 @@ const KIND_STYLE: Record<HistoryEvent["kind"], { color: string; label: string }>
   maintenance: { color: "var(--ok)", label: "Acted" },
   work_order: { color: "var(--ink-2)", label: "Acted" },
   recommendation: { color: "var(--cyan)", label: "Verified" },
+  // A real domain event that is none of the named stages. Previously these fell
+  // into `recommendation` and were rendered as "Verified", which is how a raw
+  // HTTP request ended up wearing a verification badge.
+  event: { color: "var(--ink-2)", label: "Recorded" },
 };
 
-const CATEGORY_ORDER = ["Observed", "Decided", "Acted", "Verified"];
+const CATEGORY_ORDER = ["Observed", "Decided", "Acted", "Verified", "Recorded"];
 
 export default function HistoryPage() {
   const router = useRouter();
