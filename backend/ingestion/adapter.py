@@ -15,6 +15,8 @@ thread-safe on first use; concurrent reindexes queue instead of racing.
 
 from __future__ import annotations
 
+import ast
+import json
 import logging
 import sys
 import threading
@@ -124,6 +126,76 @@ class LocalGPTIndexer:
         if "'" in document_id:
             raise ValueError("document_id must not contain single quotes")
         return int(table.count_rows(filter=f"document_id = '{document_id}'"))
+
+    def chunks(self, document_id: str | None = None, *, limit: int = 200) -> list[dict[str, Any]]:
+        """Read stored chunk text back out of the index table.
+
+        After parsing, this table is the only place a document's text exists —
+        the upload is staged and the source file is not re-parsed on read. Any
+        surface that needs to show what a document actually says (the document
+        field, an evidence view, a graph built from real content) has to read it
+        from here rather than from a hand-written copy that drifts.
+
+        Ordering is by (document_id, chunk_index) so repeated calls return the
+        document in reading order.
+        """
+        import lancedb
+
+        from backend.storage.lancedb import has_table
+
+        db = lancedb.connect(self._db_path)
+        if not has_table(db, self._table_name):
+            return []
+        table = db.open_table(self._table_name)
+        query = table.search()
+        if document_id is not None:
+            if "'" in document_id:
+                raise ValueError("document_id must not contain single quotes")
+            query = query.where(f"document_id = '{document_id}'")
+        rows = query.limit(max(1, limit)).to_arrow().to_pylist()
+
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            meta = row.get("metadata")
+            if isinstance(meta, str):
+                try:
+                    meta = json.loads(meta)
+                except json.JSONDecodeError:
+                    meta = {}
+            if not isinstance(meta, dict):
+                meta = {}
+            # The pipeline nests the citation block one level down under
+            # "metadata"; tolerate both layouts so a schema tweak upstream does
+            # not silently blank this endpoint.
+            inner = meta.get("metadata")
+            if isinstance(inner, str):
+                try:
+                    inner = ast.literal_eval(inner)
+                except (ValueError, SyntaxError):
+                    inner = {}
+            citations = inner if isinstance(inner, dict) else meta
+
+            headings = citations.get("heading_path") or []
+            if isinstance(headings, str):
+                try:
+                    headings = json.loads(headings)
+                except json.JSONDecodeError:
+                    headings = [headings]
+            page = citations.get("page")
+            out.append(
+                {
+                    "chunk_id": row.get("chunk_id"),
+                    "document_id": row.get("document_id"),
+                    "chunk_index": row.get("chunk_index"),
+                    "text": row.get("text"),
+                    "block_type": citations.get("block_type") or "paragraph",
+                    "heading_path": list(headings) if isinstance(headings, list) else [],
+                    "page": page,
+                    "source": citations.get("source"),
+                }
+            )
+        out.sort(key=lambda c: (str(c["document_id"]), int(c["chunk_index"] or 0)))
+        return out
 
     @property
     def embedding_model(self) -> str:

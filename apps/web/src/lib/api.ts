@@ -258,6 +258,27 @@ export const api = {
     },
     delete: (id: string) =>
       request<{ deleted: boolean; id: string }>(`/api/documents/${id}`, { method: "DELETE" }),
+    /**
+     * The parsed text of one document, in reading order. This is the only place
+     * a document's content exists after parsing — the source file is not
+     * re-parsed on read, so anything that displays document text reads it here.
+     */
+    chunks: (id: string, limit = 200) =>
+      request<{
+        documentId: string;
+        filename: string;
+        chunkCount: number;
+        chunks: {
+          chunk_id: string;
+          document_id: string;
+          chunk_index: number;
+          text: string;
+          block_type: string;
+          heading_path: string[];
+          page: number | null;
+          source: string | null;
+        }[];
+      }>(`/api/documents/${encodeURIComponent(id)}/chunks?limit=${limit}`),
     reindex: (id: string) =>
       request<Record<string, unknown>>(`/api/documents/${id}/reindex`, { method: "POST" }),
   },

@@ -150,6 +150,28 @@ class IngestionService:
         self._stager.unstage(document_id)
         return deleted
 
+    def chunks(self, document_id: str, *, limit: int = 200) -> list[dict[str, Any]]:
+        """The parsed text of a stored document, in reading order.
+
+        Rows are keyed by the staged basename (``<uuid><ext>``); the same
+        resolution `purge` uses applies here, preferring the id recorded at
+        index time so a document renamed after indexing is still readable.
+        """
+        document = self._get(document_id)
+        return self._indexer.chunks(self._index_document_id(document), limit=limit)
+
+    def _index_document_id(self, document: Document) -> str:
+        try:
+            metadata = json.loads(document.metadata_json or "{}")
+        except ValueError:
+            metadata = {}
+        ingestion = metadata.get("ingestion")
+        if isinstance(ingestion, dict):
+            recorded = ingestion.get("index_document_id")
+            if isinstance(recorded, str) and recorded:
+                return recorded
+        return f"{document.id}{_extension_of(document.filename)}"
+
     # --- internals ---------------------------------------------------------
 
     def _get(self, document_id: str) -> Document:

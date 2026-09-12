@@ -51,6 +51,23 @@ class FakeIndexer:
     def chunk_count(self, document_id: str | None = None) -> int:
         return 3 if not self.fail else 0
 
+    def chunks(self, document_id: str | None = None, *, limit: int = 200) -> list[dict]:
+        if self.fail:
+            return []
+        return [
+            {
+                "chunk_id": f"{document_id}_{i}",
+                "document_id": document_id,
+                "chunk_index": i,
+                "text": f"chunk {i} of {document_id}",
+                "block_type": "paragraph",
+                "heading_path": [],
+                "page": 1,
+                "source": None,
+            }
+            for i in range(min(3, limit))
+        ]
+
 
 def make_app(settings: Settings, indexer: FakeIndexer):
     app = create_app(settings)
@@ -165,6 +182,34 @@ def test_reindex_is_idempotent_replacing_previous_vectors(ingest_client):
     client.post(f"/api/documents/{document['id']}/reindex")
     client.post(f"/api/documents/{document['id']}/reindex")
     assert len(indexer.indexed) == 2  # re-staged and re-run
+
+
+def test_document_chunks_endpoint_returns_parsed_text(ingest_client):
+    """The read-back path the document field depends on.
+
+    After parsing, the vector table is the only place a document's text exists.
+    If this endpoint silently returned nothing, every surface that displays
+    document content would fall back to something hand-written — which is
+    exactly the failure it was added to prevent.
+    """
+    client, _ = ingest_client
+    document = _upload(client)
+    client.post(f"/api/documents/{document['id']}/reindex")
+
+    response = client.get(f"/api/documents/{document['id']}/chunks")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["documentId"] == document["id"]
+    assert body["filename"] == "manual.pdf"
+    assert body["chunkCount"] == 3
+    # Rows are keyed by the staged basename, not the bare uuid.
+    assert body["chunks"][0]["document_id"] == f"{document['id']}.pdf"
+    assert body["chunks"][0]["text"]
+
+
+def test_document_chunks_missing_document_404(ingest_client):
+    client, _ = ingest_client
+    assert client.get("/api/documents/does-not-exist/chunks").status_code == 404
 
 
 def test_delete_purges_vectors(ingest_client):

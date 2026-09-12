@@ -19,7 +19,7 @@
  * documentation from `src/lib/documents/field.ts`.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CORPUS_PAGES, KIND_LABEL, loadGeneratedPages, type DocPage } from "@/lib/documents/field";
+import { KIND_LABEL, loadCorpusPages, type DocPage } from "@/lib/documents/field";
 
 const FOCAL = 3.0;
 const NEAR = 1.0;
@@ -50,17 +50,23 @@ export default function DocumentField({ onSelect, speed = 1 }: Props) {
   const reduced = useRef(false);
   const hit = useRef<{ page: DocPage; x: number; y: number; w: number; h: number }[]>([]);
   const [hover, setHover] = useState<DocPage | null>(null);
-  const [pages, setPages] = useState<DocPage[]>(CORPUS_PAGES);
-  const [count, setCount] = useState(CORPUS_PAGES.length);
+  const [pages, setPages] = useState<DocPage[]>([]);
+  const [count, setCount] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Append generated knowledge-base sections when present.
+  // Real pages, read from the live corpus. An empty result is reported rather
+  // than filled with hand-written pages, which is what this used to do.
   useEffect(() => {
     let alive = true;
-    loadGeneratedPages().then((extra) => {
-      if (!alive || !extra.length) return;
-      setPages([...CORPUS_PAGES, ...extra]);
-      setCount(CORPUS_PAGES.length + extra.length);
-    });
+    loadCorpusPages()
+      .then((real) => {
+        if (!alive) return;
+        setPages(real);
+        setCount(real.length);
+      })
+      .catch((err) => {
+        if (alive) setLoadError(err instanceof Error ? err.message : String(err));
+      });
     return () => { alive = false; };
   }, []);
 
@@ -384,6 +390,28 @@ export default function DocumentField({ onSelect, speed = 1 }: Props) {
         aria-label="Animated archive of refinery documents moving through space"
         role="img"
       />
+      {pages.length === 0 && (
+        // An empty canvas would read as a perpetual loading state. Say what is
+        // actually true: either nothing is indexed, or the read failed.
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 32,
+            textAlign: "center",
+            pointerEvents: "none",
+          }}
+        >
+          <p style={{ margin: 0, maxWidth: 520, fontSize: 13, lineHeight: 1.7, color: "var(--ink-2)" }}>
+            {loadError
+              ? `The document field could not read the corpus: ${loadError}`
+              : "No indexed document has parsed text to show yet. Ingest a document and this field will fill with its real pages."}
+          </p>
+        </div>
+      )}
       <div className="df-legend" aria-hidden="true">
         <span><i style={{ background: kindColor("inspection") }} />Inspection</span>
         <span><i style={{ background: kindColor("procedure") }} />Procedure</span>

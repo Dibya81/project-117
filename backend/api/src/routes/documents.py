@@ -78,6 +78,31 @@ def delete_document(document_id: str, request: Request) -> dict:
     return {"deleted": True, "id": document.id, "filename": document.filename}
 
 
+@router.get("/{document_id}/chunks")
+def document_chunks(document_id: str, request: Request, limit: int = 200) -> dict:
+    """The parsed text of a document, in reading order.
+
+    After parsing, the vector table is the only place this text exists — the
+    upload is staged and the source is not re-parsed on read. Any surface that
+    shows what a document says must read it from here; the alternative is a
+    hand-written copy that drifts from the corpus.
+    """
+    documents = get_documents(request)
+    try:
+        document = documents.get(document_id)
+    except DocumentNotFoundError:
+        raise NotFound(f"document '{document_id}' does not exist") from None
+
+    ingestion = get_ingestion(request)
+    chunks = ingestion.chunks(document_id, limit=max(1, min(limit, 1000)))
+    return {
+        "documentId": document.id,
+        "filename": document.filename,
+        "chunkCount": len(chunks),
+        "chunks": chunks,
+    }
+
+
 @router.post("/{document_id}/reindex")
 async def reindex_document(document_id: str, request: Request) -> dict:
     """Index or re-index a stored document through the localGPT pipeline.

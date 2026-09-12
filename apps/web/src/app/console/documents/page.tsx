@@ -445,29 +445,14 @@ function DocumentsPageInner() {
         </div>
         <DocumentField
           onSelect={(page) => {
-            const match =
-              docs?.find((d) => d.filename.replace(/\.(pdf|xlsx|csv|png|md|docx)$/i, "") === page.doc.replace(/\.(pdf|xlsx|csv|png|md|docx)$/i, "")) ??
-              docs?.find((d) => page.doc.toLowerCase().startsWith(d.filename.slice(0, 8).toLowerCase().replace(/[^a-z0-9]/g, ""))) ??
-              null;
-            if (match) {
-              setOpenDoc(match);
-              setEvidenceMode(false);
-              visit({ id: match.id, label: match.filename, kind: "document", href: `/console/documents?doc=${match.id}` });
-            } else {
-              // A page from the generated knowledge base: open it as evidence
-              // context rather than pretending a library record exists.
-              setOpenDoc({
-                id: `kb-${page.id}`,
-                filename: page.doc,
-                content_type: "text/markdown",
-                size_bytes: 0,
-                status: "indexed",
-                metadata: { section: page.section, entities: page.entities.length },
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              });
-              setEvidenceMode(false);
-            }
+            // The page carries the real library id, so this opens the actual
+            // record. It previously guessed at a match from the filename and,
+            // failing that, synthesised a fake DocumentRecord to open.
+            const match = docs?.find((d) => d.id === page.documentId) ?? null;
+            if (!match) return;
+            setOpenDoc(match);
+            setEvidenceMode(false);
+            visit({ id: match.id, label: match.filename, kind: "document", href: `/console/documents?doc=${match.id}` });
           }}
         />
       </section>
