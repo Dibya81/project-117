@@ -83,4 +83,15 @@ def test_plant_definition(client: TestClient):
     assert resp.status_code == 200
     assert "plant" in resp.json()
 
+def test_plant_scenarios(client: TestClient):
+    resp = client.get("/api/simulation/plants/refinery/scenarios")
+    assert resp.status_code == 200
+    scenarios = resp.json()["scenarios"]
+    assert len(scenarios) == 14
+    assert {"id", "name", "description", "steps"} <= set(scenarios[0])
+
+def test_plant_scenarios_unknown_plant(client: TestClient):
+    resp = client.get("/api/simulation/plants/no-such-plant/scenarios")
+    assert resp.status_code == 404
+
 

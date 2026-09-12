@@ -33,7 +33,7 @@ def parse_register(text: str) -> dict[str, str]:
     m = REGISTER.search(text)
     if not m:
         raise SystemExit("could not locate the ### 4.1 register table in the dossier")
-    rows = [l for l in m.group(1).splitlines() if l.strip().startswith("|")]
+    rows = [line for line in m.group(1).splitlines() if line.strip().startswith("|")]
     rows = [r for r in rows if not re.match(r"^\|[\s:|-]+\|$", r.strip())]
     out: dict[str, str] = {}
     for r in rows[1:]:

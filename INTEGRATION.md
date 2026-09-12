@@ -18,10 +18,10 @@ How the Project 117 simulation frontend (`frontend/`) talks to the data package
 ## 1. What runs where
 
 ```
-project-117-simulation/          data package (generated, deterministic, seed=117)
-  database/schema.sql            SQLite schema — the authority on field names
-  database/generate_seed.py      single source of truth; edit + re-run
-  public/data/*.json             same rows as JSON
+project-117-simulation/          data package
+  database/seed_plants.sql       committed seed — source of truth for the
+                                 backend's refinery/steel plants + scenarios
+  public/data/*.json             frozen JSON copy for the workbench
   public/plants.json             manifest added for the hub page
 
 frontend/                        Vite + React + TS workbench
@@ -47,8 +47,10 @@ that came off the wire.
 
 ## 2. Data shape contracts
 
-Source of truth: `project-117-simulation/database/schema.sql`. The JSON export
-is the same rows with two differences, both normalised on load by
+Source of truth: `project-117-simulation/database/seed_plants.sql`, applied by
+`backend/simulation/persistence.py` (the SQLite schema for the live plants
+lives in that module). The workbench's `public/data/*.json` is a frozen copy of
+the same rows with two differences, both normalised on load by
 `src/data/service.ts`:
 
 | SQL | JSON | Handling |
@@ -295,14 +297,13 @@ npm run build        # tsc -b && vite build
 npm run typecheck
 ```
 
-Regenerating the plant data (edit `PLANTS` in `generate_seed.py` first):
-
-```bash
-python3 project-117-simulation/database/generate_seed.py
-```
+Regenerating the plant data: the backend's canonical seed is committed at
+`project-117-simulation/database/seed_plants.sql` and applied automatically on
+first run. The workbench's `public/data/*.json` is a frozen copy served as-is,
+so there is no generator to re-run.
 
 The frontend serves `project-117-simulation/public` directly as its
-`publicDir`, so regenerated JSON appears with no copy step.
+`publicDir`, so that JSON appears with no copy step.
 
 ---
 
@@ -312,8 +313,8 @@ These are properties of the provided dataset, reported rather than papered
 over. The frontend renders them faithfully.
 
 **1. Equipment `status` and sensor readings are independent axes.**
-`generate_seed.py` derives `status` from age against expected life
-(`ratio > 0.95` → warning, `> 1.05` → critical), while every sensor's
+The (now superseded) stale generator derived `status` from age against expected
+life (`ratio > 0.95` → warning, `> 1.05` → critical), while every sensor's
 `current_value` is generated inside its own normal band
 (`random.uniform(lo, hi)`). The result is that the refinery has 23 units marked
 `critical` and 6 `warning`, but **0 of 137 sensors out of band**.
@@ -331,6 +332,5 @@ reports zero orphans on both prebuilt plants.
 
 **3. `plants.json` is the one file added to the data package.** The hub page
 needs a manifest; it did not exist. Nothing else in
-`project-117-simulation/` was modified, and re-running `generate_seed.py`
-reproduces the JSON byte-for-byte apart from `plants.json`, which the generator
-does not write.
+`project-117-simulation/public/` was modified, and the frozen JSON copy is no
+longer regenerated from source.

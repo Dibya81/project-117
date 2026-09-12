@@ -66,13 +66,13 @@ project117/
 │   └── src/                   React Flow canvas, agent trace, WS bridge
 │
 ├── project-117-simulation/    PLANT DATA PACKAGE (deliverable)
-│   ├── database/schema.sql    field-name authority for the plant model
-│   ├── database/generate_seed.py  deterministic generator (seed = 117)
-│   └── public/                the same rows exported as JSON
+│   ├── database/seed_plants.sql   committed seed — source of truth for
+│   │                              the refinery/steel plant definitions
+│   └── public/                the same rows exported as JSON (workbench copy)
 │
 ├── data/                      runtime + demo data (see data/README.md)
 │   ├── knowledge/  demo/      retrieval corpus (tracked)
-│   ├── simulation/            plant datasets (tracked)
+│   ├── simulation.db          simulation SQLite store (git-ignored, seeded)
 │   ├── uploads/  lancedb/     runtime stores (git-ignored)
 │   └── *.db                   SQLite stores (git-ignored)
 │
@@ -92,7 +92,7 @@ project117/
 | **`apps/web/`** | The product console: a Next.js 14 App Router app with a cinematic landing page (`/`) and the operator console (`/console/*`) — plant twin, agent command center, approvals, work orders, documents, knowledge graphs, admin. |
 | **`backend/`** | The engine. FastAPI service exposing the orchestrator, the specialized agents, ingestion + hybrid RAG with citations, the sandbox client, verification checkers, approvals/RBAC, persistence and the audit trail. It also runs the digital-twin simulation and streams it over SSE. |
 | **`frontend/`** | A standalone Vite + React **simulation workbench**: a React Flow canvas over the `project-117-simulation/` data package, with a WebSocket bridge to an orchestrator. It is a separate, smaller demo surface — not part of the Next.js app or the pnpm workspace. |
-| **`project-117-simulation/`** | The plant **data package**: SQL schema, deterministic seed generator, and JSON exports for the prebuilt refinery and steelworks. It is the single source of truth for plant field names. |
+| **`project-117-simulation/`** | The plant **data package**: the committed SQL seed (`database/seed_plants.sql`) that is the source of truth for the prebuilt refinery and steelworks, plus frozen JSON exports for the Vite workbench. |
 
 ### Which engine runs
 
@@ -480,11 +480,12 @@ curl -s -XPOST http://127.0.0.1:8000/api/simulation/plants/refinery/equipment/e-
 curl -s http://127.0.0.1:8000/api/simulation/plants/refinery/snapshot | python3 -m json.tool
 ```
 
-Regenerate or validate the datasets any time (deterministic, seed 117):
+The plant datasets live in the simulation SQLite store. A fresh clone seeds
+itself on first run from the committed
+`project-117-simulation/database/seed_plants.sql`; validate it with:
 
 ```bash
-python3 scripts/generate_simulation_data.py
-python3 scripts/validate_simulation_data.py
+./.venv/bin/python scripts/validate_plant_data.py
 ```
 
 ## Testing & quality
@@ -501,8 +502,7 @@ same commands (`make help` lists them), and both entry points are exercised.
 | `pnpm lint` | `next lint` for the Next.js console. |
 | `cd frontend && npm run typecheck` | `tsc --noEmit` for the Vite workbench. |
 | `pnpm build` / `pnpm start` | Build and serve the Next.js console. |
-| `python3 scripts/validate_plant_data.py` | Plant-data quality report (exit 0 on success). |
-| `python3 scripts/validate_simulation_data.py` | Refs/envelopes/topology/scenarios for both datasets. |
+| `./.venv/bin/python scripts/validate_plant_data.py` | Plant-data quality report from the DB (exit 0 on success). |
 | `python3 tests/simulation/test_verification_regression.py` | Verification regression (stdlib only). |
 | `python3 tests/simulation/redteam_harness.py` | Determinism + negative tests (stdlib only). |
 | `python3 tests/simulation/test_integration_pipeline.py` | End-to-end simulation gate (stdlib only). |
@@ -615,8 +615,8 @@ limitation rather than repaired:
 | `apps/web/` | Next.js 14 console + cinematic landing page. |
 | `backend/` | FastAPI engine: orchestrator, agents, simulation, RAG, sandbox, verification, audit. |
 | `frontend/` | Vite + React simulation workbench. |
-| `project-117-simulation/` | Plant data package: SQL schema, seed generator, JSON exports. |
-| `data/` | Tracked demo/knowledge/plant data plus git-ignored runtime stores. |
+| `project-117-simulation/` | Plant data package: committed SQL seed + frozen JSON exports. |
+| `data/` | Tracked demo/knowledge data plus git-ignored runtime stores (incl. the seeded simulation DB). |
 | `docs/` | Setup, architecture, decisions, frontend design, simulation and knowledge docs. |
 | `scripts/` | Dataset generators/validators and smoke tests. |
 | `tests/` | `unit/` and `simulation/` test suites. |

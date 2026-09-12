@@ -31,6 +31,7 @@ from __future__ import annotations
 import json
 import random
 import re
+import sys
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -41,7 +42,13 @@ from pathlib import Path
 SEED = 117017
 
 ROOT = Path(__file__).resolve().parents[1]
-SIM_DIR = ROOT / "apps/web/public/simulation/refinery"
+# Plant rows come from the local SQLite store. The JSON dataset under
+# apps/web/public/simulation/ was removed once SQL became the source of truth;
+# backend.simulation.datasets reads the same rows the engine runs on.
+sys.path.insert(0, str(ROOT))
+from backend.simulation import datasets as _datasets  # noqa: E402
+
+_plant_def = _datasets.load_plant("refinery").model_dump()
 DEMO_DIR = ROOT / "data/demo"
 MASTER_PATH = ROOT / "data/knowledge" / "REFINERY-TECHNICAL-KNOWLEDGE-BASE.md"
 CHUNK_DIR = ROOT / "data/knowledge" / "refinery"
@@ -384,12 +391,12 @@ def load_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-PLANT = load_json(SIM_DIR / "plant.json")
-AREAS = load_json(SIM_DIR / "areas.json")
-UNITS = load_json(SIM_DIR / "equipment.json")
-CONNECTIONS = load_json(SIM_DIR / "connections.json")
-FAILURE_MODES = load_json(SIM_DIR / "failure_modes.json")
-SCENARIOS = load_json(SIM_DIR / "scenarios.json")
+PLANT = {"id": _plant_def["id"], "name": _plant_def["name"], "industry": _plant_def["industry"]}
+AREAS = _plant_def["areas"]
+UNITS = _plant_def["equipment"]
+CONNECTIONS = _plant_def["connections"]
+FAILURE_MODES = _plant_def["failure_modes"]
+SCENARIOS = _datasets.load_scenarios("refinery")
 DEMO_UNITS = load_json(DEMO_DIR / "equipment" / "equipment.json")
 DEMO_WORK_ORDERS = load_json(DEMO_DIR / "work-orders.json")
 DEMO_APPROVALS = load_json(DEMO_DIR / "approvals.json")
@@ -921,7 +928,6 @@ def area_summary_lines(area_id):
 
 def sec_01():
     total_sensors = sum(len(u["sensors"]) for u in UNITS)
-    warnings = [u for u in UNITS if unit_status(u) != "NORMAL"]
     rows = []
     for u in UNITS:
         if unit_status(u) != "NORMAL":
@@ -3327,7 +3333,7 @@ def parse_table_block(text, marker):
     """Parse the first markdown table after a marker line. Returns list of cell lists."""
     lines = text.splitlines()
     try:
-        start = next(i for i, l in enumerate(lines) if l.strip() == marker)
+        start = next(i for i, line in enumerate(lines) if line.strip() == marker)
     except StopIteration:
         return []
     rows = []

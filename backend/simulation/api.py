@@ -109,6 +109,18 @@ def plant_definition(plant_id: str, principal: Principal = Depends(get_principal
     return {"plant": plant.model_dump(), "source": "database"}
 
 
+@router.get("/plants/{plant_id}/scenarios")
+def plant_scenarios(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    """Scenario scripts for a plant, read from SQLite.
+
+    Scenarios are not part of the Plant model, so they have their own table;
+    the store is the only source, there is no JSON fallback."""
+    svc = _svc()
+    if svc.store.load_plant_dict(plant_id) is None:
+        raise HTTPException(status_code=404, detail=f"unknown plant dataset: {plant_id}")
+    return {"scenarios": svc.store.load_scenarios(plant_id)}
+
+
 @router.delete("/plants/{plant_id}")
 def delete_plant(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
     svc = _svc()

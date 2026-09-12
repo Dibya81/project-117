@@ -1,18 +1,16 @@
 # Project 117 — simulation data package
 
-This is the data layer for the simulation demo: the SQL schema, seed data,
-and JSON exports for both prebuilt plants. It's deterministic (seed=117) —
-re-run `database/generate_seed.py` any time you want to regenerate or extend it.
+This is the data layer for the simulation demo: the committed SQL seed for
+both prebuilt plants, plus JSON copies for the optional Vite workbench.
 
-- `database/schema.sql` — SQLite schema (zones, equipment, sensors, connections,
-  plus runtime tables for fault events and the agent trace).
-- `database/seed_oil_refinery.sql`, `database/seed_iron_steel_plant.sql` —
-  generated INSERT statements. 101 and 104 equipment respectively.
-- `public/data/oil_refinery.json`, `public/data/iron_steel_plant.json` —
-  the same data as JSON, for the frontend to load directly without a DB round-trip.
-- `database/generate_seed.py` — single source of truth. Edit the `PLANTS` list
-  to add zones/equipment counts, then re-run.
+- `database/seed_plants.sql` — **source of truth** for the refinery and steel
+  plant definitions and their scenarios. It is generated from the JSON dataset
+  by `scripts/export_plant_sql.py` and applied automatically by
+  `SimulationStore` (`backend/simulation/persistence.py`) on first run, so a
+  fresh clone needs no JSON.
+- `public/data/*.json` — a frozen JSON copy the Vite workbench loads directly
+  without a DB round-trip. The backend does not read it.
 
 The React app (canvas, node components, agent trace panel, WebSocket bridge)
 is not in this package — build it with Claude Code using the prompt provided
-in chat, which references this exact schema and JSON shape.
+in chat, which references this exact shape.

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Plant dataset validator — structural + topological integrity.
 
-Pure stdlib. Checks duplicate ids/tags, orphan sensors, dangling
-connections, unknown areas/failure modes, graph connectivity (weakly
-connected components over process pipes), and per-area isolation.
+Reads the dataset plants from the SQLite store (the JSON files are gone), so
+it validates exactly what the engine will load. Checks duplicate ids/tags,
+orphan sensors, dangling connections, unknown areas/failure modes, graph
+connectivity (weakly connected components over process pipes), and per-area
+isolation.
 
-Usage: python3 scripts/validate_plant_data.py [--json]
+Usage: ./.venv/bin/python scripts/validate_plant_data.py [--json]
 Exit code 1 if any ERROR-level finding is present.
 """
 from __future__ import annotations
@@ -15,21 +17,19 @@ import sys
 from collections import defaultdict, deque
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1] / "data" / "simulation"
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from backend.simulation.persistence import SimulationStore, get_store  # noqa: E402
 
 
-def load(d: Path, name: str):
-    p = d / name
-    return json.loads(p.read_text()) if p.exists() else []
-
-
-def validate(d: Path) -> dict:
-    plant = json.loads((d / "plant.json").read_text())
-    areas = load(d, "areas.json")
-    equipment = load(d, "equipment.json")
-    connections = load(d, "connections.json")
-    modes = load(d, "failure_modes.json")
-    scenarios = load(d, "scenarios.json")
+def validate(store: SimulationStore, plant_id: str) -> dict:
+    plant = store.load_plant_dict(plant_id) or {}
+    areas = plant.get("areas", [])
+    equipment = plant.get("equipment", [])
+    connections = plant.get("connections", [])
+    modes = plant.get("failure_modes", [])
+    scenarios = store.load_scenarios(plant_id)
 
     errors: list[str] = []
     warnings: list[str] = []
@@ -180,9 +180,9 @@ def validate(d: Path) -> dict:
 
 def main() -> int:
     reports = []
-    for d in sorted(p for p in ROOT.iterdir() if p.is_dir()):
-        if (d / "plant.json").exists():
-            reports.append(validate(d))
+    store = get_store()
+    for meta in sorted(store.list_saved_plants(origin="dataset"), key=lambda m: m["id"]):
+        reports.append(validate(store, meta["id"]))
     print(json.dumps(reports, indent=2))
     return 1 if any(r["errors"] for r in reports) else 0
 

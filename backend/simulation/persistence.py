@@ -35,6 +35,11 @@ from typing import Any
 
 DEFAULT_DB = Path(os.environ.get("P117_SIMULATION_DB", "data/simulation.db"))
 
+#: Committed, generated SQL that installs the dataset plants (refinery, steel)
+#: and their scenarios. This is the source of truth now that the JSON datasets
+#: are gone; see ``scripts/export_plant_sql.py``.
+SEED_SQL = Path(__file__).resolve().parents[2] / "project-117-simulation" / "database" / "seed_plants.sql"
+
 SCHEMA = """
 PRAGMA journal_mode=WAL;
 PRAGMA foreign_keys=ON;
@@ -118,6 +123,17 @@ CREATE TABLE IF NOT EXISTS connections (
 );
 CREATE INDEX IF NOT EXISTS ix_connections_source ON connections(plant_id, source);
 CREATE INDEX IF NOT EXISTS ix_connections_target ON connections(plant_id, target);
+
+-- Scenarios are not part of the Plant model (they drive a demo, not the
+-- topology), so they get their own table keyed by (plant_id, id). The full
+-- scenario JSON is kept here; callers rehydrate it, exactly like plants.
+CREATE TABLE IF NOT EXISTS scenarios (
+    plant_id   TEXT NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+    id         TEXT NOT NULL,
+    definition TEXT NOT NULL,                     -- full scenario JSON
+    updated_at REAL NOT NULL,
+    PRIMARY KEY (plant_id, id)
+);
 
 CREATE TABLE IF NOT EXISTS telemetry (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -301,8 +317,26 @@ class SimulationStore:
         with self._lock:
             self._db.executescript(SCHEMA)
             self._db.commit()
+        self._seed_if_empty()
 
     # ------------------------------------------------------------- plumbing
+
+    def _seed_if_empty(self) -> None:
+        """Install the committed dataset seed exactly once.
+
+        A fresh clone has an empty ``plants`` table and no dataset JSON, so the
+        committed SQL seed (``project-117-simulation/database/seed_plants.sql``)
+        is what gives it refinery + steel. The empty-table guard is the safety
+        property: re-opening a populated database never re-applies the seed, so
+        a builder plant or an operator's saved plant is never overwritten. The
+        seed itself uses ``INSERT OR IGNORE``, so even a manual re-run is
+        harmless.
+        """
+        if self.count("plants") > 0 or not SEED_SQL.exists():
+            return
+        with self._lock:
+            self._db.executescript(SEED_SQL.read_text())
+            self._db.commit()
 
     def close(self) -> None:
         with self._lock:
@@ -336,7 +370,13 @@ class SimulationStore:
                 "INSERT INTO plants (id,name,industry,origin,definition,created_at,updated_at)"
                 " VALUES (?,?,?,?,?,?,?)"
                 " ON CONFLICT(id) DO UPDATE SET name=excluded.name, industry=excluded.industry,"
-                " origin=excluded.origin, definition=excluded.definition, updated_at=excluded.updated_at",
+                " origin=excluded.origin, updated_at=excluded.updated_at,"
+                # A dataset plant's definition is the seeded, canonical one. The
+                # engine mutates the in-memory Plant (flow, leaking, capacity…),
+                # so re-registering it must not write that runtime state back
+                # over the seed. Builder plants keep updating freely.
+                " definition=CASE WHEN plants.origin='dataset' THEN plants.definition"
+                " ELSE excluded.definition END",
                 (d["id"], d["name"], d.get("industry", ""), origin, json.dumps(d), now, now),
             )
             for a in d.get("areas", []):
@@ -424,6 +464,39 @@ class SimulationStore:
         """Delete a plant and, via ON DELETE CASCADE, its graph rows."""
         cur = self._exec("DELETE FROM plants WHERE id=?", (plant_id,))
         return bool(cur.rowcount)
+
+    def save_scenarios(self, plant_id: str, scenarios: list[Any]) -> int:
+        """Upsert a plant's scenarios. Returns rows written.
+
+        Scenarios are stored as their JSON definition (not normalised into
+        columns) because they are demo scripts, not topology: the shape can
+        grow without a migration, matching how ``plants.definition`` works.
+        """
+        rows = []
+        now = time.time()
+        for s in scenarios:
+            d = s.model_dump() if hasattr(s, "model_dump") else dict(s)
+            rows.append((plant_id, d["id"], json.dumps(d), now))
+        if not rows:
+            return 0
+        with self._lock:
+            self._db.executemany(
+                "INSERT INTO scenarios (plant_id,id,definition,updated_at) VALUES (?,?,?,?)"
+                " ON CONFLICT(plant_id,id) DO UPDATE SET definition=excluded.definition,"
+                " updated_at=excluded.updated_at",
+                rows,
+            )
+            self._db.commit()
+        return len(rows)
+
+    def load_scenarios(self, plant_id: str) -> list[dict]:
+        """Raw scenario dicts for a plant, ordered by id. Empty when unknown."""
+        return [
+            json.loads(r["definition"])
+            for r in self.query(
+                "SELECT definition FROM scenarios WHERE plant_id=? ORDER BY id", (plant_id,)
+            )
+        ]
 
     # ------------------------------------------------------------ telemetry
 

@@ -139,8 +139,9 @@ class Settings(BaseSettings):
     # "org/name" and downloads weights. Any role containing "/" is rejected at
     # startup unless this is deliberately set true.
     allow_remote_model_repos: bool = False
-    # Simulation (digital twin) — datasets under data/simulation; the tick loop
-    # only runs when datasets are present (scripts/generate_simulation_data.py).
+    # Simulation (digital twin) — plants live in the simulation SQLite store,
+    # seeded on first run from project-117-simulation/database/seed_plants.sql;
+    # the tick loop only runs when plants are registered.
     simulation_enabled: bool = True
     simulation_tick_s: float = 1.0
 

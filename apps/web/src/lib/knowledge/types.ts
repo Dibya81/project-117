@@ -3,9 +3,9 @@
  *
  * Two namespaces, one renderer:
  *
- *   plant   — the refinery. Built at runtime from the real simulation dataset
- *             (public/simulation/refinery/*) plus the console records
- *             (documents, work orders, anomalies, history, learned rules).
+ *   plant   — the refinery. Built at runtime from the plant definition served
+ *             by the simulation API (local SQLite store) plus the console
+ *             records (documents, work orders, anomalies, history, rules).
  *   system  — Project 117's own source graph, compiled from graphify's
  *             graph.json by scripts/build_knowledge_graph.py.
  *

@@ -24,16 +24,15 @@ backend/simulation/
 ├── engine.py        # tick loop · telemetry · propagation · alarms · incidents
 ├── agents.py        # deterministic multi-agent pipeline (task DAG + plan)
 ├── service.py       # lifecycle · event log (replayable) · agent orchestration
-├── datasets.py      # loader + validator for data/simulation/<plant>/
+├── datasets.py      # DB-backed plant/scenario loader + validator
 └── api.py           # /api/simulation/* + SSE stream
 
 scripts/
-├── generate_simulation_data.py   # regenerates both datasets (deterministic)
-└── validate_simulation_data.py   # refs/envelopes/topology/scenarios
+└── validate_plant_data.py        # refs/envelopes/topology/scenarios from the DB
 
-data/simulation/
-├── refinery/*.json   # 58 equipment · 224 sensors · 60 connections · 18 areas
-└── steel/*.json      # 55 equipment · 194 sensors · 58 connections · 17 areas
+project-117-simulation/database/
+└── seed_plants.sql   # committed seed: refinery 58/224/14 · steel 55/194/14
+                        (equipment/sensors/scenarios), applied on first run
 
 apps/web/src/
 ├── lib/sim/
@@ -58,9 +57,8 @@ docs/simulation/ASSET_SOURCES.md  # asset provenance (all ORIGINAL)
 ## 3. Running
 
 ```bash
-# datasets are committed; regenerate or re-validate any time:
-python3 scripts/generate_simulation_data.py
-python3 scripts/validate_simulation_data.py
+# datasets come from the committed SQL seed (applied on first run); validate:
+./.venv/bin/python scripts/validate_plant_data.py
 
 # backend (serves /api/simulation/* with live engines at 1s ticks)
 # run from the repository root: pyproject.toml/tests live there and
@@ -151,9 +149,10 @@ events from a single adapter surface.
 - **New failure mode**: add to `FAILURE_MODES` (generator + custom.ts) and a
   `mechanism` branch in both engines. The pipeline is generic — nothing else
   to touch.
-- **New plant**: new directory under `data/simulation/<id>/` (use the
-  generator as a template), validate, drop a card in the hub, done.
-- **New scenario**: an entry in `<plant>/scenarios.json` — steps are
+- **New plant**: add it to `project-117-simulation/database/seed_plants.sql`
+  (or save one from the builder canvas), then re-open a fresh store — seeding
+  picks it up. Validate with `scripts/validate_plant_data.py`.
+- **New scenario**: a row in the `scenarios` table for the plant — steps are
   `inject_failure` events at sim-time offsets.
 
 ## 10. Honest limits

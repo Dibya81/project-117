@@ -4,8 +4,9 @@
  * Project 117 ships two equipment vocabularies, and until they are joined the
  * app shows the same physical machine twice.
  *
- *   REGISTER vocabulary  58 units in
- *                        apps/web/public/simulation/refinery/equipment.json
+ *   REGISTER vocabulary  58 units in the refinery plant definition served by
+ *                        GET /api/simulation/plants/refinery/definition
+ *                        (local SQLite store; the bundled JSON was removed).
  *                        The live simulation register. Authority for
  *                        instrumentation, process topology and telemetry.
  *

@@ -5,18 +5,24 @@
  *
  * Assembled at runtime from the same sources the rest of the console reads:
  *
- *   public/simulation/refinery/*.json   the plant dataset (58 units, 224
- *                                       sensors, 18 areas, 60 process lines,
- *                                       12 failure modes, 14 scenarios)
+ *   GET /api/simulation/plants/refinery/definition   the plant dataset (58
+ *                                       units, 224 sensors, 18 areas, 60 process
+ *                                       lines, 12 failure modes)
+ *   GET /api/simulation/plants/refinery/scenarios    the 14 committed scenarios
  *   consoleData.*                       documents, work orders, anomalies,
  *                                       history, learned rules, approvals,
  *                                       agents
+ *
+ * The plant rows come from the backend's local SQLite store. They used to be
+ * bundled JSON under public/simulation/, which meant the graph could describe
+ * a different plant from the one the engine was running.
  *
  * Every edge is derived from a field that actually exists — `equipment_id`,
  * `area_id`, `applies_to`, evidence citations, `target`. Nothing is invented
  * to make the picture prettier, and each edge records where it came from.
  */
 import { consoleData } from "@/lib/data/console";
+import { API_BASE } from "@/lib/sim/adapter";
 import { relationOf } from "@/lib/sim/relations";
 import type { PlantTemplate } from "@/lib/sim/templates";
 import { CROSSWALK, isIdentityMerge } from "./canonical";
@@ -29,7 +35,7 @@ import {
   type Provenance,
 } from "./types";
 
-const REFINERY = "/simulation/refinery";
+const REFINERY_ID = "refinery";
 
 interface RefEquipment {
   id: string;
@@ -72,8 +78,9 @@ interface RefScenario {
   steps: { at_s: number; action: string; target: string; mode: string }[];
 }
 
-async function j<T>(path: string): Promise<T> {
-  const r = await fetch(path);
+/** GET from the simulation API (plant rows live in its SQLite store). */
+async function api<T>(path: string): Promise<T> {
+  const r = await fetch(`${API_BASE}/api/simulation${path}`, { credentials: "same-origin" });
   if (!r.ok) throw new Error(`${path} → HTTP ${r.status}`);
   return (await r.json()) as T;
 }
@@ -89,14 +96,19 @@ export async function buildPlantGraph(): Promise<KGraph> {
   // between calls, so its revision is the cache key.
   if (cached && cachedRevision === consoleData.customPlants.revision()) return cached;
 
-  const [plant, areas, equipment, connections, failureModes, scenarios] = await Promise.all([
-    j<{ id: string; name: string; industry: string }>(`${REFINERY}/plant.json`),
-    j<RefArea[]>(`${REFINERY}/areas.json`),
-    j<RefEquipment[]>(`${REFINERY}/equipment.json`),
-    j<RefConnection[]>(`${REFINERY}/connections.json`),
-    j<RefFailureMode[]>(`${REFINERY}/failure_modes.json`),
-    j<RefScenario[]>(`${REFINERY}/scenarios.json`),
-  ]);
+  const def = await api<{
+    plant: { id: string; name: string; industry: string } & {
+      areas: RefArea[];
+      equipment: RefEquipment[];
+      connections: RefConnection[];
+      failure_modes: RefFailureMode[];
+    };
+  }>(`/plants/${REFINERY_ID}/definition`);
+  const { areas, equipment, connections, failure_modes: failureModes } = def.plant;
+  const plant = { id: def.plant.id, name: def.plant.name, industry: def.plant.industry };
+  const scenarios = await api<{ scenarios: RefScenario[] }>(`/plants/${REFINERY_ID}/scenarios`)
+    .then((r) => r.scenarios)
+    .catch(() => [] as RefScenario[]);
 
   const [documents, workOrders, alerts, history, rules, approvals, agents, consoleEquipment] =
     await Promise.all([

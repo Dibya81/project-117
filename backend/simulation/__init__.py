@@ -15,7 +15,7 @@ Modules:
     engine      — tick loop, telemetry, alarms, failure propagation
     agents      — deterministic multi-agent incident pipeline
     service     — lifecycle + orchestration + persistence seams
-    datasets    — loader/validator for data/simulation/*.json
+    datasets    — DB-backed access/validation for the seeded plants
     api         — FastAPI router (/api/simulation/*) + SSE stream
 """
 

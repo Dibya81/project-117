@@ -22,7 +22,25 @@ import type {
   SimSnapshot,
 } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8000";
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8000";
+
+/**
+ * Minimal GET against the simulation API.
+ *
+ * The embedded adapter has no request helper of its own because it used to read
+ * bundled JSON; now that plant data lives only in the backend's SQLite store it
+ * needs one.
+ */
+async function apiGet<T>(path: string): Promise<T> {
+  const endpoint = `${API_BASE}/api/simulation${path}`;
+  const res = await fetch(endpoint, { credentials: "same-origin" });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`simulation api ${res.status} ${detail}`.trim());
+  }
+  return (await res.json()) as T;
+}
+
 const RAW_MODE = process.env.NEXT_PUBLIC_DATA_MODE ?? "live";
 /**
  * Data mode is explicit, never inferred.
@@ -134,17 +152,20 @@ class EmbeddedAdapter implements SimAdapter {
 
   async loadPlant(id: string): Promise<{ plant: PlantDef; scenarios: ScenarioDef[] }> {
     if (this.plants.has(id)) return this.plants.get(id)!;
-    const [plant, areas, equipment, connections, failureModes, scenarios] = await Promise.all([
-      fetch(`/simulation/${id}/plant.json`).then((r) => r.json()),
-      fetch(`/simulation/${id}/areas.json`).then((r) => r.json()),
-      fetch(`/simulation/${id}/equipment.json`).then((r) => r.json()),
-      fetch(`/simulation/${id}/connections.json`).then((r) => r.json()),
-      fetch(`/simulation/${id}/failure_modes.json`).then((r) => r.json()),
-      fetch(`/simulation/${id}/scenarios.json`).then((r) => r.json()).catch(() => []),
+    // Plant data comes from the backend's SQLite store, never from bundled
+    // JSON. The embedded engine still runs in the browser, but it is fed the
+    // same rows the live path reads, so the two transports cannot drift apart
+    // about what a plant contains — which is exactly what happened when each
+    // shipped its own copy of the dataset.
+    const [def, sc] = await Promise.all([
+      apiGet<{ plant: PlantDef }>(`/plants/${id}/definition`),
+      apiGet<{ scenarios: ScenarioDef[] }>(`/plants/${id}/scenarios`).catch(() => ({
+        scenarios: [] as ScenarioDef[],
+      })),
     ]);
-    const def = { plant: { ...plant, areas, equipment, connections, failure_modes: failureModes } as PlantDef, scenarios: scenarios as ScenarioDef[] };
-    this.plants.set(id, def);
-    return def;
+    const resolved = { plant: def.plant, scenarios: sc.scenarios };
+    this.plants.set(id, resolved);
+    return resolved;
   }
 
   registerCustomPlant(plant: PlantDef): void {
@@ -325,9 +346,12 @@ class LiveAdapter implements SimAdapter {
   }
 
   async loadPlant(id: string): Promise<{ plant: PlantDef; scenarios: ScenarioDef[] }> {
-    // snapshot carries the full plant definition; scenarios come from the dataset
+    // Snapshot carries the full plant definition; scenarios come from the
+    // store as well, so the console needs no bundled data copy at all.
     const snap = await this.req<SimSnapshot & { plant: PlantDef }>(`/plants/${id}/snapshot`);
-    const scenarios = await fetch(`/simulation/${id}/scenarios.json`).then((r) => r.json()).catch(() => []);
+    const scenarios = await this.req<{ scenarios: ScenarioDef[] }>(`/plants/${id}/scenarios`)
+      .then((r) => r.scenarios)
+      .catch(() => [] as ScenarioDef[]);
     return { plant: snap.plant, scenarios };
   }
 

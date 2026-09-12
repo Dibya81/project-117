@@ -11,7 +11,7 @@ Every command below is literal. Where a step needs network access it says so.
 |---|---|---|
 | Backend (FastAPI, simulation engine, agents, sandbox client, RAG service) | yes | `backend/` |
 | Frontend (Next.js 14 console) | yes | `apps/web/` |
-| Plant datasets (refinery, steel) | yes | `data/simulation/` |
+| Plant datasets (refinery, steel) | yes | committed SQL seed `project-117-simulation/database/seed_plants.sql`, applied on first run |
 | Knowledge corpus for retrieval | yes | `data/knowledge/`, `data/demo/` (seeded by script) |
 | **localGPT** retrieval stack | **no** | vendored separately into `vendor/localGPT` (optional) |
 | **LightRAG** graph-RAG | **no** | installed from PyPI as the `graphrag` extra (optional) |
@@ -188,7 +188,7 @@ curl -s http://127.0.0.1:8000/api/simulation/plants/refinery/history | python3 -
 ## 7. Test suites
 
 ```bash
-python3 scripts/validate_plant_data.py             # plant data quality (exit 0)
+./.venv/bin/python scripts/validate_plant_data.py    # plant data quality (exit 0)
 python3 tests/simulation/test_verification_regression.py
 python3 tests/simulation/redteam_harness.py        # determinism + negative tests
 python3 tests/simulation/test_integration_pipeline.py
