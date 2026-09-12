@@ -5,11 +5,14 @@
  * change inside this file, never in a component.
  */
 import type {
+  AdminUser,
   Alert,
+  AuditEvent,
   ConsoleRole,
   EquipmentDetailData,
   HistoryEvent,
   LearnedRule,
+  ModelStatus,
   NotificationItem,
 } from "@/types/console";
 import type { ApprovalRequest, Equipment, HealthState, WorkOrder } from "@/types";
@@ -538,10 +541,39 @@ export const consoleData = {
   // separate change, not a one-line swap. Tracked, not silently faked.
   analytics: { summary: () => ok(ANALYTICS_SUMMARY) },
   admin: {
-    users: () => ok(USERS),
-    models: () => ok(MODELS),
+    // No identity store exists yet — an empty roster beats inventing users.
+    users: (): Promise<AdminUser[]> => ok([]),
+    // Real model roles from the gateway. `status` reflects whether the role is
+    // CONFIGURED, which is what the endpoint actually knows; it does not claim
+    // a model is loaded, because nothing here reports load state.
+    models: () =>
+      api.models.status().then((r) => {
+        const roles = (r as { roles?: Record<string, string | null> }).roles ?? {};
+        return Object.entries(roles).map<ModelStatus>(([role, model]) => ({
+          role,
+          model: model ?? "—",
+          status: model ? "available" : "unavailable",
+        }));
+      }),
+    // NOTE: still mock. SystemPosture requires storage_used_gb, storage_total_gb,
+    // egress and external_calls_24h, none of which /health reports. Inventing
+    // disk figures would put a fabricated number in front of an operator, so the
+    // correct fix is to extend the backend health payload — tracked, not faked.
     posture: () => ok(POSTURE),
-    audit: () => ok(AUDIT),
+    // Real audit rows: the durable record of everything the platform did.
+    audit: () =>
+      api.audit
+        .query({ limit: 200 })
+        .then((r) =>
+          (r.events ?? []).map<AuditEvent>((e) => ({
+            id: String(e.id ?? ""),
+            at: String(e.timestamp ?? ""),
+            actor: String(e.user ?? "system"),
+            action: String(e.action ?? ""),
+            ...(e.tool ? { tool: String(e.tool) } : {}),
+            ...(e.model ? { model: String(e.model) } : {}),
+          })),
+        ),
   },
 };
 
