@@ -288,19 +288,33 @@ export const consoleData = {
     },
     revision: () => customPlantRevision,
   },
-  artifacts: { list: () => ok(ARTIFACTS) },
+  // Artifacts, jobs, tools and workflows are real backend records.
+  artifacts: { list: () => api.artifacts.list().then((r) => r.artifacts) },
   workspace: {
-    sessions: () => ok(SESSIONS),
+    // No workspace/session endpoint exists yet; an empty list is the honest
+    // answer, and clearly better than fabricated sessions.
+    sessions: () => ok([]),
     demoTask: () => ok(C3_TASK),
   },
   insights: { list: () => ok(INSIGHTS) },
   jobs: {
-    list: () => ok(JOBS),
-    get: (id: string) => ok(JOBS.find((j) => j.id === id) ?? null),
+    list: () => api.jobs.list().then((r) => r.jobs),
+    get: (id: string) => api.jobs.get(id),
   },
-  tools: { list: () => ok(TOOLS) },
-  workflows: { list: () => ok(WORKFLOWS) },
-  search: { query: (q: string) => ok(searchMock(q)) },
+  tools: { list: () => api.tools.list().then((r) => r.tools) },
+  workflows: { list: () => api.workflows.list().then((r) => r.workflows) },
+  search: {
+    query: (q: string) =>
+      api.search.query({ query: q }).then((r) => {
+        const results = (r as { results?: unknown[] }).results ?? [];
+        return { query: q, results };
+      }),
+  },
+  // NOTE: still mock. The insights page expects {anomalies_7d, mttr_hours,
+  // mtbf_hours, verification_rate, …}, but the real /api/analytics/summary
+  // returns {equipment, workOrders, approvals, platform, computedAt, sources}.
+  // Wiring it needs the insights page rewritten against the real shape — a
+  // separate change, not a one-line swap. Tracked, not silently faked.
   analytics: { summary: () => ok(ANALYTICS_SUMMARY) },
   admin: {
     users: () => ok(USERS),
