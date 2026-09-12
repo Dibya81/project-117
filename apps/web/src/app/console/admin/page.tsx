@@ -298,22 +298,39 @@ export default function AdminPage() {
                 <div className="cs-trace">
                   {audit
                     .filter((a) => `${a.actor} ${a.action}`.toLowerCase().includes(auditFilter.toLowerCase()))
-                    .map((a, i) => (
-                      <div key={a.id} className="cs-trace__row" style={{ animationDelay: `${i * 60}ms` }}>
-                        <StatusDot state={a.action.includes("verified") ? "ok" : a.action.includes("approval") ? "warning" : "ai"} />
-                        <span>
-                          <div className="cs-mono" style={{ fontSize: 12.5 }}>{a.action}</div>
-                          <div className="cs-trace__detail">
-                            {a.actor}
-                            {a.tool && ` · ${a.tool}`}
-                            {a.model && ` · ${a.model}`}
-                            {a.job_id && ` · ${a.job_id}`}
-                            {a.approval_id && ` · ${a.approval_id}`}
-                          </div>
-                        </span>
-                        <span className="cs-trace__ms">{timeAgo(a.at)}</span>
-                      </div>
-                    ))}
+                    .map((a, i) => {
+                      // The dot reflects the recorded outcome, not a guess from
+                      // the action's spelling. A failed row used to be
+                      // indistinguishable from a successful one, and carried an
+                      // "ai" dot either way.
+                      const failed = a.outcome === "failure";
+                      return (
+                        <div key={a.id} className="cs-trace__row" style={{ animationDelay: `${i * 60}ms` }}>
+                          <StatusDot state={failed ? "critical" : a.outcome ? "ok" : "unknown"} />
+                          <span>
+                            <div className="cs-mono" style={{ fontSize: 12.5 }}>{a.action}</div>
+                            <div className="cs-trace__detail">
+                              {a.actor}
+                              {a.resource_type && ` · ${a.resource_type}`}
+                              {a.resource_id && ` · ${a.resource_id}`}
+                              {a.agent && ` · ${a.agent}`}
+                              {a.tool && ` · ${a.tool}`}
+                              {a.model && ` · ${a.model}`}
+                              {a.approval && ` · approval ${a.approval}`}
+                            </div>
+                            {a.error && (
+                              <div className="cs-trace__detail" style={{ color: "var(--red)" }}>
+                                {a.error}
+                              </div>
+                            )}
+                          </span>
+                          <span className="cs-trace__ms">
+                            {failed ? "FAILED · " : ""}
+                            {timeAgo(a.at)}
+                          </span>
+                        </div>
+                      );
+                    })}
                 </div>
               </>
             ) : (

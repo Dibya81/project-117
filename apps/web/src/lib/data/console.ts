@@ -630,8 +630,16 @@ export const consoleData = {
             at: String(e.timestamp ?? ""),
             actor: String(e.user ?? "system"),
             action: String(e.action ?? ""),
+            // Outcome, resource and error are the columns that make this an
+            // audit record rather than a list of verbs.
+            ...(e.resource_type ? { resource_type: String(e.resource_type) } : {}),
+            ...(e.resource_id ? { resource_id: String(e.resource_id) } : {}),
+            ...(e.outcome ? { outcome: String(e.outcome) } : {}),
+            ...(e.agent ? { agent: String(e.agent) } : {}),
             ...(e.tool ? { tool: String(e.tool) } : {}),
             ...(e.model ? { model: String(e.model) } : {}),
+            ...(e.approval ? { approval: String(e.approval) } : {}),
+            ...(e.error ? { error: String(e.error) } : {}),
           })),
         ),
   },

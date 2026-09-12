@@ -76,15 +76,33 @@ export interface AdminUser {
   last_active: string;
 }
 
+/**
+ * One row of the audit ledger — GET /api/audit.
+ *
+ * Mirrors the wire: `{id, timestamp, user, action, resource_type, resource_id,
+ * outcome, agent, model, tool, approval, detail, error}`. It previously declared
+ * `job_id` and `approval_id`, which the endpoint has never returned, and omitted
+ * `outcome` and `error` — so the ledger could not distinguish a failed action
+ * from a successful one, and showed no reason for either. In a security record
+ * that is the most important column.
+ */
 export interface AuditEvent {
   id: string;
   at: string;
   actor: string;
   action: string;
+  /** What the action was performed on. */
+  resource_type?: string;
+  resource_id?: string;
+  /** "success" | "failure" — the endpoint's own vocabulary. */
+  outcome?: string;
+  /** The agent that performed it, when one did. */
+  agent?: string;
   tool?: string;
   model?: string;
-  job_id?: string;
-  approval_id?: string;
+  approval?: string;
+  /** Present when outcome is "failure". */
+  error?: string;
 }
 
 export interface ModelStatus {
