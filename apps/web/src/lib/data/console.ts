@@ -4,7 +4,14 @@
  * single awaitable call so swapping to live backend endpoints is a mechanical
  * change inside this file, never in a component.
  */
-import type { ConsoleRole, EquipmentDetailData, HistoryEvent } from "@/types/console";
+import type {
+  Alert,
+  ConsoleRole,
+  EquipmentDetailData,
+  HistoryEvent,
+  LearnedRule,
+  NotificationItem,
+} from "@/types/console";
 import type { ApprovalRequest, Equipment, HealthState, WorkOrder } from "@/types";
 import type { EquipmentRecord, WorkOrderRecord, ApprovalRecord } from "@/lib/api";
 import type { PlantDef, SimEvent } from "@/lib/sim/types";
@@ -276,6 +283,38 @@ function toApproval(r: ApprovalRecord): ApprovalRequest {
   };
 }
 
+/**
+ * Map one audit row onto an operational-history entry.
+ *
+ * The audit log is the real, durable record of everything the platform did, so
+ * history is derived from it rather than from a curated mock timeline. The
+ * action prefix decides the category; anything unrecognised is reported as a
+ * recommendation rather than being forced into a category it does not belong to.
+ */
+function toHistoryEvent(e: Record<string, unknown>): HistoryEvent {
+  const action = String(e.action ?? "");
+  const kind: HistoryEvent["kind"] = action.startsWith("approval.")
+    ? "approval"
+    : action.startsWith("incident.")
+      ? "anomaly"
+      : action.startsWith("work_order.")
+        ? "work_order"
+        : action.startsWith("document.")
+          ? "inspection"
+          : action.startsWith("plant.") || action.startsWith("sensor.") || action.startsWith("equipment.")
+            ? "maintenance"
+            : "recommendation";
+  return {
+    id: String(e.id ?? ""),
+    kind,
+    title: action || "audit event",
+    detail: [e.resource_type, e.resource_id, e.outcome].filter(Boolean).join(" · "),
+    actor: String(e.user ?? "system"),
+    equipment_id: typeof e.resource_id === "string" && e.resource_id.includes("-") ? e.resource_id : undefined,
+    at: String(e.timestamp ?? ""),
+  };
+}
+
 export const consoleData = {
   equipment: {
     // The real plant: 58 units served from the SQLite store by /api/equipment,
@@ -364,11 +403,16 @@ export const consoleData = {
       };
     },
   },
+  // No alerting or notification endpoint exists. An empty list is the honest
+  // answer — a fabricated alert feed would be worse than none, because an
+  // operator cannot tell a real alarm from a decorative one. The list is typed
+  // explicitly: an untyped `[]` narrows to never[] and breaks every consumer
+  // that reads a field off an alert.
   alerts: {
-    list: () => ok(ALERTS),
-    active: () => ok(ALERTS.filter((a) => !a.acknowledged)),
+    list: (): Promise<Alert[]> => ok([]),
+    active: (): Promise<Alert[]> => ok([]),
   },
-  notifications: { list: () => ok(NOTIFICATIONS) },
+  notifications: { list: (): Promise<NotificationItem[]> => ok([]) },
   // Agents come from the backend registry — the real descriptors the
   // orchestrator dispatches on, not a client-side list.
   //
@@ -425,10 +469,25 @@ export const consoleData = {
     decide: (id: string, decision: "approved" | "rejected") =>
       api.approvals.decide(id, decision).then(toApproval),
   },
-  graph: { get: () => ok({ nodes: GRAPH_NODES, edges: GRAPH_EDGES }) },
+  // The knowledge graph builds itself from the plant definition and the console
+  // records (lib/knowledge/plant.ts); this adapter's graph section was a mock
+  // leftover that nothing rendered. Empty rather than a second, stale topology.
+  graph: { get: () => ok({ nodes: [], edges: [] }) },
   history: {
-    list: () => ok([...simHistory, ...HISTORY]),
-    rules: () => ok(LEARNED_RULES),
+    /**
+     * Real audit rows, newest first, in front of the milestones this session
+     * witnessed. The audit log is the durable record; the session list carries
+     * simulation events that have not been persisted yet.
+     */
+    list: async () => {
+      const audited = await api.audit
+        .query({ limit: 200 })
+        .then((r) => (r.events ?? []).map(toHistoryEvent))
+        .catch(() => [] as HistoryEvent[]);
+      return [...simHistory, ...audited];
+    },
+    // No learned-rule store exists yet; an empty list beats invented rules.
+    rules: (): Promise<LearnedRule[]> => ok([]),
     /**
      * Promote a real simulation milestone into session history. Called by
      * lib/sim/store.ts as engine events arrive; non-milestones are ignored.
