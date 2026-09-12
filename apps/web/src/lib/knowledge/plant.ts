@@ -25,7 +25,6 @@ import { consoleData } from "@/lib/data/console";
 import { API_BASE } from "@/lib/sim/adapter";
 import { relationOf } from "@/lib/sim/relations";
 import type { PlantTemplate } from "@/lib/sim/templates";
-import { CROSSWALK, isIdentityMerge } from "./canonical";
 import {
   summarize,
   type KCommunity,
@@ -523,58 +522,17 @@ export async function buildPlantGraph(): Promise<KGraph> {
     }
   }
 
-  // ---- canonical identity: join the two equipment vocabularies ---------
-  // Without this the graph shows the same physical machine twice — once under
-  // its console tag (C-3) and once under its register tag (C-1071). `exact`
-  // and `twin` mappings are one machine, so they collapse into a single node
-  // keyed by the overlay tag the rest of the console already uses; `partial`
-  // mappings stay separate and get an explicit edge instead of being conflated.
-  for (const entry of CROSSWALK) {
-    const regId = `equipment:${entry.register}`;
-    const ovId = `equipment:${entry.overlay}`;
-    // An `exact` mapping where both vocabularies use the same tag (P-1042) is
-    // already one node. Merging it with itself would delete it, so nothing to do.
-    if (regId === ovId) continue;
-
-    const reg = nodes.get(regId);
-    const ov = nodes.get(ovId);
-    if (!reg || !ov) continue;
-
-    if (isIdentityMerge(entry)) {
-      ov.facts = {
-        ...ov.facts,
-        register_tag: entry.register,
-        register_name: entry.registerName,
-        identity: `${entry.confidence} match`,
-        identity_basis: entry.basis,
-        area: reg.facts?.area ?? ov.facts?.area,
-        criticality: reg.facts?.criticality ?? ov.facts?.criticality,
-        sensors: reg.facts?.sensors ?? ov.facts?.sensors,
-      };
-      ov.group = (reg.group as string) ?? ov.group;
-      for (const e of edges) {
-        if (e.from === regId) e.from = ovId;
-        if (e.to === regId) e.to = ovId;
-      }
-      nodes.delete(regId);
-    } else {
-      edges.push({
-        id: `pe-x-${entry.register}`,
-        from: ovId,
-        to: regId,
-        relation: "RELATED_TO",
-        provenance: "EXTRACTED",
-        source: "Section 4b register/overlay crosswalk",
-        confidence: 0.5,
-      });
-    }
-  }
+  // No register/overlay crosswalk. One existed here, joining the plant's
+  // register tags (C-1071, E-1063, TK-1121) to a narrative vocabulary
+  // (C-3, E-340, T-118) that came from demo data since deleted. Every entry
+  // was inert — the overlay side never existed — while its comments described
+  // a reconciliation that could not happen. The graph is built from the real
+  // register alone, so there is nothing to join.
 
   const nodeList = [...nodes.values()];
   const liveIds = new Set(nodeList.map((n) => n.id));
-  // Merging an identity pair can turn an edge between the two into a self-loop,
-  // and it can collapse two distinct edges (one via C-3, one via C-1071) onto
-  // the same pair. Drop self-loops and keep one edge per (from, to, relation).
+  // Defensive dedupe: building the node set can collapse two edges onto the
+  // same pair. Drop self-loops and keep one edge per (from, to, relation).
   const liveEdges: KEdge[] = [];
   const seenEdge = new Set<string>();
   for (const e of edges) {

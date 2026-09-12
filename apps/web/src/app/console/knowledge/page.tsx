@@ -305,6 +305,17 @@ export default function KnowledgeUniverse() {
         <div className="ku-head__title">
           <span className="ku-kicker">Project 117 · Knowledge Universe</span>
           <h1>Knowledge Universe</h1>
+          {ns === "system" && sysIndex && (
+            // The system graph is a compiled artifact, not a live view. Saying
+            // when it was built — and from what — is the difference between a
+            // current picture of the codebase and a stale one presented as
+            // current. `graphify-out/` is not committed, so the age is the only
+            // honest signal available at runtime.
+            <span className="ku-meta" style={{ display: "block", marginTop: 4, fontSize: 10.5, letterSpacing: "0.06em", color: "var(--ink-3)" }}>
+              {sysIndex.nodeCount.toLocaleString()} nodes · {sysIndex.edgeCount.toLocaleString()} edges ·
+              compiled {new Date(sysIndex.generated).toLocaleDateString()} by {sysIndex.generator}
+            </span>
+          )}
         </div>
 
         <div className="ku-ns" role="tablist" aria-label="Graph namespace">
