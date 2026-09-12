@@ -79,9 +79,15 @@ export interface InvestigationHandle {
   cancel: () => void;
 }
 
+export interface InvestigationScope {
+  /** Library document id; the backend translates it to its indexed basename. */
+  documentId?: string;
+}
+
 export function runInvestigation(
   prompt: string,
   onUpdate: (task: WorkspaceTask) => void,
+  scope: InvestigationScope = {},
 ): InvestigationHandle {
   let cancelled = false;
   const emit = (t: WorkspaceTask) => {
@@ -96,7 +102,11 @@ export function runInvestigation(
   void (async () => {
     const started = performance.now();
     try {
-      const turn = await api.chat.create({ message: prompt, use_rag: true });
+      const turn = await api.chat.create({
+        message: prompt,
+        use_rag: true,
+        ...(scope.documentId ? { document_ids: [scope.documentId] } : {}),
+      });
       if (cancelled) return;
 
       const evidence = turn.evidence ?? [];

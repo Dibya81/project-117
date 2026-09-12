@@ -35,6 +35,7 @@ export default function WorkspacePage() {
   const [task, setTask] = useState<WorkspaceTask | null>(null);
   const [hasRun, setHasRun] = useState(false);
   const [input, setInput] = useState("");
+  const [docScope, setDocScope] = useState<{ id: string; filename: string } | null>(null);
   const [tab, setTab] = useState("evidence");
   const { visit } = useJourney();
   const cancelRef = useRef<InvestigationHandle | null>(null);
@@ -45,11 +46,34 @@ export default function WorkspacePage() {
     return () => cancelRef.current?.cancel();
   }, []);
 
-  // Deep link from the Knowledge Universe: ?entity=<label> pre-loads the
-  // investigation prompt so the graph node arrives as context.
+  // Deep links pre-load the prompt so the arrival carries its context:
+  //   ?entity=<label>  from a Knowledge Universe node
+  //   ?doc=<id>        from a document's "Ask about this document"
+  // The document variant resolves the real filename, and scopes the turn to
+  // that document so the evidence comes from it rather than the whole corpus.
   useEffect(() => {
-    const entity = new URLSearchParams(window.location.search).get("entity");
-    if (entity) setInput(`Investigate ${entity}`);
+    const params = new URLSearchParams(window.location.search);
+    const entity = params.get("entity");
+    if (entity) {
+      setInput(`Investigate ${entity}`);
+      return;
+    }
+    const docId = params.get("doc");
+    if (!docId) return;
+    let alive = true;
+    consoleData.documents
+      .get(docId)
+      .then((doc) => {
+        if (!alive || !doc) return;
+        setDocScope({ id: doc.id, filename: doc.filename });
+        setInput(`Summarize “${doc.filename}” and list the operating limits it states.`);
+      })
+      .catch(() => {
+        /* unknown id: fall back to an unscoped prompt rather than failing */
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const run = useCallback((prompt: string) => {
@@ -60,11 +84,15 @@ export default function WorkspacePage() {
     // A real grounded turn against POST /api/chat. There is no timer and no
     // canned answer: what appears is what the backend returned.
     setTask(null);
-    cancelRef.current = runInvestigation(prompt, (t) => {
-      setTask(t);
-      setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }), 60);
-    });
-  }, [visit]);
+    cancelRef.current = runInvestigation(
+      prompt,
+      (t) => {
+        setTask(t);
+        setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }), 60);
+      },
+      { ...(docScope ? { documentId: docScope.id } : {}) },
+    );
+  }, [visit, docScope]);
 
   const submit = () => {
     const q = input.trim();
@@ -169,6 +197,24 @@ export default function WorkspacePage() {
           </div>
 
           {/* composer */}
+          {docScope && (
+            // A scoped investigation must say so: the same question returns
+            // different evidence depending on whether it is limited to one
+            // document, and the operator needs to see which mode they are in.
+            <div className="cs-strip" style={{ marginBottom: 8 }} role="status">
+              <span className="cs-mono" style={{ fontSize: 11 }}>
+                Scoped to <b>{docScope.filename}</b>
+              </span>
+              <button
+                className="cs-chip"
+                style={{ marginLeft: "auto" }}
+                onClick={() => setDocScope(null)}
+                aria-label="Clear document scope"
+              >
+                clear
+              </button>
+            </div>
+          )}
           <div className="cs-composer">
             <textarea
               placeholder="Ask about equipment, documents, anomalies… (⏎ to send)"
