@@ -131,10 +131,52 @@ class TestRetrievalBackend:
         assert ret.name in ("lexical-bm25", "localgpt-lancedb"), f"Unexpected backend: {ret.name}"
 
     def test_corpus_indexed(self):
+        """Every committed corpus file is indexed — and only those.
+
+        This previously asserted ``count >= 10`` against a store that held 30
+        documents for 8 files, because each ingest run uploaded a fresh copy.
+        The threshold was satisfied by the duplication, so the test passed while
+        retrieval returned the same passage several times. Asserting on the
+        corpus itself is the invariant that matters, and duplicates cannot
+        satisfy it.
+        """
+        from pathlib import Path
+
         from backend.simulation.retrieval import get_retriever
+
+        corpus = Path("data/corpus/refinery")
+        expected = {p.name for p in corpus.iterdir() if p.is_file()}
+        assert expected, f"corpus directory is empty or missing: {corpus}"
+
         ret = get_retriever()
         count = ret.document_count()
-        assert count >= 10, f"Expected ≥10 documents indexed, got {count}"
+        assert count == len(expected), (
+            f"expected exactly {len(expected)} indexed documents (one per corpus file), got {count}"
+        )
+
+    def test_index_holds_no_duplicate_chunks(self):
+        """Re-ingesting must converge, not accumulate.
+
+        The table holds one row per *chunk*, so a document appearing many times
+        is normal; what must never happen is the same chunk_id appearing twice.
+        Repeated ingest runs used to add a whole second copy of every chunk, so
+        retrieval returned the same passage several times. This pins the
+        property that scripts/ingest_corpus.py is idempotent.
+        """
+        import lancedb
+        from backend.simulation.retrieval import LANCEDB_DIR, LANCEDB_TABLE
+        from backend.storage.lancedb import has_table
+
+        db = lancedb.connect(str(LANCEDB_DIR))
+        if not has_table(db, LANCEDB_TABLE):
+            return  # offline-safe backend; nothing to assert
+        rows = db.open_table(LANCEDB_TABLE).search().limit(5000).to_arrow().to_pylist()
+        chunk_ids = [r["chunk_id"] for r in rows]
+        duplicates = sorted({c for c in chunk_ids if chunk_ids.count(c) > 1})
+        assert not duplicates, (
+            f"vector table holds {len(chunk_ids)} rows with {len(duplicates)} duplicated "
+            f"chunk_id(s), e.g. {duplicates[:3]} — each corpus document must be indexed once"
+        )
 
     def test_search_returns_real_citations(self):
         from backend.simulation.retrieval import get_retriever
