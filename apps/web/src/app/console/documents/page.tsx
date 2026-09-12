@@ -16,8 +16,7 @@ import { consoleData } from "@/lib/data/console";
 import DocumentField from "@/components/documents/DocumentField";
 import type { LibraryDoc } from "@/lib/documents/library";
 import { useJourney } from "@/lib/journey";
-import { APPROVALS, WORK_ORDERS } from "@/lib/mock/console";
-import type { Citation, DocumentRecord } from "@/types";
+import type { ApprovalRequest, Citation, DocumentRecord, WorkOrder } from "@/types";
 
 type DocStatus = DocumentRecord["status"];
 
@@ -102,13 +101,28 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: (name: 
   );
 }
 
-/** Evidence citation attached to a document, if any workflow cites it. */
-function citationFor(docId: string): { citation: Citation; claim: string } | null {
-  for (const w of WORK_ORDERS) {
+/**
+ * Evidence citation attached to a document, if any real record cites it.
+ *
+ * The corpus is passed in rather than imported: this used to search mock work
+ * orders and approvals, so every document appeared to be cited by a workflow
+ * that did not exist. An empty corpus now yields no citation, which is the
+ * truthful answer.
+ */
+interface EvidenceCorpus {
+  workOrders: WorkOrder[];
+  approvals: ApprovalRequest[];
+}
+
+function citationFor(
+  docId: string,
+  corpus: EvidenceCorpus,
+): { citation: Citation; claim: string } | null {
+  for (const w of corpus.workOrders) {
     const c = w.evidence.find((e) => e.document_id === docId);
     if (c) return { citation: c, claim: w.recommended_action ?? w.title };
   }
-  for (const a of APPROVALS) {
+  for (const a of corpus.approvals) {
     const c = a.evidence.find((e) => e.document_id === docId);
     if (c) return { citation: c, claim: a.action };
   }
@@ -124,9 +138,19 @@ const ENTITY_POOL: Record<string, string[]> = {
   "d-3": ["ME-198", "C-3", "bearing replacement", "2026-04-14"],
 };
 
-function DocumentDrawer({ doc, evidenceMode, onClose }: { doc: DocumentRecord; evidenceMode: boolean; onClose: () => void }) {
+function DocumentDrawer({
+  doc,
+  evidenceMode,
+  corpus,
+  onClose,
+}: {
+  doc: DocumentRecord;
+  evidenceMode: boolean;
+  corpus: EvidenceCorpus;
+  onClose: () => void;
+}) {
   const status = STATUS_TONE[doc.status];
-  const ev = citationFor(doc.id);
+  const ev = citationFor(doc.id, corpus);
   // Real extracted entities when the corpus holds this document; the hand-written
   // pool is only a fallback for register rows with no parsed content behind them.
   const content = (doc as LibraryDoc).content;
@@ -290,9 +314,25 @@ function DocumentsPageInner() {
   const [openDoc, setOpenDoc] = useState<DocumentRecord | null>(null);
   const [evidenceMode, setEvidenceMode] = useState(false);
   const [justAdded, setJustAdded] = useState<string | null>(null);
+  const [corpus, setCorpus] = useState<EvidenceCorpus>({ workOrders: [], approvals: [] });
 
   useEffect(() => {
     consoleData.documents.list().then(setDocs);
+  }, []);
+
+  // The evidence corpus: real work orders and approvals. Loaded separately
+  // because a document may be listed long before anything cites it.
+  useEffect(() => {
+    let alive = true;
+    Promise.all([
+      consoleData.workOrders.list().catch(() => [] as WorkOrder[]),
+      consoleData.approvals.list().catch(() => [] as ApprovalRequest[]),
+    ]).then(([workOrders, approvals]) => {
+      if (alive) setCorpus({ workOrders, approvals });
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   // deep link from citation chips: ?doc=<id> → evidence mode
@@ -301,10 +341,10 @@ function DocumentsPageInner() {
     if (id && docs) {
       const found = docs.find((d) => d.id === id) ?? null;
       setOpenDoc(found);
-      setEvidenceMode(Boolean(found && citationFor(found.id)));
+      setEvidenceMode(Boolean(found && citationFor(found.id, corpus)));
       if (found) visit({ id: found.id, label: found.filename, kind: "document", href: `/console/documents?doc=${found.id}` });
     }
-  }, [params, docs, visit]);
+  }, [params, docs, corpus, visit]);
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -448,7 +488,7 @@ function DocumentsPageInner() {
       </Panel>
 
       {uploadOpen && <UploadModal onClose={() => setUploadOpen(false)} onDone={onUploaded} />}
-      {openDoc && <DocumentDrawer doc={openDoc} evidenceMode={evidenceMode} onClose={() => setOpenDoc(null)} />}
+      {openDoc && <DocumentDrawer doc={openDoc} evidenceMode={evidenceMode} corpus={corpus} onClose={() => setOpenDoc(null)} />}
     </>
   );
 }

@@ -4,7 +4,10 @@
  * AI Workspace — conversation + task execution surface.
  * Left: sessions. Center: conversation with live TaskCard. Right: contextual
  * panel (Evidence / Execution / Artifacts / Verification).
- * Demo mode: the composer drives the scripted C-3 investigation timeline.
+ *
+ * The composer runs a real grounded turn (POST /api/chat with RAG on) and the
+ * panels render only what that turn returned. It used to drive a scripted
+ * Compressor C-3 timeline that ignored the operator's question entirely.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -16,13 +19,13 @@ import { ArtifactCard } from "@/components/workspace/ArtifactPreview";
 import { Icon } from "@/components/ui/Icon";
 import { consoleData } from "@/lib/data/console";
 import { useJourney } from "@/lib/journey";
-import { runC3Investigation } from "@/lib/demo/runTask";
+import { runInvestigation, type InvestigationHandle } from "@/lib/workspace/investigate";
 import type { WorkspaceSession, WorkspaceTask } from "@/types/console";
 
 const SUGGESTIONS = [
-  "Analyze Compressor C-3 and tell me why vibration increased.",
-  "Draft a work order for the P-1042 pressure anomaly.",
-  "Summarize Unit 200 performance this week.",
+  "What is the correct startup procedure for a centrifugal pump?",
+  "How often are compressor bearings inspected?",
+  "Summarize the crude distillation unit shutdown steps.",
 ];
 
 export default function WorkspacePage() {
@@ -34,12 +37,12 @@ export default function WorkspacePage() {
   const [input, setInput] = useState("");
   const [tab, setTab] = useState("evidence");
   const { visit } = useJourney();
-  const cancelRef = useRef<(() => void) | null>(null);
+  const cancelRef = useRef<InvestigationHandle | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     consoleData.workspace.sessions().then(setSessions);
-    return () => cancelRef.current?.();
+    return () => cancelRef.current?.cancel();
   }, []);
 
   // Deep link from the Knowledge Universe: ?entity=<label> pre-loads the
@@ -50,13 +53,15 @@ export default function WorkspacePage() {
   }, []);
 
   const run = useCallback((prompt: string) => {
-    cancelRef.current?.();
+    cancelRef.current?.cancel();
     setHasRun(true);
     setTab("evidence");
     visit({ id: `inv-${Date.now()}`, label: prompt.slice(0, 34) || "New investigation", kind: "investigation", href: "/console/workspace" });
-    void prompt;
-    cancelRef.current = runC3Investigation((t) => {
-      setTask({ ...t, request: prompt || t.request });
+    // A real grounded turn against POST /api/chat. There is no timer and no
+    // canned answer: what appears is what the backend returned.
+    setTask(null);
+    cancelRef.current = runInvestigation(prompt, (t) => {
+      setTask(t);
       setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }), 60);
     });
   }, [visit]);

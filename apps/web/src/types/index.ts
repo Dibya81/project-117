@@ -249,15 +249,41 @@ export interface ChatTurnRequest {
   document_ids?: string[] | null;
 }
 
-/** POST /api/chat — mirrors ChatResponse. */
+/** Where a retrieved chunk came from inside its source document. */
+export interface EvidenceCitation {
+  document_id: string;
+  chunk_index: number;
+  page?: number | null;
+  heading_path?: string[];
+  block_type?: string;
+}
+
+/** One retrieved chunk offered to the model as grounding. */
+export interface ChatEvidence {
+  chunk_id: string;
+  text: string;
+  score?: number | null;
+  rerank_score?: number | null;
+  citation: EvidenceCitation;
+  document?: { id: string; filename: string } | null;
+}
+
+/**
+ * POST /api/chat — mirrors the backend's ChatResponse.
+ *
+ * This previously declared `{message, role, citations, grounded}` while the
+ * route returns `{response, provider, latency_ms, evidence}`. Nothing consumed
+ * it, so the drift went unnoticed. It now matches `schemas/chat.py`, and a
+ * backend test asserts that schema against a live payload.
+ */
 export interface ChatTurnResult {
-  message: string;
-  session_id: string;
+  response: string;
   model: string;
-  role: string;
-  citations: Citation[];
-  grounded?: boolean;
-  usage?: Record<string, unknown> | null;
+  provider: string;
+  latency_ms: number;
+  session_id?: string | null;
+  usage?: Record<string, number>;
+  evidence: ChatEvidence[];
 }
 
 /** GET /api/tools — a registered, permission-scoped tool. */

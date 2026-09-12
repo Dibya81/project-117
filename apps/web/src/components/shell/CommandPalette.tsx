@@ -4,12 +4,18 @@
  * Command palette — ⌘K. A command system, not a search box.
  * Grouped results with TYPE / STATUS / CONTEXT, full keyboard navigation,
  * agents, workflows, and recent investigations alongside navigation.
+ *
+ * Everything after the fixed navigation commands is loaded from the real
+ * console data adapter — the plant's own equipment, documents, work orders,
+ * agents and workflows. The palette previously indexed mock constants, so it
+ * would happily navigate to an equipment tag that does not exist.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import { AGENTS, DOCUMENTS, EQUIPMENT, SESSIONS, WORK_ORDERS } from "@/lib/mock/console";
-import { WORKFLOWS } from "@/lib/mock/console3";
+import { consoleData } from "@/lib/data/console";
+import type { AgentDescriptor, DocumentRecord, Equipment, WorkOrder, WorkflowDefinition } from "@/types";
+import type { WorkspaceSession } from "@/types/console";
 
 interface Command {
   id: string;
@@ -20,6 +26,24 @@ interface Command {
   icon: IconName;
   run: () => void;
 }
+
+interface Index {
+  equipment: Equipment[];
+  documents: DocumentRecord[];
+  workOrders: WorkOrder[];
+  agents: AgentDescriptor[];
+  workflows: WorkflowDefinition[];
+  sessions: WorkspaceSession[];
+}
+
+const EMPTY: Index = {
+  equipment: [],
+  documents: [],
+  workOrders: [],
+  agents: [],
+  workflows: [],
+  sessions: [],
+};
 
 export function CommandPalette({
   open,
@@ -33,21 +57,43 @@ export function CommandPalette({
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [index, setIndex] = useState(0);
+  const [data, setData] = useState<Index>(EMPTY);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Load once per open. A source that fails contributes nothing rather than
+  // falling back to fixture rows; the palette then simply cannot offer what
+  // it could not read.
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    const settle = <K extends keyof Index>(key: K) => (v: Index[K]) => {
+      if (alive) setData((prev) => ({ ...prev, [key]: v }));
+    };
+    const ignore = () => {};
+    consoleData.equipment.list().then(settle("equipment")).catch(ignore);
+    consoleData.documents.list().then(settle("documents")).catch(ignore);
+    consoleData.workOrders.list().then(settle("workOrders")).catch(ignore);
+    consoleData.agents.list().then(settle("agents")).catch(ignore);
+    consoleData.workflows.list().then(settle("workflows")).catch(ignore);
+    consoleData.workspace.sessions().then(settle("sessions")).catch(ignore);
+    return () => { alive = false; };
+  }, [open]);
+
+  const close = useCallback(() => onClose(), [onClose]);
 
   const commands = useMemo<Command[]>(() => {
     const go = (href: string) => () => {
       router.push(href);
-      onClose();
+      close();
     };
-    const list: Command[] = [
+    return [
       { id: "ask", label: "Ask AI — new investigation", type: "ACTION", status: "ready", context: "AI Workspace", icon: "zap", run: go("/console/workspace") },
       { id: "home", label: "Command Center", type: "PAGE", status: "live", icon: "home", run: go("/console/home") },
       { id: "wo-new", label: "Create work order", type: "ACTION", context: "requires approval if AI-drafted", icon: "plus", run: go("/console/work-orders?new=1") },
-      { id: "appr", label: "Approvals", type: "PAGE", status: "2 pending", icon: "check", run: go("/console/approvals") },
+      { id: "appr", label: "Approvals", type: "PAGE", icon: "check", run: go("/console/approvals") },
       { id: "insights", label: "Insights", type: "PAGE", icon: "insights", run: go("/console/insights") },
       { id: "admin", label: "Sovereignty control", type: "PAGE", context: "models · audit · perimeter", icon: "admin", run: go("/console/admin") },
-      ...SESSIONS.map((s) => ({
+      ...data.sessions.map((s) => ({
         id: `session-${s.id}`,
         label: s.title,
         type: "INVESTIGATION",
@@ -55,7 +101,7 @@ export function CommandPalette({
         icon: "history" as const,
         run: go("/console/workspace"),
       })),
-      ...EQUIPMENT.map((e) => ({
+      ...data.equipment.map((e) => ({
         id: `eq-${e.id}`,
         label: `${e.id} — ${e.name}`,
         type: "EQUIPMENT",
@@ -64,7 +110,7 @@ export function CommandPalette({
         icon: "equipment" as const,
         run: go(`/console/equipment/${e.id}`),
       })),
-      ...DOCUMENTS.map((d) => ({
+      ...data.documents.map((d) => ({
         id: `doc-${d.id}`,
         label: d.filename,
         type: "DOCUMENT",
@@ -72,7 +118,7 @@ export function CommandPalette({
         icon: "file" as const,
         run: go(`/console/documents?doc=${d.id}`),
       })),
-      ...WORK_ORDERS.map((w) => ({
+      ...data.workOrders.map((w) => ({
         id: `wo-${w.id}`,
         label: `${w.id} — ${w.title}`,
         type: "WORK ORDER",
@@ -81,7 +127,7 @@ export function CommandPalette({
         icon: "workorder" as const,
         run: go(`/console/work-orders/${w.id}`),
       })),
-      ...AGENTS.map((a) => ({
+      ...data.agents.map((a) => ({
         id: `agent-${a.kind}`,
         label: a.name,
         type: "AGENT",
@@ -90,20 +136,19 @@ export function CommandPalette({
         icon: "cpu" as const,
         run: () => {
           onOpenRoster?.();
-          onClose();
+          close();
         },
       })),
-      ...WORKFLOWS.map((w) => ({
+      ...data.workflows.map((w) => ({
         id: `wf-${w.name}`,
         label: w.name.replace(/-/g, " "),
         type: "WORKFLOW",
-        status: `${w.steps.length} steps`,
+        status: `${w.steps.length} step${w.steps.length === 1 ? "" : "s"}`,
         icon: "workflow" as const,
         run: go("/console/workspace"),
       })),
     ];
-    return list;
-  }, [router, onClose, onOpenRoster]);
+  }, [router, close, onOpenRoster, data]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

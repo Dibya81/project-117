@@ -10,8 +10,8 @@ import { Button, EmptyState, Panel, SkeletonRows, StatusDot, Tag } from "@/compo
 import { Icon } from "@/components/ui/Icon";
 import { consoleData } from "@/lib/data/console";
 import { useJourney } from "@/lib/journey";
-import { HISTORY } from "@/lib/mock/console";
 import type { WorkOrder } from "@/types";
+import type { HistoryEvent } from "@/types/console";
 
 const STATUS_LABEL: Record<WorkOrder["status"], string> = {
   draft: "Draft",
@@ -55,6 +55,7 @@ export default function WorkOrderDetailPage() {
   const router = useRouter();
   const id = decodeURIComponent(params.id);
   const [wo, setWo] = useState<WorkOrder | null | undefined>(undefined);
+  const [linkedHistory, setLinkedHistory] = useState<HistoryEvent[]>([]);
   const { visit } = useJourney();
 
   useEffect(() => {
@@ -63,6 +64,29 @@ export default function WorkOrderDetailPage() {
       if (w) visit({ id: w.id, label: w.id, kind: "workorder", href: `/console/work-orders/${w.id}` });
     });
   }, [id, visit]);
+
+  // History linked to this order's equipment, read from the real audit-backed
+  // event log. The panel used to filter a mock constant, so it showed events
+  // for equipment and timeframes that had nothing to do with this order.
+  const equipmentId = wo?.equipment_id;
+  useEffect(() => {
+    if (!equipmentId) {
+      setLinkedHistory([]);
+      return;
+    }
+    let alive = true;
+    consoleData.history
+      .list()
+      .then((events) => {
+        if (alive) setLinkedHistory(events.filter((h) => h.equipment_id === equipmentId).slice(0, 5));
+      })
+      .catch(() => {
+        if (alive) setLinkedHistory([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [equipmentId]);
 
   if (wo === undefined) {
     return (
@@ -83,7 +107,6 @@ export default function WorkOrderDetailPage() {
   }
 
   const aiDrafted = wo.assignee.includes("agent") || wo.evidence.length > 0;
-  const relatedHistory = HISTORY.filter((h) => h.equipment_id === wo.equipment_id).slice(0, 5);
 
   return (
     <>
@@ -215,14 +238,14 @@ export default function WorkOrderDetailPage() {
 
           <Panel title="Timeline" pad={false}>
             <div className="cs-timeline" style={{ padding: "18px 18px 4px", marginLeft: 8 }}>
-              {relatedHistory.map((h, i) => (
+              {linkedHistory.map((h, i) => (
                 <div key={h.id} className="cs-tl-item" style={{ animationDelay: `${i * 90}ms` }}>
                   <strong style={{ fontSize: 12.5 }}>{h.title}</strong>
                   <p className="cs-dim" style={{ margin: "3px 0", fontSize: 12 }}>{h.detail}</p>
                   <p className="cs-mono" style={{ margin: 0, fontSize: 10, color: "var(--ink-3)" }}>{h.actor}</p>
                 </div>
               ))}
-              {relatedHistory.length === 0 && <p className="cs-dim" style={{ fontSize: 12.5, paddingBottom: 14 }}>No linked history.</p>}
+              {linkedHistory.length === 0 && <p className="cs-dim" style={{ fontSize: 12.5, paddingBottom: 14 }}>No linked history.</p>}
             </div>
           </Panel>
         </div>

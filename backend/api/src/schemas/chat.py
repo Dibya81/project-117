@@ -2,8 +2,15 @@
 
 These live outside the route module so the same definitions can be imported by
 the route, by tests, and by the OpenAPI export that the frontend's typed API
-client is generated from. ``routes/chat.py`` imports ``ChatRequest`` from here
-— there is exactly one definition of the contract, not a copy per layer.
+client is generated from.
+
+They describe what the endpoints actually return. The previous revision of this
+module declared ``ChatResponse`` as ``{message, session_id, model, role,
+citations, grounded, usage}`` while the route returned ``{response, model,
+provider, latency_ms, session_id, usage, evidence}``. Nothing imported the old
+class, so it was never checked against a live response — a contract that is
+declared but not enforced drifts silently, and every consumer that trusted it
+read the wrong fields.
 """
 
 from __future__ import annotations
@@ -28,39 +35,75 @@ class ChatRequest(BaseModel):
     document_ids: list[str] | None = None
 
 
-class Citation(BaseModel):
-    """A pointer back to retrieved evidence. Answers carry these or say they
-    could not be grounded; they are never synthesised."""
+class EvidenceCitation(BaseModel):
+    """Where a retrieved chunk came from, inside its source document."""
 
     document_id: str
-    document_name: str | None = None
-    chunk_id: str | None = None
+    chunk_index: int
+    page: int | None = None
+    heading_path: list[str] = Field(default_factory=list)
+    block_type: str
+
+
+class EvidenceDocument(BaseModel):
+    """The source document a chunk belongs to. Present only when known."""
+
+    id: str
+    filename: str
+
+
+class Evidence(BaseModel):
+    """One retrieved chunk offered to the model as grounding.
+
+    ``text`` is the verbatim chunk. These are the snippets the answer is
+    allowed to rely on, so they are returned to the caller rather than being
+    kept server-side: the UI has to be able to show what grounded an answer.
+    """
+
+    chunk_id: str
+    text: str
     score: float | None = None
-    snippet: str | None = None
-
-
-class ChatStreamEvent(BaseModel):
-    """One frame of the SSE stream produced by ``POST /api/chat/stream``."""
-
-    type: Literal["start", "token", "citations", "usage", "done", "error"]
-    content: str | None = None
-    code: str | None = None
-    message: str | None = None
-    citations: list[Citation] | None = None
-    model: str | None = None
-    session_id: str | None = None
+    rerank_score: float | None = None
+    citation: EvidenceCitation
+    document: EvidenceDocument | None = None
 
 
 class ChatResponse(BaseModel):
-    """Non-streaming reply shape."""
+    """The non-streaming reply shape returned by ``POST /api/chat``."""
 
-    message: str
-    session_id: str
+    response: str
     model: str
-    role: str
-    citations: list[Citation] = Field(default_factory=list)
-    grounded: bool = False
-    usage: dict | None = None
+    provider: str
+    latency_ms: float
+    session_id: str | None = None
+    usage: dict[str, int] = Field(default_factory=dict)
+    #: Populated only when the turn was grounded; empty otherwise.
+    evidence: list[Evidence] = Field(default_factory=list)
 
 
-__all__ = ["ChatRequest", "ChatResponse", "ChatStreamEvent", "Citation"]
+class ChatStreamEvent(BaseModel):
+    """One frame of the SSE stream produced by ``POST /api/chat/stream``.
+
+    A single frame type carries different fields, so everything but ``type`` is
+    optional — see ``backend/chat/service.py::stream_turn`` for the emission
+    order: start, evidence?, delta*, complete.
+    """
+
+    type: Literal["start", "evidence", "delta", "error", "complete"]
+    model: str | None = None
+    provider: str | None = None
+    grounded: bool | None = None
+    evidence: list[Evidence] | None = None
+    text: str | None = None
+    message: str | None = None
+    latency_ms: float | None = None
+
+
+__all__ = [
+    "ChatRequest",
+    "ChatResponse",
+    "ChatStreamEvent",
+    "Evidence",
+    "EvidenceCitation",
+    "EvidenceDocument",
+]

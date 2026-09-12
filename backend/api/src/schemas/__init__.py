@@ -9,7 +9,9 @@ from backend.api.src.schemas.chat import (
     ChatRequest,
     ChatResponse,
     ChatStreamEvent,
-    Citation,
+    Evidence,
+    EvidenceCitation,
+    EvidenceDocument,
 )
 from backend.api.src.schemas.document import (
     DocumentListResponse,
@@ -29,7 +31,9 @@ __all__ = [
     "ChatRequest",
     "ChatResponse",
     "ChatStreamEvent",
-    "Citation",
+    "Evidence",
+    "EvidenceCitation",
+    "EvidenceDocument",
     "DocumentListResponse",
     "DocumentOut",
     "DocumentStatus",

@@ -1,8 +1,13 @@
 """Chat endpoints.
 
-Phase 2: real single-turn and streaming chat through the model router/gateway
-(no RAG yet — document-grounded answers arrive in Phase 4). History is kept
-per session in memory; persistence lands in Phase 17.
+Phase 2: real single-turn and streaming chat through the model router/gateway.
+Phase 4 adds opt-in document grounding: when ``use_rag`` is set, retrieved
+chunks are sent to the model as the only permitted evidence and returned to the
+caller alongside the answer. History is kept per session in memory; persistence
+lands in Phase 17.
+
+The module docstring used to say "no RAG yet", which had been false since Phase
+4 — worth correcting because it is the first thing a reader trusts.
 """
 
 from __future__ import annotations
@@ -13,14 +18,14 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
 from backend.api.src.errors import BadRequest, ServiceUnavailable
-from backend.api.src.schemas.chat import ChatRequest
+from backend.api.src.schemas.chat import ChatRequest, ChatResponse
 from backend.models.providers.base import ProviderUnreachable
 from backend.models.router import ModelUnavailableError
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 
-@router.post("")
+@router.post("", response_model=ChatResponse)
 async def chat(payload: ChatRequest, request: Request) -> dict:
     role = payload.role or "reasoning"
     _validate_role(role)

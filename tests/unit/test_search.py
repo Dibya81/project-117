@@ -340,6 +340,31 @@ def test_chat_stream_emits_evidence_event(search_client):
     assert evidence_event["evidence"][0]["citation"]["page"] == 2
 
 
+def test_chat_response_matches_the_declared_contract(search_client):
+    """The declared response model must describe what the route returns.
+
+    ``schemas/chat.py`` previously declared a ``ChatResponse`` with fields the
+    route never returned, and nothing compared the two — the class was exported,
+    documented a contract, and was wrong. Asserting the declared model against a
+    live payload is what makes that class load-bearing instead of decorative.
+    """
+    from backend.api.src.schemas.chat import ChatResponse
+
+    client, _ = search_client
+    body = client.post(
+        "/api/chat", json={"message": "how often do we inspect bearings?", "use_rag": True}
+    ).json()
+
+    declared = set(ChatResponse.model_fields)
+    assert declared == set(body), (
+        f"declared {sorted(declared)} but the route returned {sorted(body)}"
+    )
+    # And the payload must actually validate against the declaration.
+    parsed = ChatResponse.model_validate(body)
+    assert parsed.evidence, "grounded turn must carry evidence"
+    assert parsed.evidence[0].citation.document_id
+
+
 # ---------------------------------------------------------------------------
 # Opt-in integration test: real vendor retriever + real Ollama
 # ---------------------------------------------------------------------------
