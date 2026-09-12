@@ -13,15 +13,14 @@ import { consoleData } from "@/lib/data/console";
 import type { Equipment, WorkOrder } from "@/types";
 
 const COLUMNS: { id: WorkOrder["status"]; label: string; tone: "warn" | "ai" | "ok" | undefined }[] = [
-  { id: "pending_approval", label: "Pending approval", tone: "warn" },
+  { id: "on_hold", label: "Pending approval", tone: "warn" },
   { id: "open", label: "Open", tone: undefined },
-  { id: "assigned", label: "Assigned", tone: "ai" },
   { id: "in_progress", label: "In progress", tone: "ai" },
-  { id: "done", label: "Done", tone: "ok" },
+  { id: "completed", label: "Done", tone: "ok" },
 ];
 
 const PRIORITY_TONE: Record<WorkOrder["priority"], "crit" | "warn" | "ok" | undefined> = {
-  urgent: "crit",
+  critical: "crit",
   high: "warn",
   medium: undefined,
   low: "ok",
@@ -62,7 +61,7 @@ function CreateModal({ equipment, onClose, onCreated }: { equipment: Equipment[]
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
-            <option value="urgent">Urgent</option>
+            <option value="critical">Critical</option>
           </select>
         </div>
         <div className="cs-field">
@@ -116,7 +115,7 @@ function WorkOrdersInner() {
         <div className="cs-pagehead__actions" style={{ marginLeft: "auto" }}>
           <select className="cs-select" style={{ width: 140 }} value={prioFilter} onChange={(e) => setPrioFilter(e.target.value)} aria-label="Filter by priority">
             <option value="all">All priorities</option>
-            <option value="urgent">Urgent</option>
+            <option value="critical">Critical</option>
             <option value="high">High</option>
             <option value="medium">Medium</option>
             <option value="low">Low</option>
@@ -178,7 +177,7 @@ function WorkOrdersInner() {
                         </div>
                       )}
                       <div className="cs-mono cs-dim" style={{ fontSize: 10, marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                        <StatusDot state={col.id === "done" ? "ok" : col.id === "pending_approval" ? "warning" : "ai"} />
+                        <StatusDot state={col.id === "completed" ? "ok" : col.id === "on_hold" ? "warning" : "ai"} />
                         {w.equipment_id} · {w.assignee}
                       </div>
                     </button>

@@ -29,6 +29,7 @@ import {
 } from "@/lib/mock/console";
 import { equipmentDetail, INSIGHTS } from "@/lib/mock/console2";
 import { ANALYTICS_SUMMARY, JOBS, TOOLS, WORKFLOWS, searchMock } from "@/lib/mock/console3";
+import { api } from "@/lib/api";
 import { loadLibrary } from "@/lib/documents/library";
 import { crosswalkForRegister } from "@/lib/knowledge/canonical";
 
@@ -198,7 +199,22 @@ export const consoleData = {
     active: () => ok(ALERTS.filter((a) => !a.acknowledged)),
   },
   notifications: { list: () => ok(NOTIFICATIONS) },
-  agents: { list: () => ok(AGENTS) },
+  // Agents come from the backend registry — the real descriptors the
+  // orchestrator dispatches on, not a client-side list.
+  //
+  // Shape note, because the declared type does not match the wire: the backend
+  // returns {capabilities, description, name, requires_rag, tools}, while
+  // AgentDescriptor declares {kind, name, description, model_role, tools,
+  // permissions, status}. The agent's `name` IS its kind, so it is mapped
+  // across. `status` is reported as idle rather than invented: a registry
+  // listing genuinely does not know whether an agent is mid-run, and claiming
+  // otherwise would be the exact fakery this console exists to avoid.
+  agents: {
+    list: () =>
+      api.agents.list().then((r) =>
+        r.agents.map((a) => ({ ...a, kind: a.name as typeof a.kind, status: "idle" as const })),
+      ),
+  },
   documents: {
     /**
      * The canonical library: register rows joined with the real refinery

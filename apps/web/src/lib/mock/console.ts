@@ -119,7 +119,7 @@ export const DOCUMENTS: DocumentRecord[] = [
 export const WORK_ORDERS: WorkOrder[] = [
   {
     id: "WO-8852", equipment_id: "C-3", title: "Inspect C-3 bearing assembly — vibration trend",
-    priority: "high", status: "pending_approval", assignee: "maintenance-agent",
+    priority: "high", status: "on_hold", assignee: "maintenance-agent",
     recommended_action: "Inspect drive-end bearing during next low-demand window; baseline vibration per SOP-07.3 §4.",
     evidence: [
       { document_id: "d-5", filename: "vibration_baseline_C-3.xlsx", snippet: "Baseline 5.7 mm/s at 8,800 rpm…" },
@@ -128,14 +128,14 @@ export const WORK_ORDERS: WorkOrder[] = [
   },
   {
     id: "WO-8841", equipment_id: "P-1042", title: "Inspect crude feed pump discharge line",
-    priority: "high", status: "pending_approval", assignee: "maintenance-agent",
+    priority: "high", status: "on_hold", assignee: "maintenance-agent",
     recommended_action: "Isolate P-1042 during next low-demand window; inspect discharge line and relief valve per SOP-14.2.",
     evidence: [{ document_id: "d-1", filename: "inspection_report_aug.pdf", page: 4, snippet: "Discharge pressure trending above 17 bar since 12 Aug…" }],
   },
-  { id: "WO-8837", equipment_id: "V-2210", title: "Anti-surge valve actuator diagnostics", priority: "urgent", status: "open", assignee: "unassigned", evidence: [] },
+  { id: "WO-8837", equipment_id: "V-2210", title: "Anti-surge valve actuator diagnostics", priority: "critical", status: "open", assignee: "unassigned", evidence: [] },
   { id: "WO-8810", equipment_id: "T-118", title: "Feed surge tank level transmitter calibration", priority: "medium", status: "in_progress", assignee: "r.kapoor", evidence: [] },
-  { id: "WO-8802", equipment_id: "E-340", title: "Quarterly exchanger fouling check", priority: "medium", status: "done", assignee: "r.kapoor", evidence: [] },
-  { id: "WO-8790", equipment_id: "P-2051", title: "Lean oil pump seal replacement", priority: "low", status: "done", assignee: "s.mehta", evidence: [] },
+  { id: "WO-8802", equipment_id: "E-340", title: "Quarterly exchanger fouling check", priority: "medium", status: "completed", assignee: "r.kapoor", evidence: [] },
+  { id: "WO-8790", equipment_id: "P-2051", title: "Lean oil pump seal replacement", priority: "low", status: "completed", assignee: "s.mehta", evidence: [] },
 ];
 
 export const APPROVALS: ApprovalRequest[] = [

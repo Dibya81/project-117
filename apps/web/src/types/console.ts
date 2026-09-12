@@ -157,6 +157,12 @@ export interface EquipmentDetailData {
   status: HealthState;
   kpis: { label: string; value: string; state?: HealthState }[];
   insight?: string;
+  /**
+   * Current instrument readings, straight from the plant dataset's
+   * `keySignals`. Present even when `telemetry` is empty — the dataset carries
+   * a nominal value per signal but no persisted time series.
+   */
+  readings?: { key: string; label: string; unit: string; value: number; warnAbove?: number; critAbove?: number }[];
   telemetry: EquipmentTelemetrySeries[];
   maintenance: { id: string; title: string; at: string; by: string }[];
   documents: { id: string; filename: string; kind: string }[];

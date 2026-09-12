@@ -14,19 +14,21 @@ import { HISTORY } from "@/lib/mock/console";
 import type { WorkOrder } from "@/types";
 
 const STATUS_LABEL: Record<WorkOrder["status"], string> = {
+  draft: "Draft",
   open: "Open",
-  assigned: "Assigned",
   in_progress: "In progress",
-  pending_approval: "Pending approval",
-  done: "Done",
+  on_hold: "On hold",
+  completed: "Completed",
+  cancelled: "Cancelled",
 };
 
 const STATUS_TONE: Record<WorkOrder["status"], "warn" | "ai" | "ok"> = {
+  draft: "warn",
   open: "warn",
-  assigned: "ai",
   in_progress: "ai",
-  pending_approval: "warn",
-  done: "ok",
+  on_hold: "warn",
+  completed: "ok",
+  cancelled: "ok",
 };
 
 const PROVENANCE = [
@@ -42,10 +44,9 @@ const PROVENANCE = [
 
 /** Where this WO sits on the provenance spine. */
 function provenanceIndex(w: WorkOrder): number {
-  if (w.status === "done") return 7;
+  if (w.status === "completed") return 7;
   if (w.status === "in_progress") return 5;
-  if (w.status === "assigned") return 4;
-  if (w.status === "pending_approval") return 3; // drafted, awaiting decision
+  if (w.status === "on_hold") return 3; // drafted, awaiting decision
   return w.evidence.length > 0 || w.recommended_action ? 2 : 1;
 }
 
@@ -197,7 +198,7 @@ export default function WorkOrderDetailPage() {
         </div>
 
         <div className="cs-stack">
-          {wo.status === "pending_approval" && (
+          {wo.status === "on_hold" && (
             <Panel title="Approval gate" pad style={{ borderColor: "rgba(255,180,84,0.4)" }}>
               <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                 <StatusDot state="warning" pulse />

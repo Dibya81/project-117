@@ -91,7 +91,7 @@ export default function HomePage() {
     consoleData.jobs.list().then(setJobs);
   }, []);
 
-  const openWOs = useMemo(() => workOrders?.filter((w) => w.status !== "done") ?? [], [workOrders]);
+  const openWOs = useMemo(() => workOrders?.filter((w) => w.status !== "completed") ?? [], [workOrders]);
   const anomalies = INSIGHTS[0];
   const liveJobs = jobs?.filter((j) => ["QUEUED", "PLANNING", "RETRIEVING", "EXECUTING", "VERIFYING"].includes(j.state)) ?? [];
   const critCount = alerts?.filter((a) => a.severity === "critical").length ?? 0;
@@ -324,7 +324,7 @@ export default function HomePage() {
                     <div className="cs-row__sub">{w.equipment_id} · {w.assignee}</div>
                   </span>
                   <span className="cs-row__meta">
-                    <Tag tone={w.priority === "urgent" ? "crit" : w.priority === "high" ? "warn" : undefined}>{w.priority}</Tag>
+                    <Tag tone={w.priority === "critical" ? "crit" : w.priority === "high" ? "warn" : undefined}>{w.priority}</Tag>
                   </span>
                 </button>
               ))}

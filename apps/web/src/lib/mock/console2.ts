@@ -66,7 +66,7 @@ export function equipmentDetail(id: string): EquipmentDetailData | null {
     documents: [{ id: "d-1", filename: "inspection_report_aug.pdf", kind: "Inspection" }],
     history: HISTORY.filter((h) => h.equipment_id === eq.id),
     related: [{ id: "C-3", name: "Recycle Gas Compressor", relation: "same train" }],
-    open_work_orders: WORK_ORDERS.filter((w) => w.equipment_id === eq.id && w.status !== "done").map((w) => w.id),
+    open_work_orders: WORK_ORDERS.filter((w) => w.equipment_id === eq.id && w.status !== "completed").map((w) => w.id),
   };
 }
 

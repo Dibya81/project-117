@@ -231,7 +231,7 @@ export function AgentResponseConsole({
         {!activeJob ? (
           <p className="arc-empty">
             No response job yet. Inject a fault on the canvas or from a scenario —
-            the lanes fill from the backend's own events.
+            the lanes fill from events the backend emits.
           </p>
         ) : (
           <>

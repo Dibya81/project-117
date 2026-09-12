@@ -78,9 +78,30 @@ export interface JobRecord {
 export interface Equipment {
   id: string;
   name: string;
-  kind: "pump" | "tank" | "compressor" | "exchanger" | "valve";
+  /**
+   * The real plant dataset's equipment type vocabulary (`GET /api/equipment`
+   * `type`). The console originally knew five kinds; the dataset carries more
+   * (vessels, furnaces, columns, utilities, motors), so the union mirrors it.
+   */
+  kind:
+    | "pump"
+    | "tank"
+    | "compressor"
+    | "exchanger"
+    | "valve"
+    | "vessel"
+    | "furnace"
+    | "utility"
+    | "column"
+    | "safety"
+    | "motor";
   zone: string;
   status: HealthState;
+  /**
+   * Schematic canvas position. The plant dataset has no geospatial
+   * coordinates, so this is a deterministic layout derived from the asset's
+   * area group — it places nodes legibly, it does not claim a real location.
+   */
   position: [number, number, number];
   sensors: SensorReading[];
   last_inspection?: ISODate;
@@ -100,8 +121,10 @@ export interface WorkOrder {
   id: string;
   equipment_id: string;
   title: string;
-  priority: "low" | "medium" | "high" | "urgent";
-  status: "open" | "assigned" | "in_progress" | "pending_approval" | "done";
+  /** Mirrors the backend's PRIORITIES (work_orders.py). */
+  priority: "low" | "medium" | "high" | "critical";
+  /** Mirrors WORK_ORDER_TRANSITIONS in backend/storage/operations.py. */
+  status: "draft" | "open" | "in_progress" | "on_hold" | "completed" | "cancelled";
   assignee: string;
   evidence: Citation[];
   recommended_action?: string;
@@ -112,7 +135,11 @@ export interface ApprovalRequest {
   id: string;
   action: string;
   risk: "low" | "medium" | "high";
-  agent: AgentKind;
+  /**
+   * Optional: the operations approval store records `type`/`requiredRole`,
+   * not the originating agent kind, so the adapter does not invent one.
+   */
+  agent?: AgentKind;
   requested_by: string;
   equipment_id?: string;
   reason: string;
