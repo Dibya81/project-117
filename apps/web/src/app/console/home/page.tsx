@@ -17,8 +17,7 @@ import { PlantMap } from "@/components/console/PlantMap";
 import { IntelligenceChain } from "@/components/console/IntelligenceChain";
 import { LogicCoreScene } from "@/components/threeui/ThreeUIScenes";
 import { consoleData } from "@/lib/data/console";
-import { INSIGHTS } from "@/lib/mock/console2";
-import type { Alert } from "@/types/console";
+import type { Alert, SystemPosture } from "@/types/console";
 import type { AgentDescriptor, ApprovalRequest, ArtifactRecord, Equipment, JobRecord, WorkOrder } from "@/types";
 
 /** Deterministic 2 Hz drift so telemetry feels alive, not random. */
@@ -80,6 +79,7 @@ export default function HomePage() {
   const [agents, setAgents] = useState<AgentDescriptor[] | null>(null);
   const [artifacts, setArtifacts] = useState<ArtifactRecord[] | null>(null);
   const [jobs, setJobs] = useState<JobRecord[] | null>(null);
+  const [posture, setPosture] = useState<SystemPosture | null>(null);
 
   useEffect(() => {
     consoleData.alerts.active().then(setAlerts);
@@ -89,10 +89,10 @@ export default function HomePage() {
     consoleData.agents.list().then(setAgents);
     consoleData.artifacts.list().then(setArtifacts);
     consoleData.jobs.list().then(setJobs);
+    consoleData.admin.posture().then(setPosture).catch(() => setPosture(null));
   }, []);
 
   const openWOs = useMemo(() => workOrders?.filter((w) => w.status !== "completed") ?? [], [workOrders]);
-  const anomalies = INSIGHTS[0];
   const liveJobs = jobs?.filter((j) => ["QUEUED", "PLANNING", "RETRIEVING", "EXECUTING", "VERIFYING"].includes(j.state)) ?? [];
   const critCount = alerts?.filter((a) => a.severity === "critical").length ?? 0;
   const [coreMode, setCoreMode] = useState<"reactor" | "lattice">("lattice");
@@ -105,17 +105,38 @@ export default function HomePage() {
           <h1>Plant Alpha — Live</h1>
         </div>
         <span className="cs-pagehead__meta">
-          {new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · all systems sovereign
+          {new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} ·{" "}
+          {posture
+            ? posture.model_gateway === "local" && posture.egress === "denied"
+              ? "all systems sovereign"
+              : "posture degraded — see Sovereignty"
+            : "posture unread"}
         </span>
       </div>
 
-      {/* status strip */}
+      {/* Status strip — real posture, not a fixed banner. Each dot is bound to
+          the measurement it claims; before the reading lands it reads unknown
+          rather than green. */}
       <div className="cs-strip" role="status" aria-label="System status" style={{ marginBottom: 16 }}>
-        <span><StatusDot state="ok" pulse /> SYSTEM OK</span>
-        <span><StatusDot state="ok" pulse /> MODELS LOCAL</span>
-        <span><StatusDot state="ok" /> SANDBOX SECURE</span>
-        <span><StatusDot state="ok" /> EGRESS DENIED</span>
-        <span className="cs-dim">EXTERNAL CALLS: 0</span>
+        <span>
+          <StatusDot state={posture ? (posture.database === "ok" ? "ok" : "critical") : "unknown"} pulse />
+          {posture ? (posture.database === "ok" ? "SYSTEM OK" : "DATABASE ERROR") : "SYSTEM UNKNOWN"}
+        </span>
+        <span>
+          <StatusDot state={posture ? (posture.model_gateway === "local" ? "ok" : "warning") : "unknown"} pulse />
+          {posture ? `MODELS ${posture.model_gateway.toUpperCase()}` : "MODELS UNKNOWN"}
+        </span>
+        <span>
+          <StatusDot state={posture ? (posture.sandbox === "isolated" ? "ok" : "critical") : "unknown"} />
+          {posture ? (posture.sandbox === "isolated" ? "SANDBOX SECURE" : "SANDBOX UNAVAILABLE") : "SANDBOX UNKNOWN"}
+        </span>
+        <span>
+          <StatusDot state={posture ? (posture.egress === "denied" ? "ok" : "warning") : "unknown"} />
+          {posture ? `EGRESS ${posture.egress.toUpperCase()}` : "EGRESS UNKNOWN"}
+        </span>
+        <span className="cs-dim">
+          EXTERNAL CALLS: {posture ? posture.external_calls_24h : "—"}
+        </span>
         <span className="cs-dim" style={{ marginLeft: "auto" }}>
           {liveJobs.length} AGENT TASK{liveJobs.length === 1 ? "" : "S"} RUNNING
         </span>
@@ -269,8 +290,25 @@ export default function HomePage() {
           </Panel>
 
           <Panel title="Anomalies — 30 days">
-            <TrendChart points={anomalies.points} threshold={anomalies.threshold} unit={anomalies.unit} tone="amber" live />
-            <p className="cs-dim" style={{ margin: "8px 0 0", fontSize: 12 }}>{anomalies.summary}</p>
+            {alerts === null ? (
+              <SkeletonRows rows={3} />
+            ) : alerts.length === 0 ? (
+              <p className="cs-dim" style={{ margin: 0, fontSize: 12, lineHeight: 1.7 }}>
+                No anomaly series is recorded yet, so there is nothing to plot. The panel this
+                replaced drew a hand-written curve and described it as a finding.
+              </p>
+            ) : (
+              <>
+                <TrendChart
+                  points={alerts.map((a, i) => ({ t: Date.parse(a.at) || i, value: 1 }))}
+                  unit="alerts"
+                  tone="amber"
+                />
+                <p className="cs-dim" style={{ margin: "8px 0 0", fontSize: 12 }}>
+                  {alerts.length} active alert{alerts.length === 1 ? "" : "s"} · {critCount} critical
+                </p>
+              </>
+            )}
           </Panel>
         </div>
 

@@ -19,30 +19,12 @@ import type {
 import type { ApprovalRequest, Equipment, HealthState, WorkOrder } from "@/types";
 import type { EquipmentRecord, WorkOrderRecord, ApprovalRecord } from "@/lib/api";
 import type { PlantDef, SimEvent } from "@/lib/sim/types";
-import {
-  AGENTS,
-  ALERTS,
-  APPROVALS,
-  ARTIFACTS,
-  AUDIT,
-  C3_TASK,
-  DOCUMENTS,
-  EQUIPMENT,
-  GRAPH_EDGES,
-  GRAPH_NODES,
-  HISTORY,
-  LEARNED_RULES,
-  MODELS,
-  NOTIFICATIONS,
-  SESSIONS,
-  USERS,
-  WORK_ORDERS,
-} from "@/lib/mock/console";
-import { equipmentDetail, INSIGHTS } from "@/lib/mock/console2";
-import { ANALYTICS_SUMMARY, JOBS, TOOLS, WORKFLOWS, searchMock } from "@/lib/mock/console3";
+// Only the mock symbols still in use are imported. Every other name here was
+// dead: `AGENTS`, `EQUIPMENT`, `WORK_ORDERS`, `JOBS`, `TOOLS`, `WORKFLOWS`,
+// `searchMock` and friends had been replaced by real API calls but their
+// imports were left behind, which made the module look far more mock-backed
+// than it is. The three below are the genuine remainder.
 import { api } from "@/lib/api";
-import { loadLibrary } from "@/lib/documents/library";
-import { crosswalkForRegister } from "@/lib/knowledge/canonical";
 
 const ok = <T,>(value: T) => Promise.resolve(value);
 
@@ -389,21 +371,14 @@ export const consoleData = {
           };
         }
       } catch {
-        /* not a register id — fall through to the narrative overlay */
+        /* Not a real register id. */
       }
-      const direct = equipmentDetail(id);
-      if (direct) return direct;
-      const entry = crosswalkForRegister(id);
-      if (!entry) return null;
-      const twin = equipmentDetail(entry.overlay);
-      if (!twin) return null;
-      return {
-        ...twin,
-        registerTag: entry.register,
-        registerName: entry.registerName,
-        mappingConfidence: entry.confidence,
-        mappingBasis: entry.basis,
-      };
+      // No fallback to a narrative detail record. The previous version resolved
+      // unknown ids — including the fictional tags from the retired demo data —
+      // to a hand-written detail page, so /console/equipment/C-3 rendered a
+      // convincing machine that does not exist in the plant dataset. A missing
+      // asset now reports as missing.
+      return null;
     },
   },
   // No alerting or notification endpoint exists. An empty list is the honest
@@ -432,19 +407,26 @@ export const consoleData = {
         r.agents.map((a) => ({ ...a, kind: a.name as typeof a.kind, status: "idle" as const })),
       ),
   },
+  // The real library: whatever the backend has actually stored and indexed.
+  //
+  // This used to join seven hand-written register rows with a JSON artifact
+  // generated from data/knowledge/**, which no longer exists — so the page
+  // listed documents that were not in the plant and omitted the ones that were.
   documents: {
-    /**
-     * The canonical library: register rows joined with the real refinery
-     * corpus and the 5-year dossier. See lib/documents/library.ts.
-     */
-    list: () => loadLibrary(DOCUMENTS).then((r) => r.docs),
-    get: (id: string) => loadLibrary(DOCUMENTS).then((r) => r.docs.find((d) => d.id === id) ?? null),
-    stats: () => loadLibrary(DOCUMENTS).then((r) => r.stats),
-    /** Simulated upload pipeline: stored → indexing → indexed. */
-    upload: (filename: string) => {
-      const id = `d-${Math.floor(Math.random() * 900 + 100)}`;
-      return ok({ id, filename });
+    list: () => api.documents.list().then((r) => r.documents),
+    get: (id: string) => api.documents.get(id),
+    stats: async () => {
+      const rows = await api.documents.list().then((r) => r.documents);
+      const chunks = rows.reduce((sum, d) => {
+        const ing = (d.metadata as { ingestion?: { chunk_count?: number } })?.ingestion;
+        return sum + (ing?.chunk_count ?? 0);
+      }, 0);
+      return { total: rows.length, indexed: rows.filter((d) => d.status === "indexed").length, chunks };
     },
+    /** Real multipart upload; the row is registered by the server. */
+    upload: (file: File) => api.documents.upload(file),
+    reindex: (id: string) => api.documents.reindex(id),
+    remove: (id: string) => api.documents.delete(id),
   },
   workOrders: {
     // Real orders from the operations store. The session-only list is gone:
@@ -518,9 +500,10 @@ export const consoleData = {
     // No workspace/session endpoint exists yet; an empty list is the honest
     // answer, and clearly better than fabricated sessions.
     sessions: () => ok([]),
-    demoTask: () => ok(C3_TASK),
   },
-  insights: { list: () => ok(INSIGHTS) },
+  // The insights page reads analytics directly. The mock series that used to
+  // live behind insights.list() is gone: its "AI observation" cards and
+  // confidence percentages were hand-written constants presented as findings.
   jobs: {
     list: () => api.jobs.list().then((r) => r.jobs),
     get: (id: string) => api.jobs.get(id),
@@ -534,12 +517,14 @@ export const consoleData = {
         return { query: q, results };
       }),
   },
-  // NOTE: still mock. The insights page expects {anomalies_7d, mttr_hours,
-  // mtbf_hours, verification_rate, …}, but the real /api/analytics/summary
-  // returns {equipment, workOrders, approvals, platform, computedAt, sources}.
-  // Wiring it needs the insights page rewritten against the real shape — a
-  // separate change, not a one-line swap. Tracked, not silently faked.
-  analytics: { summary: () => ok(ANALYTICS_SUMMARY) },
+  // Real analytics. Every figure is computed from the plant dataset, the
+  // operations store, or measured by the running process — see
+  // backend/api/src/routes/analytics.py. Series are empty until trend history
+  // is persisted, and the page says so rather than drawing invented points.
+  analytics: {
+    summary: () => api.analytics.summary(),
+    trends: (series?: string[]) => api.analytics.trends(series),
+  },
   admin: {
     // No identity store exists yet — an empty roster beats inventing users.
     users: (): Promise<AdminUser[]> => ok([]),

@@ -35,11 +35,15 @@ async function request<T>(
   init?: RequestInit,
 ): Promise<T> {
   let res: Response;
+  // Multipart bodies must let the browser set Content-Type, because only it
+  // knows the boundary it generated. Forcing application/json here silently
+  // produces an unparseable body and a 422 from the server.
+  const isForm = typeof FormData !== "undefined" && init?.body instanceof FormData;
   try {
     res = await fetch(`${API_BASE}${path}`, {
       ...init,
       headers: {
-        "Content-Type": "application/json",
+        ...(isForm ? {} : { "Content-Type": "application/json" }),
         ...authHeaders(),
         ...(init?.headers ?? {}),
       },
@@ -142,6 +146,39 @@ export interface ApprovalRecord {
   evidence: string[];
 }
 
+/** GET /api/analytics/summary — every figure computed from real rows or
+ *  measured by the running process. Nothing here is a decorative constant. */
+export interface AnalyticsSummary {
+  equipment: {
+    total: number;
+    byStatus: Record<string, number>;
+    critical: string[];
+    warning: string[];
+  };
+  workOrders: {
+    total: number;
+    byStatus: Record<string, number>;
+    open: number;
+    highPriorityOpen: number;
+  };
+  approvals: { total: number; pending: number };
+  /** In-process metrics: request counters and per-route latencies. */
+  platform: {
+    counters: Record<string, number>;
+    durations: Record<string, { count: number; mean_ms: number }>;
+  };
+  computedAt: string;
+  sources: Record<string, string>;
+}
+
+/** GET /api/analytics/trends. Series are empty until history is persisted;
+ *  the endpoint says so rather than inventing points. */
+export interface AnalyticsTrends {
+  series: Record<string, { t: number; value: number }[]>;
+  available: string[];
+  source: string;
+}
+
 /** The three list endpoints share this envelope. */
 interface ListEnvelope<T> {
   items: T[];
@@ -149,13 +186,23 @@ interface ListEnvelope<T> {
   source: string;
 }
 
-function query(params: Record<string, string | number | undefined | null>): string {
-  const qs = new URLSearchParams(
-    Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "") as [
-      string,
-      string,
-    ][],
-  );
+type QueryValue = string | number | boolean | string[] | undefined | null;
+
+/**
+ * Build a query string. Arrays become repeated parameters (`?series=a&series=b`)
+ * rather than a single comma-joined value, which is what FastAPI's `list[str]`
+ * query parameters expect.
+ */
+function query(params: Record<string, QueryValue>): string {
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
+    if (Array.isArray(value)) {
+      for (const item of value) qs.append(key, item);
+    } else {
+      qs.append(key, String(value));
+    }
+  }
   const s = qs.toString();
   return s ? `?${s}` : "";
 }
@@ -197,6 +244,18 @@ export const api = {
   documents: {
     list: () => request<{ total: number; documents: DocumentRecord[] }>("/api/documents"),
     get: (id: string) => request<DocumentRecord>(`/api/documents/${id}`),
+    /**
+     * Real multipart upload to POST /api/documents/upload. The file is read by
+     * the server and stored; the response carries the registered rows.
+     */
+    upload: (file: File) => {
+      const form = new FormData();
+      form.append("files", file);
+      return request<{ uploaded: number; documents: DocumentRecord[] }>(
+        "/api/documents/upload",
+        { method: "POST", body: form },
+      );
+    },
     delete: (id: string) =>
       request<{ deleted: boolean; id: string }>(`/api/documents/${id}`, { method: "DELETE" }),
     reindex: (id: string) =>
@@ -299,8 +358,9 @@ export const api = {
   },
 
   analytics: {
-    summary: () => request<Record<string, unknown>>("/api/analytics/summary"),
-    trends: () => request<Record<string, unknown>>("/api/analytics/trends"),
+    summary: () => request<AnalyticsSummary>("/api/analytics/summary"),
+    trends: (series?: string[]) =>
+      request<AnalyticsTrends>(`/api/analytics/trends${query({ series })}`),
   },
 };
 

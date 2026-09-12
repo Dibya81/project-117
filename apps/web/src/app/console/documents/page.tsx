@@ -8,13 +8,12 @@
  * EVIDENCE MODE: claim → evidence → source → verification.
  */
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button, EmptyState, Panel, Progress, SkeletonRows, StatusDot, Tag, timeAgo } from "@/components/ui/primitives";
 import { Drawer, Modal } from "@/components/ui/overlays";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { consoleData } from "@/lib/data/console";
 import DocumentField from "@/components/documents/DocumentField";
-import type { LibraryDoc } from "@/lib/documents/library";
 import { useJourney } from "@/lib/journey";
 import type { ApprovalRequest, Citation, DocumentRecord, WorkOrder } from "@/types";
 
@@ -37,50 +36,88 @@ const PIPELINE: { id: string; label: string; detail: string; icon: IconName; at:
   { id: "parsing", label: "Parsing", detail: "docling layout analysis", icon: "doc", at: 1300 },
   { id: "ocr", label: "OCR", detail: "scanned regions recognized on-device", icon: "eye", at: 2200 },
   { id: "chunking", label: "Chunking", detail: "semantic blocks with page/heading metadata", icon: "layers", at: 3100 },
-  { id: "embedding", label: "Embedding", detail: "bge-m3 vectors — local, no egress", icon: "cpu", at: 4100 },
+  { id: "embedding", label: "Embedding", detail: "nomic-embed-text vectors — local, no egress", icon: "cpu", at: 4100 },
   { id: "extract", label: "Knowledge extraction", detail: "entities, equipment refs, thresholds", icon: "zap", at: 5000 },
   { id: "graph", label: "Graph update", detail: "relationships linked into the plant graph", icon: "graph", at: 5800 },
   { id: "ready", label: "Ready", detail: "citable by every agent", icon: "check", at: 6500 },
 ];
 
-function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: (name: string) => void }) {
-  const [file, setFile] = useState<string | null>(null);
+/**
+ * Real upload. The previous version never opened a file picker: clicking
+ * "browse" pretended to ingest a hardcoded filename and animated a pipeline
+ * with ticks beside stages that had not run. This one posts the chosen file to
+ * POST /api/documents/upload, then reindexes it through the real pipeline and
+ * reports the backend's own status.
+ */
+function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const [file, setFile] = useState<File | null>(null);
   const [stage, setStage] = useState(-1);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [docId, setDocId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const start = (name: string) => {
-    setFile(name);
-    PIPELINE.forEach((s, i) => {
-      timers.current.push(setTimeout(() => setStage(i), s.at - 1400));
-    });
-    timers.current.push(setTimeout(() => onDone(name), 7100));
+  const start = async (picked: File) => {
+    setFile(picked);
+    setError(null);
+    setStage(0);
+    try {
+      const uploaded = await consoleData.documents.upload(picked);
+      const doc = uploaded.documents[0];
+      if (!doc) throw new Error("the server accepted the file but registered no document");
+      setDocId(doc.id);
+      // The row exists now; the expensive parse runs server-side.
+      setStage(3);
+      await consoleData.documents.reindex(doc.id);
+      setStage(PIPELINE.length - 1);
+      onDone();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setStage(-1);
+    }
   };
 
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
-
-  const progress = Math.max(0, ((stage + 1) / PIPELINE.length) * 100);
+  const progress = stage < 0 ? 0 : Math.min(100, ((stage + 1) / PIPELINE.length) * 100);
   const done = stage >= PIPELINE.length - 1;
 
   return (
     <Modal title="Ingest document" wide onClose={onClose}>
       {!file ? (
-        <button className="cs-upload" style={{ width: "100%", font: "inherit" }} onClick={() => start("bearing_clearance_procedure_rev2.pdf")}>
-          <Icon name="upload" size={26} />
-          <p style={{ margin: "12px 0 4px", color: "var(--ink-1)", fontWeight: 600 }}>Drop a document, or click to browse</p>
-          <p className="cs-mono cs-dim" style={{ margin: 0, fontSize: 10.5, letterSpacing: "0.08em" }}>
-            PDF · DOCX · TXT · MD · CSV · XLSX — parsed, embedded and linked locally. It never leaves this machine.
-          </p>
-        </button>
+        <>
+          <input
+            ref={inputRef}
+            type="file"
+            style={{ display: "none" }}
+            aria-label="Choose a document to ingest"
+            onChange={(e) => {
+              const picked = e.target.files?.[0];
+              if (picked) void start(picked);
+            }}
+          />
+          <button
+            className="cs-upload"
+            style={{ width: "100%", font: "inherit" }}
+            onClick={() => inputRef.current?.click()}
+          >
+            <Icon name="upload" size={26} />
+            <p style={{ margin: "12px 0 4px", color: "var(--ink-1)", fontWeight: 600 }}>
+              Choose a document to ingest
+            </p>
+            <p className="cs-mono cs-dim" style={{ margin: 0, fontSize: 10.5, letterSpacing: "0.08em" }}>
+              PDF · DOCX · TXT · MD · CSV · XLSX · PPTX — parsed, embedded and linked locally.
+              It never leaves this machine.
+            </p>
+          </button>
+        </>
       ) : (
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
             <Icon name="file" size={15} />
-            <span className="cs-mono" style={{ fontSize: 12.5 }}>{file}</span>
-            <span className="cs-mono" style={{ marginLeft: "auto", fontSize: 11, color: done ? "var(--ok)" : "var(--cyan)" }}>
-              {Math.round(progress)}%
+            <span className="cs-mono" style={{ fontSize: 12.5 }}>{file.name}</span>
+            <span className="cs-mono" style={{ marginLeft: "auto", fontSize: 11, color: error ? "var(--red)" : done ? "var(--ok)" : "var(--cyan)" }}>
+              {error ? "failed" : `${Math.round(progress)}%`}
             </span>
           </div>
-          <Progress value={progress} tone={done ? "ok" : "cyan"} />
+          <Progress value={progress} tone={error ? "crit" : done ? "ok" : "cyan"} />
           <div className="cs-trace" style={{ marginTop: 16 }}>
             {PIPELINE.map((s, i) => (
               <div key={s.id} className="cs-trace__row" style={{ opacity: i <= stage ? 1 : 0.32 }}>
@@ -95,6 +132,14 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: (name: 
               </div>
             ))}
           </div>
+          {error && (
+            <p style={{ margin: "14px 0 0", fontSize: 12.5, color: "var(--red)", lineHeight: 1.6 }}>{error}</p>
+          )}
+          {done && docId && (
+            <p className="cs-mono cs-dim" style={{ margin: "14px 0 0", fontSize: 10 }}>
+              registered as {docId}
+            </p>
+          )}
         </div>
       )}
     </Modal>
@@ -129,42 +174,63 @@ function citationFor(
   return null;
 }
 
-const ENTITY_POOL: Record<string, string[]> = {
-  "d-1": ["P-1042", "17 bar", "Unit 200", "relief valve", "discharge line"],
-  "d-7": ["C-3", "drive-end bearing", "0.09 mm", "coupling", "IR-204"],
-  "d-4": ["2× band", "bearing wear", "14 days", "SOP-07.3", "alarm levels"],
-  "d-5": ["5.7 mm/s", "8,800 rpm", "baseline", "C-3"],
-  "d-2": ["90 days", "isolation", "crude feed", "P-1042"],
-  "d-3": ["ME-198", "C-3", "bearing replacement", "2026-04-14"],
-};
+
+/** The ingestion block the backend records on every stored document. */
+interface IngestionMeta {
+  indexed?: boolean;
+  embedding_model?: string;
+  chunk_count?: number;
+  index_table?: string;
+  last_index_seconds?: number;
+  last_index_error?: string | null;
+}
+
+function ingestionOf(doc: DocumentRecord): IngestionMeta {
+  return ((doc.metadata as { ingestion?: IngestionMeta })?.ingestion ?? {}) as IngestionMeta;
+}
 
 function DocumentDrawer({
   doc,
   evidenceMode,
   corpus,
   onClose,
+  onChanged,
 }: {
   doc: DocumentRecord;
   evidenceMode: boolean;
   corpus: EvidenceCorpus;
   onClose: () => void;
+  onChanged: () => void;
 }) {
   const status = STATUS_TONE[doc.status];
   const ev = citationFor(doc.id, corpus);
-  // Real extracted entities when the corpus holds this document; the hand-written
-  // pool is only a fallback for register rows with no parsed content behind them.
-  const content = (doc as LibraryDoc).content;
-  const entities = content?.entities?.length ? content.entities : ENTITY_POOL[doc.id] ?? [];
-  const sectionCount = (doc as LibraryDoc).sectionCount;
+  const ingestion = ingestionOf(doc);
+  const [reindexing, setReindexing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const reindex = async () => {
+    setReindexing(true);
+    setError(null);
+    try {
+      await consoleData.documents.reindex(doc.id);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setReindexing(false);
+    }
+  };
+
   return (
     <Drawer title={doc.filename} wide onClose={onClose}>
       <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 16 }}>
         <Tag tone={status.tone}>{status.label}</Tag>
         <Tag>{doc.content_type.split("/").pop()}</Tag>
         <Tag>{fmtSize(doc.size_bytes)}</Tag>
-        {typeof doc.metadata.pages === "number" && <Tag>{String(doc.metadata.pages)} pages</Tag>}
-        {sectionCount && <Tag tone="ai">{sectionCount} sections</Tag>}
-        {content && <Tag tone="ok">Parsed</Tag>}
+        {typeof ingestion.chunk_count === "number" && (
+          <Tag tone="ai">{ingestion.chunk_count} chunks</Tag>
+        )}
         {evidenceMode && <Tag tone="ai">Evidence mode</Tag>}
       </div>
 
@@ -203,79 +269,43 @@ function DocumentDrawer({
         </div>
       )}
 
-      {content ? (
-        <div className="cs-docview">
-          <div className="cs-docview__head">
-            <p className="cs-mono cs-text-cyan" style={{ margin: 0, fontSize: 10, letterSpacing: "0.3em" }}>
-              DOCUMENT VIEWER · PARSED REPRESENTATION
-            </p>
-            <span className="cs-mono cs-dim" style={{ fontSize: 9.5 }}>
-              {content.source} · {content.chars.toLocaleString()} chars
-            </span>
-          </div>
-
-          <h3 className="cs-docview__title">{content.title}</h3>
-
-          {content.lines.length > 0 && (
-            <div className="cs-docview__body">
-              {content.lines.map((line, i) => (
-                <p key={i} style={{ animationDelay: `${i * 40}ms` }}>{line}</p>
-              ))}
-            </div>
-          )}
-
-          {content.table && content.table.length > 1 && (
-            <div className="cs-docview__table">
-              <p className="cs-mono cs-dim" style={{ margin: "0 0 8px", fontSize: 9.5, letterSpacing: "0.28em", textTransform: "uppercase" }}>
-                Extracted table
-              </p>
-              <table className="cs-table">
-                <thead>
-                  <tr>{content.table[0].map((h, i) => <th key={i} scope="col">{h}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {content.table.slice(1).map((row, r) => (
-                    <tr key={r}>{row.map((cell, c) => <td key={c} className={c === 0 ? "cs-mono" : undefined}>{cell}</td>)}</tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="cs-scan" style={{ border: "1px solid var(--line)", borderRadius: 10, background: "var(--bg-1)", minHeight: 260, padding: 26, marginBottom: 16 }}>
+        <div className="cs-scan" style={{ border: "1px solid var(--line)", borderRadius: 10, background: "var(--bg-1)", minHeight: 200, padding: 26, marginBottom: 16 }}>
           <p className="cs-mono cs-text-cyan" style={{ margin: "0 0 10px", fontSize: 10, letterSpacing: "0.3em" }}>
-            DOCUMENT VIEWER · PARSED REPRESENTATION
+            INDEX RECORD
           </p>
-          <p style={{ color: "var(--ink-2)", fontSize: 13, lineHeight: 1.75, margin: 0 }}>
-            This register row has no parsed text in the corpus yet. The extraction pipeline below is
-            what runs when its source file is ingested.
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 18 }}>
-            {["Title + metadata", "Sections & headings", "Extracted tables", "Embedded entities", "OCR confidence map"].map((s, i) => (
-              <div key={s} style={{ display: "flex", gap: 9, alignItems: "center", fontSize: 12.5, color: "var(--ink-2)", animation: `p117-fade-up 480ms var(--ease-out) ${i * 90}ms both` }}>
-                <Icon name="check" size={12} /> {s}
+          {/* What the backend actually recorded for this document, rather than a
+              decorative checklist of pipeline stages with ticks beside them. */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {(
+              [
+                ["Embedding model", ingestion.embedding_model ?? "—"],
+                ["Chunks indexed", ingestion.chunk_count != null ? String(ingestion.chunk_count) : "—"],
+                ["Vector table", ingestion.index_table ?? "—"],
+                [
+                  "Index time",
+                  ingestion.last_index_seconds != null ? `${ingestion.last_index_seconds.toFixed(2)} s` : "—",
+                ],
+              ] as const
+            ).map(([label, value]) => (
+              <div key={label} style={{ display: "flex", gap: 9, alignItems: "center", fontSize: 12.5, color: "var(--ink-2)" }}>
+                <span>{label}</span>
                 <span style={{ flex: 1, borderBottom: "1px dashed var(--line)" }} />
+                <span className="cs-mono">{value}</span>
               </div>
             ))}
           </div>
+          {doc.status !== "indexed" && (
+            <p className="cs-dim" style={{ margin: "14px 0 0", fontSize: 12.5, lineHeight: 1.7 }}>
+              This document has not been indexed, so it is not citable by any agent yet. Reindex
+              runs the real parsing and embedding pipeline.
+            </p>
+          )}
+          {ingestion.last_index_error && (
+            <p style={{ margin: "14px 0 0", fontSize: 12.5, lineHeight: 1.7, color: "var(--red)" }}>
+              Last index error: {ingestion.last_index_error}
+            </p>
+          )}
         </div>
-      )}
-
-      {entities.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <p className="cs-mono cs-dim" style={{ margin: "0 0 9px", fontSize: 9.5, letterSpacing: "0.28em", textTransform: "uppercase" }}>
-            Extracted intelligence
-          </p>
-          <div className="cs-chips">
-            {entities.map((e, i) => (
-              <span key={e} className="cs-chip" style={{ cursor: "default", borderColor: "rgba(183,156,255,0.35)", background: "var(--violet-soft)", color: "var(--violet)", animation: `p117-scale-in 400ms var(--ease-spring) ${i * 70}ms both` }}>
-                {e}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 12.5 }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -292,13 +322,24 @@ function DocumentDrawer({
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-        <Button variant="primary">
+      <div style={{ display: "flex", gap: 10, marginTop: 20, alignItems: "center", flexWrap: "wrap" }}>
+        <Button
+          variant="primary"
+          onClick={() => {
+            onClose();
+            router.push(`/console/workspace?doc=${encodeURIComponent(doc.id)}`);
+          }}
+        >
           <Icon name="zap" size={13} /> Ask about this document
         </Button>
-        <Button variant="ghost">
-          <Icon name="refresh" size={13} /> Reindex
+        <Button variant="ghost" onClick={reindex} disabled={reindexing}>
+          <Icon name="refresh" size={13} /> {reindexing ? "Reindexing…" : "Reindex"}
         </Button>
+        {error && (
+          <span className="cs-mono" style={{ fontSize: 11, color: "var(--red)" }}>
+            {error}
+          </span>
+        )}
       </div>
     </Drawer>
   );
@@ -353,11 +394,17 @@ function DocumentsPageInner() {
     );
   }, [docs, filter, statusFilter]);
 
-  const onUploaded = useCallback((name: string) => {
-    setUploadOpen(false);
-    setJustAdded(name);
-    setTimeout(() => setJustAdded(null), 4200);
+  // Reload the real list after a successful ingest, and report the backend's
+  // own status rather than asserting what the pipeline did.
+  const reload = useCallback(() => {
+    consoleData.documents.list().then(setDocs).catch(() => setDocs([]));
   }, []);
+
+  const onUploaded = useCallback(() => {
+    reload();
+    setJustAdded("document registered");
+    setTimeout(() => setJustAdded(null), 4200);
+  }, [reload]);
 
   return (
     <>
@@ -376,7 +423,7 @@ function DocumentsPageInner() {
       {justAdded && (
         <div className="cs-strip" style={{ marginBottom: 16, borderColor: "rgba(61,220,151,0.4)", animation: "p117-fade-up 400ms var(--ease-out) both" }} role="status">
           <span>
-            <StatusDot state="ok" pulse /> <span className="cs-mono">{justAdded}</span> — knowledge extracted, graph updated, now citable by every agent
+            <StatusDot state="ok" pulse /> <span className="cs-mono">{justAdded}</span> — the backend accepted the file and reported its index status; see the row below
           </span>
         </div>
       )}
@@ -488,7 +535,15 @@ function DocumentsPageInner() {
       </Panel>
 
       {uploadOpen && <UploadModal onClose={() => setUploadOpen(false)} onDone={onUploaded} />}
-      {openDoc && <DocumentDrawer doc={openDoc} evidenceMode={evidenceMode} corpus={corpus} onClose={() => setOpenDoc(null)} />}
+      {openDoc && (
+        <DocumentDrawer
+          doc={openDoc}
+          evidenceMode={evidenceMode}
+          corpus={corpus}
+          onClose={() => setOpenDoc(null)}
+          onChanged={reload}
+        />
+      )}
     </>
   );
 }
