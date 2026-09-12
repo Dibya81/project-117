@@ -175,7 +175,7 @@ function recordSimMilestone(ev: SimEvent): void {
  * the readings shown are real instrument state, not invented numbers. Where the
  * backend reports no limit, no threshold is invented.
  */
-function toEquipment(r: EquipmentRecord, areaIndex: number, order: number): Equipment {
+function toEquipment(r: EquipmentRecord): Equipment {
   const status: HealthState =
     r.status === "healthy"
       ? "ok"
@@ -185,14 +185,25 @@ function toEquipment(r: EquipmentRecord, areaIndex: number, order: number): Equi
           ? "critical"
           : "unknown";
 
-  const grid = Math.max(0, areaIndex);
+  // The plan coordinate from the dataset, not a synthesised grid slot.
+  //
+  // This previously read `[areaIndex * 6, (order % 4) * 3, 0]`, whose third
+  // component is always zero — and PlantMap draws the second axis from index 2.
+  // Every asset therefore collapsed onto one horizontal line with overlapping
+  // labels, in a panel two-thirds empty. The dataset has always carried x and
+  // y inside each area rectangle; the API just was not serving them.
+  //
+  // Convention: plan x -> index 0 (screen x), plan y -> index 2 (depth), with
+  // elevation at index 1, which is what the consumers read.
+  const x = Number.isFinite(r.x) ? r.x : 0;
+  const y = Number.isFinite(r.y) ? r.y : 0;
   return {
     id: r.id,
     name: r.name,
     kind: r.type as Equipment["kind"],
     zone: r.area || r.unit || "Unassigned",
     status,
-    position: [grid * 6, (order % 4) * 3, 0],
+    position: [x, 0, y],
     sensors: (r.keySignals ?? []).map((s, i) => {
       // A unit can carry redundant instruments for the same measurement, so the
       // signal name alone is NOT unique — keying on it produced duplicate React
@@ -301,16 +312,22 @@ function toHistoryEvent(e: Record<string, unknown>): HistoryEvent {
 }
 
 export const consoleData = {
+  /**
+   * The plant the console is showing. The default is the refinery, which is
+   * what every data surface reads; if the list is unavailable the name is null
+   * and callers say "unknown" rather than falling back to an invented label.
+   */
+  plant: {
+    identity: async (): Promise<{ id: string; name: string } | null> => {
+      const r = await api.plants.list().catch(() => null);
+      const first = r?.plants?.[0];
+      return first ? { id: first.id, name: first.name } : null;
+    },
+  },
   equipment: {
     // The real plant: 58 units served from the SQLite store by /api/equipment,
     // not the six-row synthetic set the console used to read.
-    list: () =>
-      api.equipment.list().then((r) => {
-        // Area order fixes each asset's placement so the schematic is stable
-        // across reloads rather than reshuffling.
-        const areas = [...new Set(r.items.map((e) => e.area || e.unit || "Unassigned"))].sort();
-        return r.items.map((e, i) => toEquipment(e, areas.indexOf(e.area || e.unit || "Unassigned"), i));
-      }),
+    list: () => api.equipment.list().then((r) => r.items.map((e) => toEquipment(e))),
     /**
      * Resolve an equipment tag to its record.
      *
@@ -324,7 +341,7 @@ export const consoleData = {
       try {
         const r = await api.equipment.get(id);
         if (r) {
-          const view = toEquipment(r, 0, 0);
+          const view = toEquipment(r);
           // Telemetry and maintenance come from the backend's own endpoints; an
           // empty series is reported as empty rather than invented, and the
           // dataset genuinely carries no persisted time series (see the type).
@@ -402,6 +419,11 @@ export const consoleData = {
   // listing genuinely does not know whether an agent is mid-run, and claiming
   // otherwise would be the exact fakery this console exists to avoid.
   agents: {
+    // The wire carries {name, description, capabilities, requires_rag, tools}.
+    // `kind` is the registry name (they are the same string) and `status` is
+    // reported idle because a registry listing genuinely does not know whether
+    // an agent is mid-run — claiming otherwise is the fakery this console exists
+    // to avoid.
     list: () =>
       api.agents.list().then((r) =>
         r.agents.map((a) => ({ ...a, kind: a.name as typeof a.kind, status: "idle" as const })),

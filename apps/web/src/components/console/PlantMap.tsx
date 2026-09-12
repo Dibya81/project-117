@@ -167,8 +167,31 @@ export function PlantMap({ equipment, onHover }: { equipment: Equipment[]; onHov
         ctx.shadowBlur = 0;
       });
 
-      // equipment nodes
-      equipment.forEach((e) => {
+      // Label placement. 58 assets across one plan puts their tags ~13px apart,
+      // so drawing every tag produced an unreadable smear ("<-P-1001 1001
+      // P-1002 P-1004..."). Labels are measured and placed greedily: the
+      // hovered asset always wins, then the assets an operator most needs to
+      // identify. A tag that would collide is skipped, and hovering reveals it —
+      // which is what the panel's own hint already says to do.
+      const placed: { x1: number; y1: number; x2: number; y2: number }[] = [];
+      const labelOrder = [...equipment].sort((a, b) => {
+        const rank = (e: Equipment) =>
+          (hoveredRef.current === e.id ? -100 : 0) +
+          (e.status === "critical" ? -10 : e.status === "warning" ? -5 : 0);
+        return rank(a) - rank(b);
+      });
+      const labelFits = (x: number, y: number, w: number, h: number) => {
+        const box = { x1: x - w / 2, y1: y - h / 2, x2: x + w / 2, y2: y + h / 2 };
+        for (const q of placed) {
+          if (box.x1 < q.x2 && box.x2 > q.x1 && box.y1 < q.y2 && box.y2 > q.y1) return false;
+        }
+        placed.push(box);
+        return true;
+      };
+
+      // equipment nodes, drawn in label priority order so the greedy pass below
+      // sees the most important tags first.
+      labelOrder.forEach((e) => {
         const p = px.get(e.id);
         if (!p) return;
         const c = COLORS[e.status];
@@ -196,11 +219,7 @@ export function PlantMap({ equipment, onHover }: { equipment: Equipment[]; onHov
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // label
-        ctx.font = "600 10px ui-monospace, monospace";
-        ctx.textAlign = "center";
-        ctx.fillStyle = isHover ? "#eaf2fa" : "rgba(157,177,199,0.85)";
-        ctx.fillText(e.id, p.x, p.y + r + 15);
+
 
         // critical: radiating ring
         if (e.status === "critical" && !reduced) {
@@ -212,6 +231,21 @@ export function PlantMap({ equipment, onHover }: { equipment: Equipment[]; onHov
           ctx.stroke();
         }
       });
+
+      // Label pass. Separate from the glyph pass so the hovered asset's tag
+      // wins regardless of draw order.
+      ctx.font = "600 10px ui-monospace, monospace";
+      ctx.textAlign = "center";
+      for (const e of labelOrder) {
+        const p = px.get(e.id);
+        if (!p) continue;
+        const isHover = hoveredRef.current === e.id;
+        const w = ctx.measureText(e.id).width;
+        if (isHover || labelFits(p.x, p.y + 27, w + 4, 12)) {
+          ctx.fillStyle = isHover ? "#eaf2fa" : "rgba(157,177,199,0.85)";
+          ctx.fillText(e.id, p.x, p.y + 27);
+        }
+      }
 
       if (reduced) cancelAnimationFrame(raf); // one static frame
     };

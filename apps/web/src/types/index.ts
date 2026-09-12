@@ -46,13 +46,28 @@ export interface DocumentRecord {
   updated_at: ISODate;
 }
 
+/**
+ * GET /api/agents — one registered agent.
+ *
+ * Mirrors the wire: `{name, description, capabilities, requires_rag, tools}`.
+ * It previously declared `model_role` and `permissions`, which the endpoint has
+ * never returned. Two consumers read them, and one crashed the Knowledge
+ * Universe page with "Cannot read properties of undefined (reading 'join')".
+ * A field that exists only in the type is a promise the API does not keep.
+ *
+ * `kind` and `status` are added by the client adapter, not the wire: an agent's
+ * registry name *is* its kind, and the registry does not report load state, so
+ * the adapter reports `idle` rather than inventing a running agent.
+ */
 export interface AgentDescriptor {
   kind: AgentKind;
   name: string;
   description: string;
-  model_role: string;
+  /** What this agent is allowed to do, as the registry declares it. */
+  capabilities: string[];
+  /** True when answers must be grounded in retrieved documents. */
+  requires_rag: boolean;
   tools: string[];
-  permissions: string[];
   status: "idle" | "running" | "verifying" | "blocked";
 }
 

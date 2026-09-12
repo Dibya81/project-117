@@ -41,8 +41,11 @@ export function AgentRoster({ agents, onClose }: { agents: AgentDescriptor[]; on
               </span>
             ))}
           </div>
+          {/* The registry publishes capabilities, not permissions. This line
+              printed `a.permissions`, which the API never returns, so opening
+              the roster threw before it could render. */}
           <div className="cs-mono cs-dim" style={{ fontSize: 10, letterSpacing: "0.06em" }}>
-            permissions&nbsp;&nbsp;{a.permissions.join("  ·  ")}
+            capabilities&nbsp;&nbsp;{a.capabilities.join("  ·  ")}
           </div>
         </section>
       ))}

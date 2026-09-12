@@ -40,7 +40,7 @@ function LiveSensorValue({ value, seed, unit }: { value: number; seed: number; u
   );
 }
 
-function HeroStat({ label, value, suffix, tone, onClick }: { label: string; value: number; suffix?: string; tone?: string; onClick?: () => void }) {
+function HeroStat({ label, value, suffix, tone, onClick }: { label: string; value: number | string; suffix?: string; tone?: string; onClick?: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -64,7 +64,8 @@ function HeroStat({ label, value, suffix, tone, onClick }: { label: string; valu
         {label}
       </span>
       <span className="cs-mono" style={{ fontSize: 21, fontWeight: 700, color: tone ?? "var(--ink-1)" }}>
-        <Counter value={value} suffix={suffix} />
+        {/* A dash means "no denominator", which Counter cannot express. */}
+        {typeof value === "number" ? <Counter value={value} suffix={suffix} /> : <>{value}{suffix}</>}
       </span>
     </button>
   );
@@ -80,6 +81,7 @@ export default function HomePage() {
   const [artifacts, setArtifacts] = useState<ArtifactRecord[] | null>(null);
   const [jobs, setJobs] = useState<JobRecord[] | null>(null);
   const [posture, setPosture] = useState<SystemPosture | null>(null);
+  const [plantName, setPlantName] = useState<string | null>(null);
 
   useEffect(() => {
     consoleData.alerts.active().then(setAlerts);
@@ -90,10 +92,17 @@ export default function HomePage() {
     consoleData.artifacts.list().then(setArtifacts);
     consoleData.jobs.list().then(setJobs);
     consoleData.admin.posture().then(setPosture).catch(() => setPosture(null));
+    consoleData.plant.identity().then((p) => setPlantName(p?.name ?? null));
   }, []);
 
   const openWOs = useMemo(() => workOrders?.filter((w) => w.status !== "completed") ?? [], [workOrders]);
   const liveJobs = jobs?.filter((j) => ["QUEUED", "PLANNING", "RETRIEVING", "EXECUTING", "VERIFYING"].includes(j.state)) ?? [];
+  // Completion rate over real jobs. Null when there are none: a rate with no
+  // denominator is not 0%, it is undefined, and showing a number would invent it.
+  const completedRate =
+    jobs && jobs.length
+      ? Math.round((jobs.filter((j) => j.state === "COMPLETED").length / jobs.length) * 100)
+      : null;
   const critCount = alerts?.filter((a) => a.severity === "critical").length ?? 0;
   const [coreMode, setCoreMode] = useState<"reactor" | "lattice">("lattice");
 
@@ -102,7 +111,9 @@ export default function HomePage() {
       <div className="cs-pagehead">
         <div>
           <span className="cs-pagehead__kicker">Command Center</span>
-          <h1>Plant Alpha — Live</h1>
+          {/* Real dataset name. This said "Plant Alpha", which is not a plant
+              in the store — the console was showing Meridian Synthetic Refinery. */}
+          <h1>{plantName ?? "Plant"} — Live</h1>
         </div>
         <span className="cs-pagehead__meta">
           {new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} ·{" "}
@@ -150,7 +161,7 @@ export default function HomePage() {
       {/* LIVE PLANT + REACTOR */}
       <div className="cs-home cs-home--plant" style={{ marginBottom: 16 }}>
         <Panel
-          title="Plant Alpha — live twin"
+          title={`${plantName ?? "Plant"} — live twin`}
           hud
           glow
           pad={false}
@@ -204,8 +215,24 @@ export default function HomePage() {
             <HeroStat label="Active alerts" value={alerts?.length ?? 0} tone={critCount ? "var(--crit)" : "var(--warn)"} onClick={() => router.push("/console/equipment")} />
             <HeroStat label="Pending approvals" value={approvals?.length ?? 0} tone="var(--warn)" onClick={() => router.push("/console/approvals")} />
             <HeroStat label="Open work orders" value={openWOs.length} onClick={() => router.push("/console/work-orders")} />
-            <HeroStat label="Agent tasks · 7d" value={47} tone="var(--cyan)" onClick={() => router.push("/console/insights")} />
-            <HeroStat label="Verified" value={96} suffix="%" tone="var(--ok)" />
+            {/* These two read 47 agent tasks and 96% verified as literals — the
+                last fabricated figures on this page, sitting directly beneath
+                three honest zeros. Now they are the real counts: jobs the
+                backend has recorded, and the share that reached a terminal
+                state. With no jobs the rate is null, and the row says so
+                rather than showing a confident 96%. */}
+            <HeroStat
+              label="Agent tasks"
+              value={jobs?.length ?? 0}
+              tone="var(--cyan)"
+              onClick={() => router.push("/console/insights")}
+            />
+            <HeroStat
+              label="Tasks completed"
+              value={completedRate ?? "—"}
+              suffix={completedRate == null ? "" : "%"}
+              tone="var(--ok)"
+            />
           </div>
         </Panel>
       </div>

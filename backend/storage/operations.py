@@ -248,6 +248,11 @@ class OperationsStore:
             "type": equipment.kind.value,
             "unit": area_name,
             "area": area_name,
+            # The dataset carries a real plan coordinate for every asset, inside
+            # its area rectangle. The API did not expose it, so the console
+            # invented a position and every unit collapsed onto a single line.
+            "x": equipment.x,
+            "y": equipment.y,
             "criticality": label,
             "status": STATUS_BY_STATE.get(equipment.state.value, "healthy"),
             "manufacturer": equipment.manufacturer,

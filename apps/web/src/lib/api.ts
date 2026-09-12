@@ -99,6 +99,13 @@ export interface EquipmentRecord {
   type: string;
   unit: string;
   area: string;
+  /**
+   * Plan coordinates from the plant dataset, inside the asset's area
+   * rectangle. These are the real layout the schematic draws from; the console
+   * used to synthesise a position because the API did not expose these.
+   */
+  x: number;
+  y: number;
   /** A word ("medium", "high"), not a number — the earlier annotation was wrong. */
   criticality: string;
   status: string;
@@ -207,8 +214,28 @@ function query(params: Record<string, QueryValue>): string {
   return s ? `?${s}` : "";
 }
 
+/** One entry from GET /api/simulation/plants. */
+export interface PlantSummary {
+  id: string;
+  name: string;
+  industry: string;
+  assets: number;
+  sensors: number;
+  scenarios: number;
+  areas: number;
+}
+
 export const api = {
   health: () => request<HealthResponse>("/health"),
+
+  /**
+   * The plant datasets the backend serves. Used for identity — the console
+   * displayed a hardcoded "Plant Alpha", which is not a plant that exists.
+   */
+  plants: {
+    list: () =>
+      request<{ source: string; plants: PlantSummary[] }>("/api/simulation/plants"),
+  },
 
   chat: {
     create: (payload: ChatTurnRequest) =>

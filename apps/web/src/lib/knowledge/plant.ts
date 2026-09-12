@@ -483,7 +483,14 @@ export async function buildPlantGraph(): Promise<KGraph> {
       type: "agent",
       status: ag.status,
       source: "agent registry",
-      facts: { model_role: ag.model_role, tools: ag.tools.join(", "), permissions: ag.permissions.join(", ") },
+      // `model_role` and `permissions` are not on the wire; reading them threw
+      // "Cannot read properties of undefined (reading 'join')" and the whole
+      // Knowledge Universe rendered as "Graph unavailable".
+      facts: {
+        capabilities: (ag.capabilities ?? []).join(", "),
+        tools: (ag.tools ?? []).join(", "),
+        grounding: ag.requires_rag ? "retrieval required" : "no retrieval",
+      },
       href: "/console/workspace",
     });
     for (const w of workOrders) {

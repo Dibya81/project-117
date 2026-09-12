@@ -60,8 +60,34 @@ const LENSES: { id: Lens; label: string; types: string[]; icon: Parameters<typeo
   { id: "rule", label: "Learned rules", types: ["rule"], icon: "check" },
 ];
 
-/** The asset the golden demo starts from. */
-const C3 = "equipment:C-3";
+/**
+ * The asset the guided trace starts from, discovered from the graph rather than
+ * named. It used to be the hardcoded `equipment:C-3`, an asset from the retired
+ * demo data: the "Trace the C-3 story" button set its path endpoints to a node
+ * that does not exist, so pressing it did nothing at all. The anchor is now the
+ * best-connected real asset, preferring one that reaches a document.
+ */
+function chooseTraceAnchor(graph: KGraph): string | null {
+  const equipment = graph.nodes.filter((n) => n.type === "equipment");
+  if (!equipment.length) return null;
+  const degree = new Map<string, number>();
+  const reachesDocument = new Set<string>();
+  for (const e of graph.edges) {
+    degree.set(e.from, (degree.get(e.from) ?? 0) + 1);
+    degree.set(e.to, (degree.get(e.to) ?? 0) + 1);
+    const from = graph.nodes.find((n) => n.id === e.from);
+    const to = graph.nodes.find((n) => n.id === e.to);
+    if (to?.type === "document" && from?.type === "equipment") reachesDocument.add(from.id);
+    if (from?.type === "document" && to?.type === "equipment") reachesDocument.add(to.id);
+  }
+  const scored = [...equipment].sort((a, b) => {
+    const doc = Number(reachesDocument.has(b.id)) - Number(reachesDocument.has(a.id));
+    if (doc) return doc;
+    return (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0);
+  });
+  const top = scored[0];
+  return (degree.get(top.id) ?? 0) > 0 ? top.id : null;
+}
 
 export default function KnowledgeUniverse() {
   const router = useRouter();
@@ -98,9 +124,11 @@ export default function KnowledgeUniverse() {
           setSelected(wanted);
           return;
         }
-        // Default focus is the C-3 story, so the page opens on something
-        // meaningful instead of the whole refinery at once.
-        if (g.nodes.some((n) => n.id === C3)) setSelected(C3);
+        // Open on the discovered anchor rather than the whole refinery at once.
+        // This used to focus C-3, an asset from the retired demo data, so the
+        // guard above was always false and the page opened with nothing selected.
+        const anchor = chooseTraceAnchor(g);
+        if (anchor) setSelected(anchor);
       })
       .catch((e) => setError(String(e.message ?? e)));
     loadSystemIndex().then(setSysIndex).catch((e) => setError(String(e.message ?? e)));
@@ -253,34 +281,52 @@ export default function KnowledgeUniverse() {
     setSelected(found[0].id);
   }, [query, ensureFull]);
 
+  /** The anchor the guided trace walks from, or null when the graph is empty. */
+  const traceAnchor = useMemo(() => (plant ? chooseTraceAnchor(plant) : null), [plant]);
+
   /**
-   * Walk the golden path. The route is discovered from the graph, not
-   * hardcoded: an anomaly on C-3 → C-3 → its work order → the approval that
-   * governs it → the agent that raised it. If a link is missing from the data
-   * the path is simply shorter — nothing is fabricated to lengthen it.
+   * Walk from the anchor to whatever the graph actually connects it to: an
+   * anomaly, then a work order raised against it, then the agent that raised
+   * that. The route is discovered from the edges, never hardcoded, and if a
+   * link is missing the path is simply shorter — nothing is invented to
+   * lengthen it. With no anomalies or work orders in the store (the current
+   * state) this resolves to anchor → its documents, which is a real path.
    */
   const traceStory = useCallback(() => {
-    if (!plant) return;
+    if (!plant || !traceAnchor) return;
     setNs("plant");
     setLens("all");
-    const touchesC3 = (id: string) =>
+    const touches = (id: string) =>
       plant.edges.some(
-        (e) => (e.from === id && e.to === C3) || (e.to === id && e.from === C3),
+        (e) => (e.from === id && e.to === traceAnchor) || (e.to === id && e.from === traceAnchor),
       );
-    const anomaly = plant.nodes.find((n) => n.type === "anomaly" && touchesC3(n.id));
+    const anomaly = plant.nodes.find((n) => n.type === "anomaly" && touches(n.id));
     // work order → equipment is `FOR_EQUIPMENT`, so the edge runs from the
     // work order to the asset, not the other way round.
     const wo = plant.nodes.find(
-      (n) => n.type === "work_order" && plant.edges.some((e) => e.from === n.id && e.to === C3),
+      (n) =>
+        n.type === "work_order" &&
+        plant.edges.some((e) => e.from === n.id && e.to === traceAnchor),
     );
     const agent = plant.nodes.find(
       (n) => n.type === "agent" && wo != null && plant.edges.some((e) => e.from === n.id && e.to === wo.id),
     );
-    setPathFrom(anomaly?.id ?? C3);
-    setPathTo((agent ?? wo)?.id ?? C3);
-    setSelected(C3);
-    graphRef.current?.focusNode(C3);
-  }, [plant]);
+    const document = plant.nodes.find(
+      (n) =>
+        n.type === "document" &&
+        plant.edges.some(
+          (e) =>
+            (e.from === traceAnchor && e.to === n.id) ||
+            (e.to === traceAnchor && e.from === n.id),
+        ),
+    );
+    const from = anomaly?.id ?? traceAnchor;
+    const to = (agent ?? wo ?? document)?.id ?? traceAnchor;
+    setPathFrom(from);
+    setPathTo(to === from ? null : to);
+    setSelected(traceAnchor);
+    graphRef.current?.focusNode(traceAnchor);
+  }, [plant, traceAnchor]);
 
   /* ---------------- keyboard ---------------- */
   useEffect(() => {
@@ -397,7 +443,10 @@ export default function KnowledgeUniverse() {
           </div>
 
           <button className="ku-trace" onClick={traceStory}>
-            <Icon name="play" size={12} /> Trace the C-3 story
+            <Icon name="play" size={12} />{' '}
+            {traceAnchor
+              ? `Trace ${traceAnchor.replace(/^equipment:/, "")}`
+              : "Trace (no plant data)"}
           </button>
         </nav>
 
@@ -466,7 +515,10 @@ export default function KnowledgeUniverse() {
               <b>Select an entity</b>
               <span>Click a node to inspect it. Everything outside its neighbourhood recedes, and every
                 relationship is listed with the source it was read from.</span>
-              <span>Try <b>C-3</b> — or run <b>Trace the C-3 story</b>.</span>
+              <span>
+                Try <b>{traceAnchor ? traceAnchor.replace(/^equipment:/, "") : "an equipment tag"}</b> — or run the
+                guided trace.
+              </span>
             </div>
           )}
 

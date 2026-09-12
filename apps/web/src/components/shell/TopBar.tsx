@@ -11,11 +11,14 @@ import type { ConsoleRole, SystemPosture } from "@/types/console";
 const ROLES: ConsoleRole[] = ["operator", "engineer", "maintenance", "safety", "manager", "admin"];
 
 export function TopBar({
+  plantName,
   posture,
   notifications,
   onOpenPalette,
   onOpenNotifications,
 }: {
+  /** The real plant name from the backend; null while loading or unreachable. */
+  plantName: string | null;
   posture: SystemPosture | null;
   notifications: number;
   onOpenPalette: () => void;
@@ -28,9 +31,12 @@ export function TopBar({
       <ConsoleCommandDock />
 
       <span className="cs-topbar__brand">PROJECT 117</span>
+      {/* The plant's own name from the dataset. This read "Plant Alpha", a
+          hardcoded label for a plant that does not exist — the console was
+          showing Meridian Synthetic Refinery. */}
       <span className="cs-topbar__plant">
         <Icon name="gauge" size={13} />
-        Plant Alpha
+        {plantName ?? "Plant unknown"}
       </span>
 
       <button className="cs-search-trigger" onClick={onOpenPalette} aria-label="Open command palette">

@@ -1363,6 +1363,19 @@
 }
 .cs-strip > span { display: flex; align-items: center; gap: 6px; }
 
+/* The strip is a dark band, so it cannot use the light-theme ink tokens. It
+   inherited --ink-2 (#475569) and --ink-3, which on a near-black background
+   gave roughly 2:1 contrast — the dim items ("EXTERNAL CALLS", "0 AGENT TASKS
+   RUNNING") were effectively invisible. Scoped here rather than by retuning
+   the global ink scale, which the bright surfaces depend on. */
+.cs-strip,
+.cs-strip .cs-mono { color: rgba(226, 232, 240, 0.94); }
+.cs-strip .cs-dim,
+.cs-strip .cs-mono.cs-dim { color: rgba(203, 213, 225, 0.72); }
+.cs-strip .cs-text-cyan { color: #7cc4ff; }
+.cs-strip .cs-text-ok,
+.cs-strip .cs-text-green { color: #4ade9f; }
+
 /* --- scan animation overlay --- */
 .cs-scan {
   position: relative;

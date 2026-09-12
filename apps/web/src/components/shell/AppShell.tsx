@@ -115,6 +115,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [rosterOpen, setRosterOpen] = useState(false);
 
   const [posture, setPosture] = useState<SystemPosture | null>(null);
+  const [plantName, setPlantName] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [agents, setAgents] = useState<AgentDescriptor[]>([]);
   const [approvalsPending, setApprovalsPending] = useState(0);
@@ -122,6 +123,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     consoleData.admin.posture().then(setPosture);
+    consoleData.plant.identity().then((p) => setPlantName(p?.name ?? null));
     consoleData.notifications.list().then(setNotifications);
     consoleData.agents.list().then(setAgents);
     consoleData.approvals.pending().then((p) => setApprovalsPending(p.length));
@@ -200,6 +202,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <div className="cs-main">
             <TopBar
+              plantName={plantName}
               posture={posture}
               notifications={notifications.length}
               onOpenPalette={() => setPaletteOpen(true)}
