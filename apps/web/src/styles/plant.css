@@ -2262,3 +2262,90 @@
 .pmap__eq[data-kind="valve"] .pmap__eq-body { fill: #eef1f5; }
 .pmap__eq[data-kind="motor"] .pmap__eq-body { fill: #edf1f6; }
 .pmap__eq[data-kind="safety"] .pmap__eq-body { fill: #fdeeee; }
+
+/* --- industrial equipment forms --------------------------------------------
+   The shapes carry the meaning: a domed shell with a bund wall is a storage
+   tank, a trayed tower is a column, a firebox with flame is a furnace. The
+   palette is quiet because the process lines carry the colour. */
+.pmap__eq-vessel {
+  fill: #dde6f0;
+  stroke: #64748b;
+  stroke-width: 1.6;
+}
+.pmap__eq-roof {
+  fill: #cfdbe9;
+  stroke: #64748b;
+  stroke-width: 1.6;
+}
+.pmap__eq-bund {
+  fill: #eef2f7;
+  stroke: #b6c2d0;
+  stroke-width: 1.1;
+}
+.pmap__eq-skirt {
+  fill: #c7d2de;
+  stroke: #64748b;
+  stroke-width: 1.2;
+}
+.pmap__eq-trays line {
+  stroke: rgba(51, 65, 85, 0.45);
+  stroke-width: 1.2;
+}
+.pmap__eq-level {
+  fill: #4d9fd6;
+  stroke: #38678f;
+  stroke-width: 0.8;
+}
+.pmap__eq-body {
+  fill: #e6ecf3;
+  stroke: #64748b;
+  stroke-width: 1.6;
+}
+.pmap__eq-firebox {
+  fill: #4a2f22;
+  stroke: #2f1d15;
+  stroke-width: 1;
+}
+.pmap__eq-flame path {
+  fill: #f59e0b;
+  opacity: 0.92;
+}
+/* The firebox breathes, slowly. Idle life, not a flashing screen. */
+@media (prefers-reduced-motion: no-preference) {
+  .pmap__eq-flame path { animation: pmap-flame 2.6s ease-in-out infinite; transform-origin: center bottom; }
+  .pmap__eq-flame path:nth-child(2) { animation-delay: 0.4s; }
+  .pmap__eq-flame path:nth-child(3) { animation-delay: 0.9s; }
+}
+@keyframes pmap-flame {
+  0%, 100% { opacity: 0.72; transform: scaleY(0.92); }
+  50%      { opacity: 1;    transform: scaleY(1.06); }
+}
+
+/* Kind tints — restrained, so the pipe colours stay dominant. */
+.pmap__eq[data-kind="furnace"] .pmap__eq-body { fill: #f0e2d6; }
+.pmap__eq[data-kind="exchanger"] .pmap__eq-body { fill: #dfeceb; }
+.pmap__eq[data-kind="compressor"] .pmap__eq-body { fill: #e2e4f2; }
+.pmap__eq[data-kind="pump"] .pmap__eq-body { fill: #e3ebf4; }
+.pmap__eq[data-kind="safety"] .pmap__eq-body { fill: #f6e2e2; stroke: #b91c1c; }
+
+.pmap__eq.is-selected .pmap__eq-body,
+.pmap__eq.is-selected .pmap__eq-vessel,
+.pmap__eq.is-selected .pmap__eq-roof {
+  stroke: var(--cyan);
+  stroke-width: 2.6;
+}
+.pmap__eq[data-state="critical"] .pmap__eq-body,
+.pmap__eq[data-state="critical"] .pmap__eq-vessel,
+.pmap__eq[data-state="failed"] .pmap__eq-body,
+.pmap__eq[data-state="failed"] .pmap__eq-vessel { stroke: #dc2626; stroke-width: 2.4; }
+.pmap__eq[data-state="warning"] .pmap__eq-body,
+.pmap__eq[data-state="warning"] .pmap__eq-vessel { stroke: #f59e0b; stroke-width: 2.2; }
+
+/* Labels sit under the equipment at a size that survives the zoom-out. */
+.pmap__eq-tag { font-size: 13px; fill: #0f172a; }
+.pmap__eq-name { font-size: 10px; fill: #475569; }
+
+/* Pipes are the process. Give them weight and keep them above the equipment
+   fills so a line is never lost behind a vessel. */
+.pmap__pipe-line { stroke-width: 3.4; }
+.pmap__pipe-flow { stroke-width: 3.4; stroke-dasharray: 5 16; }

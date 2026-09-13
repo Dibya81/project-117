@@ -47,31 +47,19 @@ const LABEL_H = 30;
  * dataset's x/y is the centre, so a larger box simply claims more of its own
  * area — which is how a real plot plan looks.
  */
-export function sizeForKind(kind: string): { w: number; h: number } {
-  switch (kind) {
-    case "column":
-      return { w: 74, h: 132 };
-    case "furnace":
-      return { w: 104, h: 96 };
-    case "tank":
-      return { w: 118, h: 92 };
-    case "vessel":
-      return { w: 84, h: 108 };
-    case "exchanger":
-      return { w: 118, h: 66 };
-    case "compressor":
-      return { w: 106, h: 84 };
-    case "motor":
-      return { w: 84, h: 70 };
-    case "safety":
-      return { w: 80, h: 70 };
-    case "pump":
-      return { w: 80, h: 68 };
-    case "valve":
-      return { w: 68, h: 60 };
-    default:
-      return { w: 86, h: 72 };
-  }
+/**
+ * Visual tier. A refinery drawing is not a uniform grid of equal boxes: the
+ * crude tower, the furnace and the storage drums are what the eye should find
+ * first, and the valves and motors hang off them. Drawing all 58 assets at one
+ * size is why the plant read as a flowchart — everything was equally important,
+ * so nothing was.
+ */
+export type Tier = "major" | "process" | "minor";
+
+export function tierOf(kind: string): Tier {
+  if (kind === "tank" || kind === "column" || kind === "furnace" || kind === "compressor") return "major";
+  if (kind === "vessel" || kind === "exchanger" || kind === "reactor" || kind === "utility") return "process";
+  return "minor";
 }
 
 export interface ProcessMapSelection {
@@ -87,34 +75,40 @@ interface Box {
 }
 
 /**
- * Process media, coloured the way a refinery draws them: restrained, and
- * distinguishable without relying on hue alone (each also carries a label).
+ * Process media, coloured the way a refinery draws them: warm for hot feed and
+ * hydrocarbons, cool for water and gas, distinct for hydrogen and products.
+ * Saturated, because on this drawing the pipe colour carries the medium and the
+ * equipment is deliberately quiet.
  */
 export const MEDIUM_COLOR: Record<string, string> = {
-  crude: "#6b5a3e",
-  "atm-resid": "#7a6242",
-  "vac-resid": "#8a6a44",
-  naphtha: "#c9a227",
-  jet: "#b98a2e",
-  diesel: "#9a7d2a",
-  reformate: "#a8862f",
-  vgo: "#8f7a3a",
-  slurry: "#5f5136",
-  hydrogen: "#5fa8c9",
-  "recycle-gas": "#6f9fc0",
-  "sour-gas": "#8a9a5b",
-  amine: "#7fae9a",
-  gas: "#8d9aa6",
-  vapor: "#a9b4bd",
-  steam: "#b9c2c9",
-  water: "#4a7fb5",
-  wastewater: "#5a6f7a",
-  brine: "#6f9aa8",
-  air: "#7fa8c4",
+  crude: "#c2761c",
+  "atm-resid": "#9c6414",
+  "vac-resid": "#8a5a12",
+  naphtha: "#d8a520",
+  jet: "#c99a1e",
+  diesel: "#b58a1c",
+  reformate: "#caa02a",
+  vgo: "#a8841c",
+  slurry: "#7a5f16",
+  hydrogen: "#7c5cf0",
+  "recycle-gas": "#6f7ff0",
+  "sour-gas": "#8a9a4b",
+  amine: "#2fa88a",
+  gas: "#6f8ba6",
+  vapor: "#8fa4bb",
+  steam: "#d4564a",
+  water: "#2f7fd4",
+  wastewater: "#4a7f96",
+  brine: "#2f92a8",
+  air: "#4d9fd6",
   control: "#7c3aed",
 };
 
 export const DEFAULT_MEDIUM_COLOR = "#8794a1";
+
+export function mediumColor(medium: string | undefined): string {
+  return MEDIUM_COLOR[medium ?? ""] ?? DEFAULT_MEDIUM_COLOR;
+}
 
 /**
  * Media that are signals rather than process fluid. A control loop drawn as a
@@ -122,10 +116,6 @@ export const DEFAULT_MEDIUM_COLOR = "#8794a1";
  * dashes instrument wiring.
  */
 export const SIGNAL_MEDIA = new Set(["control", "signal", "power"]);
-
-export function mediumColor(medium: string | undefined): string {
-  return MEDIUM_COLOR[medium ?? ""] ?? DEFAULT_MEDIUM_COLOR;
-}
 
 export function lineState(
   conn: ConnectionDef,
@@ -145,11 +135,74 @@ const STATE_STROKE: Record<string, string> = {
   normal: "",
   warning: "#f59e0b",
   critical: "#dc2626",
-  blocked: "#5b6c81",
+  blocked: "#94a3b8",
   leaking: "#dc2626",
 };
 
-/* ------------------------------------------------------------------- routing */
+/** Orthogonal route between two boxes. Process lines run square, never curved. */
+function route(a: Box, b: Box): { d: string; mid: { x: number; y: number }; horizontal: boolean } {
+  const aMidY = a.y + a.h / 2;
+  const bMidY = b.y + b.h / 2;
+  const goingRight = b.x >= a.x;
+  const startX = goingRight ? a.x + a.w : a.x;
+  const endX = goingRight ? b.x : b.x + b.w;
+  const gap = Math.abs(endX - startX);
+  const dy = Math.abs(bMidY - aMidY);
+  if (dy < 42 || gap < 80) {
+    const y = aMidY;
+    return { d: `M ${startX} ${y} H ${endX}`, mid: { x: (startX + endX) / 2, y }, horizontal: true };
+  }
+  const turnX = goingRight ? startX + Math.max(24, gap * 0.45) : startX - Math.max(24, gap * 0.45);
+  return {
+    d: `M ${startX} ${aMidY} H ${turnX} V ${bMidY} H ${endX}`,
+    mid: { x: turnX, y: (aMidY + bMidY) / 2 },
+    horizontal: false,
+  };
+}
+
+/** Footprint in plant units, by kind, at the tier's own scale. */
+export function sizeForKind(kind: string): { w: number; h: number } {
+  const tier = tierOf(kind);
+  // Sized to the plot: the dataset's areas are about 280x180 and hold roughly
+  // three assets, so a major unit can claim about a third of its area before
+  // it starts covering its neighbours. Larger than this looked better in
+  // isolation and worse on the plant, because equipment overlapped and the
+  // labels were hidden by whatever was drawn next.
+  if (tier === "major") {
+    switch (kind) {
+      case "column":
+        return { w: 66, h: 138 };
+      case "tank":
+        return { w: 124, h: 84 };
+      case "furnace":
+        return { w: 108, h: 92 };
+      default:
+        return { w: 104, h: 82 };
+    }
+  }
+  if (tier === "process") {
+    switch (kind) {
+      case "vessel":
+        return { w: 78, h: 88 };
+      case "exchanger":
+        return { w: 104, h: 58 };
+      default:
+        return { w: 88, h: 72 };
+    }
+  }
+  switch (kind) {
+    case "pump":
+      return { w: 78, h: 62 };
+    case "valve":
+      return { w: 60, h: 50 };
+    case "motor":
+      return { w: 72, h: 58 };
+    case "safety":
+      return { w: 66, h: 58 };
+    default:
+      return { w: 70, h: 58 };
+  }
+}
 
 /**
  * Orthogonal route between two boxes.
@@ -159,36 +212,6 @@ const STATE_STROKE: Record<string, string> = {
  * exists to communicate. The route leaves the source on the side facing the
  * target and enters the target on the side facing the source.
  */
-function route(a: Box, b: Box): { d: string; mid: { x: number; y: number }; horizontal: boolean } {
-  const aMidY = a.y + a.h / 2;
-  const bMidY = b.y + b.h / 2;
-  const goingRight = b.x >= a.x;
-
-  const startX = goingRight ? a.x + a.w : a.x;
-  const endX = goingRight ? b.x : b.x + b.w;
-
-  // Vertical separation decides whether a single elbow is enough.
-  const gap = Math.abs(endX - startX);
-  const dy = Math.abs(bMidY - aMidY);
-
-  if (dy < EQ_H * 0.75 || gap < EQ_W * 1.2) {
-    // Straight run: leave and enter at the same height.
-    const y = aMidY;
-    return {
-      d: `M ${startX} ${y} H ${endX}`,
-      mid: { x: (startX + endX) / 2, y },
-      horizontal: true,
-    };
-  }
-
-  // H-V-H: run out horizontally, turn once, run in horizontally.
-  const turnX = goingRight ? startX + Math.max(20, gap * 0.45) : startX - Math.max(20, gap * 0.45);
-  return {
-    d: `M ${startX} ${aMidY} H ${turnX} V ${bMidY} H ${endX}`,
-    mid: { x: turnX, y: (aMidY + bMidY) / 2 },
-    horizontal: false,
-  };
-}
 
 /* --------------------------------------------------------------------- label */
 
@@ -684,45 +707,109 @@ export function ProcessMap({
                     tower and a tank as a squat drum before any label is read.
                     The fill is a soft industrial tint, not white: a white card
                     per asset is what made this look like a flowchart. */}
-                {eq.kind === "column" || eq.kind === "vessel" ? (
+                {eq.kind === "column" ? (
                   <>
+                    {/* A distillation column: skirt, shell, dished head, trays,
+                        and the draw nozzles a real tower has. */}
                     <rect
                       className="pmap__eq-vessel"
-                      x={box.x}
-                      y={box.y + box.h * 0.09}
-                      width={box.w}
-                      height={box.h * 0.82}
-                      rx={box.w / 2}
+                      x={box.x + box.w * 0.16}
+                      y={box.y + box.h * 0.08}
+                      width={box.w * 0.68}
+                      height={box.h * 0.84}
+                      rx={box.w * 0.34}
                       style={{ ["--tone" as string]: TONE_COLOR[tone] } as CSSProperties}
                     />
-                    {/* Trays, drawn as the horizontal lines a real column has. */}
+                    <rect
+                      className="pmap__eq-skirt"
+                      x={box.x + box.w * 0.3}
+                      y={box.y + box.h * 0.92}
+                      width={box.w * 0.4}
+                      height={box.h * 0.06}
+                    />
                     <g className="pmap__eq-trays">
-                      {Array.from({ length: 5 }, (_, i) => {
-                        const y = box.y + box.h * 0.2 + (i * box.h * 0.62) / 4;
-                        return <line key={i} x1={box.x + 6} y1={y} x2={box.x + box.w - 6} y2={y} />;
+                      {Array.from({ length: 9 }, (_, i) => {
+                        const y = box.y + box.h * 0.16 + (i * box.h * 0.68) / 8;
+                        return (
+                          <line key={i} x1={box.x + box.w * 0.22} y1={y} x2={box.x + box.w * 0.78} y2={y} />
+                        );
                       })}
                     </g>
                   </>
                 ) : eq.kind === "tank" ? (
                   <>
+                    {/* A storage tank: cylindrical shell, domed roof, level gauge
+                        and the bund wall it stands in. */}
+                    <rect
+                      className="pmap__eq-bund"
+                      x={box.x}
+                      y={box.y + box.h * 0.72}
+                      width={box.w}
+                      height={box.h * 0.28}
+                      rx={4}
+                    />
+                    <rect
+                      className="pmap__eq-vessel"
+                      x={box.x + box.w * 0.12}
+                      y={box.y + box.h * 0.18}
+                      width={box.w * 0.76}
+                      height={box.h * 0.56}
+                      style={{ ["--tone" as string]: TONE_COLOR[tone] } as CSSProperties}
+                    />
+                    <path
+                      className="pmap__eq-roof"
+                      d={`M ${box.x + box.w * 0.12} ${box.y + box.h * 0.18} q ${box.w * 0.38} ${-box.h * 0.18} ${box.w * 0.76} 0`}
+                    />
+                    <rect
+                      className="pmap__eq-level"
+                      x={box.x + box.w * 0.82}
+                      y={box.y + box.h * 0.32}
+                      width={5}
+                      height={box.h * 0.3}
+                      rx={2.5}
+                    />
+                  </>
+                ) : eq.kind === "furnace" ? (
+                  <>
+                    <rect
+                      className="pmap__eq-body"
+                      x={box.x}
+                      y={box.y}
+                      width={box.w}
+                      height={box.h}
+                      rx={6}
+                      style={{ ["--tone" as string]: TONE_COLOR[tone] } as CSSProperties}
+                    />
+                    {/* Firebox: the flame is what tells you it is a furnace. */}
+                    <rect
+                      className="pmap__eq-firebox"
+                      x={box.x + box.w * 0.1}
+                      y={box.y + box.h * 0.54}
+                      width={box.w * 0.8}
+                      height={box.h * 0.4}
+                      rx={4}
+                    />
+                    <g className="pmap__eq-flame">
+                      {[0.28, 0.5, 0.72].map((fx, i) => (
+                        <path
+                          key={i}
+                          d={`M ${box.x + box.w * fx} ${box.y + box.h * 0.9} q ${-box.w * 0.05} ${-box.h * 0.16} 0 ${-box.h * 0.28} q ${box.w * 0.05} ${box.h * 0.12} 0 ${box.h * 0.28} z`}
+                        />
+                      ))}
+                    </g>
+                  </>
+                ) : eq.kind === "vessel" ? (
+                  <>
                     <rect
                       className="pmap__eq-vessel"
                       x={box.x}
-                      y={box.y + box.h * 0.12}
+                      y={box.y + box.h * 0.14}
                       width={box.w}
-                      height={box.h * 0.76}
-                      rx={7}
+                      height={box.h * 0.72}
+                      rx={box.w * 0.5}
                       style={{ ["--tone" as string]: TONE_COLOR[tone] } as CSSProperties}
                     />
-                    {/* A level gauge: the one number an operator reads off a tank. */}
-                    <rect
-                      className="pmap__eq-level"
-                      x={box.x + box.w - 13}
-                      y={box.y + box.h * 0.12 + (box.h * 0.76) / 3}
-                      width={5}
-                      height={(box.h * 0.76 * 2) / 3}
-                      rx={2.5}
-                    />
+                    <line className="pmap__eq-trays" x1={box.x + 8} y1={box.y + box.h * 0.5} x2={box.x + box.w - 8} y2={box.y + box.h * 0.5} />
                   </>
                 ) : (
                   <rect
