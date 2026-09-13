@@ -761,7 +761,27 @@ function SpatialLayout({
               (() => {
                 const a = centers.get(failover.from);
                 const b = centers.get(failover.to);
-                if (!a || !b || failover.from === failover.to) return null;
+                if (!a || !b) return null;
+                // Same-asset failover: the alternate transmitter sits on the
+                // SAME unit (PT-1001A -> PT-1001B), so there is no second node
+                // to draw to. The link used to return null here, which meant the
+                // most common case — a redundant instrument on the same machine —
+                // showed no rewiring at all. Draw the switch as a loop over the
+                // unit instead, so the operator sees the measurement move.
+                if (failover.from === failover.to) {
+                  const rx = UNIT_W / 2 + 26;
+                  const ry = 34;
+                  const d = `M ${a.x - rx * 0.4} ${a.y - ry} C ${a.x - rx} ${a.y - ry * 2.1}, ${a.x + rx} ${a.y - ry * 2.1}, ${a.x + rx * 0.4} ${a.y - ry}`;
+                  return (
+                    <g data-testid="failover-link" data-from={failover.from} data-to={failover.to} data-kind="same-asset">
+                      <path className="arc-failover-link__halo" d={d} />
+                      <path className="arc-failover-link" d={d} />
+                      <circle className="arc-failover-link__pulse" r={3.4}>
+                        <animateMotion dur="1.6s" repeatCount="indefinite" path={d} />
+                      </circle>
+                    </g>
+                  );
+                }
                 const dir = Math.sign(b.x - a.x) || 1;
                 const x1 = a.x + dir * (UNIT_W / 2 + 6);
                 const x2 = b.x - dir * (UNIT_W / 2 + 6);
@@ -849,6 +869,11 @@ function SpatialLayout({
                             data-pill=""
                             data-pill-state={p.tone}
                             data-pill-sensor={p.key}
+                            /* The raw quality, so a transmitter that is OUT OF
+                               SERVICE animates differently from one merely
+                               reading high — both tone critical, but only one
+                               means the measurement is gone. */
+                            data-pill-quality={runtime.qualities[p.key] ?? "good"}
                             title={`${p.label} ${p.value} ${p.unit}${p.token ? ` · ${p.token}` : ""}`}
                             aria-label={`${p.label} ${p.value} ${p.unit}${p.token ? ` ${p.token}` : ""}`}
                           >

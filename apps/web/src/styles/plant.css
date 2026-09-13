@@ -1293,3 +1293,48 @@
   .arc-step.is-active .arc-step__tick::after,
   .arc-failover-link { animation: none; }
 }
+
+/* --- sensor blocked / substituted ----------------------------------------
+   A transmitter taken out of service is not the same as one reading high: the
+   measurement is gone. It animates as a cut — a pulse that decays into a struck
+   -through pill — so the operator sees it go, then sees it stay gone.
+   `substituted` is the failover state: the reading is coming from elsewhere. */
+
+@keyframes p117-sensor-cut {
+  0%   { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.55); }
+  70%  { box-shadow: 0 0 0 9px rgba(220, 38, 38, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+@keyframes p117-sensor-substitute {
+  0%   { box-shadow: 0 0 0 0 rgba(69, 213, 255, 0.5); }
+  100% { box-shadow: 0 0 0 10px rgba(69, 213, 255, 0); }
+}
+
+.pt-pill[data-pill-quality="bad"] {
+  animation: p117-sensor-cut 1.6s ease-out 2;
+  text-decoration: line-through;
+  text-decoration-color: rgba(220, 38, 38, 0.75);
+  opacity: 0.72;
+}
+.pt-pill[data-pill-quality="stale"] {
+  animation: p117-sensor-cut 1.8s ease-out 2;
+  opacity: 0.8;
+}
+.pt-pill[data-pill-quality="substituted"] {
+  animation: p117-sensor-substitute 1.4s ease-out infinite;
+  border-style: dashed;
+}
+
+/* The unit carrying a blocked sensor gets a slow amber edge, so the affected
+   compartment is findable when the canvas is scrolled away from the pill. */
+.pt-unit:has(.pt-pill[data-pill-quality="bad"]) {
+  border-color: rgba(245, 158, 11, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-pill[data-pill-quality="bad"],
+  .pt-pill[data-pill-quality="stale"],
+  .pt-pill[data-pill-quality="substituted"] { animation: none; }
+  /* The cut must still be readable without motion. */
+  .pt-pill[data-pill-quality="bad"] { opacity: 0.6; }
+}

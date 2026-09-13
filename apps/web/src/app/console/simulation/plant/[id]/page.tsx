@@ -25,6 +25,7 @@ import {
 import { AgentCommandCenter } from "@/components/sim/AgentCommandCenter";
 import { AssessmentPanel } from "@/components/sim/AssessmentPanel";
 import { AgentResponseConsole } from "@/components/sim/AgentResponseConsole";
+import { AgentDispatchBoxes } from "@/components/sim/AgentDispatchBoxes";
 import { SensorRecoveryPanel, type RecoveryFocus } from "@/components/sim/SensorRecoveryPanel";
 import { simAdapter, asEmbedded } from "@/lib/sim/adapter";
 import { useSimulation } from "@/lib/sim/store";
@@ -32,6 +33,7 @@ import { reduceResponseJobs } from "@/lib/sim/response";
 import { useJourney } from "@/lib/journey";
 import { useRouter } from "next/navigation";
 import { consoleData } from "@/lib/data/console";
+import { api } from "@/lib/api";
 import { recoveryCircuit } from "@/lib/sim/recovery";
 import type { AgentTask, EquipmentDef, PlantDef, ScenarioDef, SensorDef, SimSnapshot } from "@/lib/sim/types";
 import "@/styles/plant.css";
@@ -113,6 +115,11 @@ export default function PlantTwinPage() {
   const [hovered, setHovered] = useState<EquipmentDef | null>(null);
   const [areaFocus, setAreaFocus] = useState<string | null>(null);
   const [runtime, setRuntime] = useState<CanvasRuntime | null>(null);
+  /**
+   * Role → model, from the gateway. The dispatch boxes name the model that is
+   * actually serving each role rather than labelling an agent generically.
+   */
+  const [modelRoles, setModelRoles] = useState<Record<string, string | null>>({});
   const [snap, setSnap] = useState<SimSnapshot | null>(null);
   const [busyScenario, setBusyScenario] = useState<string | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -155,6 +162,23 @@ export default function PlantTwinPage() {
     if (!responseJobs.length) return null;
     return responseJobs.find((j) => j.jobId === consoleJobId) ?? responseJobs[responseJobs.length - 1];
   }, [responseJobs, consoleJobId]);
+  /**
+   * The canvas runtime with the failover overlay applied.
+   *
+   * When the backend switched to an alternate transmitter, that transmitter is
+   * now the source of the measurement — but the engine's quality field still
+   * reads "good", because nothing changed about it. Marking it `substituted`
+   * is what makes the rewire visible on the diagram: the reading has moved, and
+   * the operator can see where to. Derived from the real `related_sensor_id`
+   * the backend reported, never assumed.
+   */
+  const displayRuntime = useMemo(() => {
+    if (!runtime) return runtime;
+    const sensorId = activeResponseJob?.failover?.relatedSensorId;
+    if (!sensorId || !runtime.qualities[sensorId]) return runtime;
+    return { ...runtime, qualities: { ...runtime.qualities, [sensorId]: "substituted" as const } };
+  }, [runtime, activeResponseJob]);
+
   const predictedIds = useMemo(
     () => activeResponseJob?.prediction.map((p) => p.equipmentId) ?? [],
     [activeResponseJob],
@@ -191,6 +215,25 @@ export default function PlantTwinPage() {
       timers.current.forEach(clearTimeout);
     };
   }, [plantId, visit]);
+
+  /**
+   * Role → model for the dispatch boxes, from the gateway. Read once: the
+   * mapping changes when an operator reassigns a role, not per tick.
+   */
+  useEffect(() => {
+    let alive = true;
+    api.models
+      .status()
+      .then((r: Record<string, unknown>) => {
+        if (alive) setModelRoles((r.roles as Record<string, string | null>) ?? {});
+      })
+      .catch(() => {
+        /* no role map: the boxes say "model unassigned" rather than name one */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // refresh canvas runtime at the store's 4 Hz cadence
   useEffect(() => {
@@ -446,7 +489,7 @@ export default function PlantTwinPage() {
     return <EmptyState title="Plant failed to load" detail={loadError} action={<Button onClick={() => location.reload()}>Retry</Button>} />;
   }
 
-  if (!plant || !runtime || !displayPlant) {
+  if (!plant || !runtime || !displayPlant || !displayRuntime) {
     return (
       <Panel>
         <SkeletonRows rows={8} label="Commissioning plant…" />
@@ -685,7 +728,7 @@ export default function PlantTwinPage() {
             <SchematicCanvas
               layout="spatial"
               plant={displayPlant}
-              runtime={runtime}
+              runtime={displayRuntime}
               selectedId={selected?.id ?? null}
               affected={sim.activeIncident?.affected ?? []}
               onSelect={onSelect}
@@ -705,6 +748,10 @@ export default function PlantTwinPage() {
               predictedIds={predictedIds}
               focusId={focusEquipmentId}
             >
+              {/* Three floating panels: which model is working, in what role,
+                  what it is doing and what it found. Rendered only when the
+                  pipeline has actually raised tasks. */}
+              <AgentDispatchBoxes tasks={sim.tasks} models={modelRoles} />
               <div className="pt-invhead">
                 <span className="pt-invhead__kicker">
                   {sim.activeIncident ? "Agent investigation · live" : "Anomaly detected"}
