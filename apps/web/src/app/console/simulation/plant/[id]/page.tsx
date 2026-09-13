@@ -26,6 +26,7 @@ import { AgentCommandCenter } from "@/components/sim/AgentCommandCenter";
 import { AssessmentPanel } from "@/components/sim/AssessmentPanel";
 import { AgentResponseConsole } from "@/components/sim/AgentResponseConsole";
 import { AgentDispatchBoxes } from "@/components/sim/AgentDispatchBoxes";
+import { ProcessMap, type ProcessMapSelection } from "@/components/sim/ProcessMap";
 import { SensorRecoveryPanel, type RecoveryFocus } from "@/components/sim/SensorRecoveryPanel";
 import { simAdapter, asEmbedded } from "@/lib/sim/adapter";
 import { useSimulation } from "@/lib/sim/store";
@@ -120,6 +121,13 @@ export default function PlantTwinPage() {
    * actually serving each role rather than labelling an agent generically.
    */
   const [modelRoles, setModelRoles] = useState<Record<string, string | null>>({});
+  /**
+   * Two drawings of the same plant. `pipeline` is the P&ID an operator reads for
+   * process state; `schematic` is the swept stage view. Both render the same
+   * equipment, the same sensors and the same engine state.
+   */
+  const [viewMode, setViewMode] = useState<"pipeline" | "schematic">("pipeline");
+  const [pipeSel, setPipeSel] = useState<ProcessMapSelection | null>(null);
   const [snap, setSnap] = useState<SimSnapshot | null>(null);
   const [busyScenario, setBusyScenario] = useState<string | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -713,6 +721,26 @@ export default function PlantTwinPage() {
         <section className="pt-mapwrap">
           <div className="pt-maphead">
             <span className="cs-panel__title">Live process map</span>
+            <div className="pt-viewtoggle" role="tablist" aria-label="Map view">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === "pipeline"}
+                className={viewMode === "pipeline" ? "is-active" : undefined}
+                onClick={() => setViewMode("pipeline")}
+              >
+                P&amp;ID
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === "schematic"}
+                className={viewMode === "schematic" ? "is-active" : undefined}
+                onClick={() => setViewMode("schematic")}
+              >
+                Areas
+              </button>
+            </div>
             <div className="pt-legend">
               <span><i className="is-ok" /> normal</span>
               <span><i className="is-warn" /> warning</span>
@@ -725,6 +753,40 @@ export default function PlantTwinPage() {
             </div>
           </div>
           <div className="pt-mapbody">
+            {viewMode === "pipeline" ? (
+              <>
+              <ProcessMap
+                plant={displayPlant}
+                runtime={displayRuntime}
+                readings={readings}
+                selection={pipeSel}
+                onSelect={(sel) => {
+                  setPipeSel(sel);
+                  if (sel?.kind === "equipment") {
+                    const eq = displayPlant.equipment.find((e) => e.id === sel.id);
+                    if (eq) onSelect(eq);
+                  } else if (sel === null) {
+                    setSelected(null);
+                  }
+                }}
+                highlight={sim.activeIncident ? [sim.activeIncident.origin_equipment, ...(sim.activeIncident.affected ?? [])].filter(Boolean) as string[] : []}
+                isolateArea={areaFocus}
+                focusId={focusEquipmentId}
+                failover={
+                  activeResponseJob?.failover
+                    ? {
+                        from: activeResponseJob.failover.fromEquipmentId,
+                        to: activeResponseJob.failover.relatedEquipmentId,
+                      }
+                    : null
+                }
+              />
+              {/* The three agent panels float over whichever drawing is shown,
+                  so the P&ID is not a lesser view. */}
+              <AgentDispatchBoxes tasks={sim.tasks} models={modelRoles} />
+              </>
+            ) : (
+            <>
             <SchematicCanvas
               layout="spatial"
               plant={displayPlant}
@@ -822,6 +884,8 @@ export default function PlantTwinPage() {
                   {hovered.sensors.length} sensors · {hovered.failure_modes.length} failure modes
                 </div>
               </div>
+            )}
+            </>
             )}
           </div>
         </section>
