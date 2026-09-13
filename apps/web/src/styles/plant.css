@@ -2142,10 +2142,12 @@
 .pt-mapwrap {
   display: flex;
   flex-direction: column;
-  /* The refinery plan is about 2.7:1. A taller container would letterbox it and
-     the dead space would read as an unfinished panel, so the height tracks the
-     plant's own aspect rather than the viewport's. */
-  height: clamp(440px, calc((100vw - 320px) / 2.55), 660px);
+  /* The plant gets the viewport. It used to be pinned to its own aspect ratio
+     to avoid letterboxing, which forced the whole refinery into a short
+     horizontal strip. A digital twin is navigated by panning, so the drawing
+     area is now as tall as the page allows and the camera decides what is in
+     frame. */
+  height: clamp(620px, calc(100vh - 250px), 1400px);
 }
 .pt-mapbody { flex: 1; min-height: 0; }
 

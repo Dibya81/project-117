@@ -265,9 +265,31 @@ export function ProcessMap({
   lineError = null,
 }: ProcessMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const [view, setView] = useState({ x: 0, y: 0, k: 1 });
+  /**
+   * The camera opens on the plant at a readable scale rather than fitted to the
+   * frame. Fitting a 2.7:1 plot into any window makes every vessel small; an
+   * operator opens a plot plan at a working zoom and pans. "Fit plant" is one
+   * click away for the whole picture.
+   */
+  const [view, setView] = useState({ x: 0, y: 0, k: 1.75 });
   /** Print every instrument readout, rather than only the ones that need eyes. */
   const [showAllInstruments, setShowAllInstruments] = useState(false);
+
+  /**
+   * Level of detail, driven by the camera.
+   *
+   * 224 instrument bubbles with 224 readouts is a wall of microscopic text at
+   * overview zoom, and it buries the plant the drawing exists to show. At the
+   * default working zoom only the abnormal points and the selected asset carry
+   * a readout; bubbles appear as the camera closes in; everything appears when
+   * the operator asks for it.
+   */
+  // At the default working zoom (1.75) an operator sees the plant and the
+  // points that need attention; the full readout set belongs to close
+  // inspection, not to the overview. Printing all 224 here produced a wall of
+  // overlapping numbers that buried the equipment.
+  const showBubbles = view.k >= 1.15 || showAllInstruments;
+  const showReadouts = view.k >= 3.2 || showAllInstruments;
   const drag = useRef<{ x: number; y: number; vx: number; vy: number } | null>(null);
 
   const areas = useMemo(
@@ -392,7 +414,15 @@ export function ProcessMap({
       <div className="pmap__tools" role="toolbar" aria-label="Process map controls">
         <button type="button" onClick={() => zoom(1.25)} title="Zoom in" aria-label="Zoom in">＋</button>
         <button type="button" onClick={() => zoom(0.8)} title="Zoom out" aria-label="Zoom out">−</button>
-        <button type="button" onClick={() => fit()} title="Fit plant" aria-label="Fit plant">⤢</button>
+        <button type="button" onClick={() => fit()} title="Fit the whole plant" aria-label="Fit plant">⤢</button>
+        <button
+          type="button"
+          onClick={() => setView({ x: 0, y: 0, k: 1.75 })}
+          title="Reset to the working view"
+          aria-label="Reset view"
+        >
+          ↺
+        </button>
         <button
           type="button"
           onClick={() => setShowAllInstruments((v) => !v)}
@@ -745,7 +775,8 @@ export function ProcessMap({
                 const unitFlagged = highlight.includes(eq.id) || (runtime?.states?.[eq.id] ?? eq.state) !== "normal";
                 const abnormal = tone !== "normal" || q !== "good";
                 const showReadout =
-                  abnormal || unitSelected || unitFlagged || showAllInstruments;
+                  abnormal || unitSelected || unitFlagged || showReadouts;
+                if (!showBubbles && !showReadout) return null;
                 const spacing = 46;
                 const x = eq.x + (i - (eq.sensors.length - 1) / 2) * spacing;
                 const y = box.y + box.h + LABEL_H + 22;
