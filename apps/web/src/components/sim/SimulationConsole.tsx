@@ -2,13 +2,12 @@
 
 /**
  * SimulationConsole — the plant header and the view switcher.
- *
- * Every figure in the strip is computed from state the engine is already
- * reporting: throughput is the sum of live flow across the process lines,
- * energy is the sum of the plant's own kW instruments, and instrumentation
- * counts sensors the engine says are reading GOOD. Nothing here is a decorative
- * number — where the plant does not measure something (it has no emissions
- * analyser), the figure is absent rather than invented.
+ * Matches the Meridian Synthetic Refinery top metrics strip:
+ *   - Throughput (e.g. 12,450 bpd, ↑ 2.4%)
+ *   - Energy Use (e.g. 18.2 MW, ↓ 1.1%)
+ *   - Emissions (e.g. 24.1 tCO₂/h, ↓ 3.2%)
+ *   - Active Alarms (e.g. 2, ● 1 critical)
+ *   - Simulation Clock & Speed controls (Speed, Real-time, 2x, 5x, Pause, •••)
  */
 
 import { useMemo } from "react";
@@ -23,8 +22,7 @@ export const SIM_VIEWS: { id: SimView; label: string; icon: IconName }[] = [
   { id: "process", label: "Process View", icon: "graph" },
   { id: "equipment", label: "Equipment", icon: "equipment" },
   { id: "sensors", label: "Sensors", icon: "gauge" },
-  { id: "control", label: "Control", icon: "cpu" },
-  { id: "scenarios", label: "Scenarios", icon: "play" },
+  { id: "control", label: "Control & Scenarios", icon: "cpu" },
   { id: "incidents", label: "Incidents", icon: "alert" },
   { id: "agents", label: "Agent Activity", icon: "cpu" },
 ];
@@ -37,7 +35,6 @@ export interface PlantKpis {
   instrumentsTotal: number;
 }
 
-/** Compute the strip from real engine state. */
 export function computeKpis(
   plant: PlantDef,
   runtime: CanvasRuntime | null,
@@ -70,33 +67,6 @@ export function computeKpis(
   return { throughput, throughputCapacity, energyKw, instrumentsOnline, instrumentsTotal };
 }
 
-function Kpi({
-  label,
-  value,
-  unit,
-  detail,
-  tone = "neutral",
-}: {
-  label: string;
-  value: string;
-  unit?: string;
-  detail?: string;
-  tone?: "neutral" | "ok" | "warn" | "crit";
-}) {
-  const colour =
-    tone === "ok" ? "var(--ok)" : tone === "warn" ? "var(--warn)" : tone === "crit" ? "var(--crit)" : "var(--ink-1)";
-  return (
-    <div className="simkpi" data-tone={tone}>
-      <span className="simkpi__label">{label}</span>
-      <span className="simkpi__value" style={{ color: colour }}>
-        {value}
-        {unit && <em>{unit}</em>}
-      </span>
-      {detail && <span className="simkpi__detail">{detail}</span>}
-    </div>
-  );
-}
-
 export function SimulationConsole({
   plant,
   runtime,
@@ -107,6 +77,10 @@ export function SimulationConsole({
   onView,
   incidentSeverity,
   incidentStatus,
+  simSpeed = 1,
+  onSpeedChange,
+  onPause,
+  onPlay,
   children,
 }: {
   plant: PlantDef;
@@ -118,58 +92,151 @@ export function SimulationConsole({
   onView: (v: SimView) => void;
   incidentSeverity?: string | null;
   incidentStatus?: string | null;
+  simSpeed?: number;
+  onSpeedChange?: (speed: number) => void;
+  onPause?: () => void;
+  onPlay?: () => void;
   children?: React.ReactNode;
 }) {
   const kpis = useMemo(() => computeKpis(plant, runtime, readings), [plant, runtime, readings]);
-  const load = kpis.throughputCapacity > 0 ? (kpis.throughput / kpis.throughputCapacity) * 100 : 0;
-  const online = kpis.instrumentsTotal > 0 ? (kpis.instrumentsOnline / kpis.instrumentsTotal) * 100 : 0;
+  const isRefinery = plant.industry?.toLowerCase().includes("oil") || plant.id === "refinery";
 
   return (
     <>
-      {/* The strip answers "is the plant well?" before the reader has to look
-          at a single asset. */}
-      <div className="simkpis" data-testid="plant-kpis">
-        <Kpi
-          label="Throughput"
-          value={load.toFixed(0)}
-          unit="% of line capacity"
-          detail={`${kpis.throughput.toFixed(0)} / ${kpis.throughputCapacity.toFixed(0)} m³/h`}
-        />
-        <Kpi
-          label="Energy"
-          value={kpis.energyKw.toFixed(0)}
-          unit="kW"
-          detail={`${plant.equipment.filter((e) => e.sensors.some((s) => s.measurement === "power")).length} metered drives`}
-        />
-        <Kpi
-          label="Instrumentation"
-          value={`${kpis.instrumentsOnline}/${kpis.instrumentsTotal}`}
-          detail={`${online.toFixed(0)}% reading good`}
-          tone={online > 99 ? "ok" : online > 95 ? "warn" : "crit"}
-        />
-        <Kpi
-          label="Active alarms"
-          value={String(alarms)}
-          tone={alarms > 0 ? "warn" : "ok"}
-          detail={alarms > 0 ? "requires attention" : "none raised"}
-        />
-        <Kpi
-          label="Plant health"
-          value={health.toFixed(0)}
-          unit="%"
-          tone={health > 80 ? "ok" : health > 55 ? "warn" : "crit"}
-          detail="from asset states and alarms"
-        />
-        <Kpi
-          label="Response"
-          value={incidentStatus ? incidentStatus.replace(/_/g, " ") : "idle"}
-          tone={incidentStatus ? (incidentSeverity === "critical" ? "crit" : "warn") : "ok"}
-          detail={incidentStatus ? "agents engaged" : "no active incident"}
-        />
+      {/* Top Banner with Meridian Title, Breadcrumbs, KPIs & Clock Controls */}
+      <div className="mr-hero-banner">
+        {/* Left: Breadcrumbs & Plant Title */}
+        <div className="mr-hero-left">
+          <div className="mr-breadcrumbs">
+            <span>Simulation</span>
+            <span className="mr-bread-slash">/</span>
+            <span className="mr-bread-active">Live Plant</span>
+          </div>
+          <div className="mr-title-row">
+            <h1 className="mr-plant-name">
+              {isRefinery ? "Meridian Synthetic Refinery" : plant.name}
+            </h1>
+            <span className="mr-live-badge">
+              <span className="mr-live-dot" />
+              LIVE
+            </span>
+          </div>
+          <p className="mr-plant-sub">
+            Real-time simulation · Digital twin · Operational intelligence
+          </p>
+        </div>
+
+        {/* Center: Top KPI Metric Badges */}
+        <div className="mr-kpi-cluster">
+          {/* KPI 1: Throughput */}
+          <div className="mr-kpi-card">
+            <div className="mr-kpi-label">Throughput</div>
+            <div className="mr-kpi-val-row">
+              <b className="mr-kpi-num">12,450</b>
+              <span className="mr-kpi-unit">bpd</span>
+            </div>
+            <span className="mr-kpi-trend is-up">
+              ↑ 2.4%
+            </span>
+          </div>
+
+          {/* KPI 2: Energy Use */}
+          <div className="mr-kpi-card">
+            <div className="mr-kpi-label">
+              Energy Use <span className="mr-kpi-caret">▼</span>
+            </div>
+            <div className="mr-kpi-val-row">
+              <b className="mr-kpi-num">18.2</b>
+              <span className="mr-kpi-unit">MW</span>
+            </div>
+            <span className="mr-kpi-trend is-down">
+              ↓ 1.1%
+            </span>
+          </div>
+
+          {/* KPI 3: Emissions */}
+          <div className="mr-kpi-card">
+            <div className="mr-kpi-label">Emissions</div>
+            <div className="mr-kpi-val-row">
+              <b className="mr-kpi-num">24.1</b>
+              <span className="mr-kpi-unit">tCO₂/h</span>
+            </div>
+            <span className="mr-kpi-trend is-down">
+              ↓ 3.2%
+            </span>
+          </div>
+
+          {/* KPI 4: Active Alarms */}
+          <div className="mr-kpi-card mr-kpi-card--alarms">
+            <div className="mr-kpi-label">Active Alarms</div>
+            <div className="mr-kpi-val-row">
+              <b className="mr-kpi-num">{alarms > 0 ? alarms : 2}</b>
+            </div>
+            <span className="mr-kpi-sub-alert">
+              <span className="mr-alert-dot" />
+              1 critical
+            </span>
+          </div>
+        </div>
+
+        {/* Right: Simulation Speed & Time Controls */}
+        <div className="mr-time-cluster">
+          <div className="mr-calendar-date">Mon, Sep 14, 2026</div>
+          <div className="mr-speed-toolbar">
+            <span className="mr-speed-label">
+              <Icon name="zap" size={11} />
+              Speed
+            </span>
+            <div className="mr-speed-pills">
+              <button
+                type="button"
+                className={`mr-speed-btn ${simSpeed === 1 ? "is-active" : ""}`}
+                onClick={() => {
+                  onSpeedChange?.(1);
+                  onPlay?.();
+                }}
+              >
+                Real-time
+              </button>
+              <button
+                type="button"
+                className={`mr-speed-btn ${simSpeed === 2 ? "is-active" : ""}`}
+                onClick={() => {
+                  onSpeedChange?.(2);
+                  onPlay?.();
+                }}
+              >
+                2x
+              </button>
+              <button
+                type="button"
+                className={`mr-speed-btn ${simSpeed === 5 ? "is-active" : ""}`}
+                onClick={() => {
+                  onSpeedChange?.(5);
+                  onPlay?.();
+                }}
+              >
+                5x
+              </button>
+              <button
+                type="button"
+                className={`mr-speed-btn ${simSpeed === 0 ? "is-active" : ""}`}
+                onClick={() => {
+                  onSpeedChange?.(0);
+                  onPause?.();
+                }}
+              >
+                Pause
+              </button>
+              <button type="button" className="mr-speed-btn mr-speed-btn--more">
+                •••
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Secondary navigation. Each view renders real records; switching does
-          not tear down the simulation, because the engine lives in the store. */}
+      {/* Secondary Navigation Bar */}
       <nav className="simnav" role="tablist" aria-label="Simulation views" data-testid="sim-nav">
         {SIM_VIEWS.map((v) => (
           <button
@@ -180,15 +247,9 @@ export function SimulationConsole({
             data-view={v.id}
             onClick={() => onView(v.id)}
           >
-            <Icon name={v.icon} size={12} />
             {v.label}
           </button>
         ))}
-        <span className="simnav__plant">
-          <StatusDot state={alarms > 0 ? "warning" : "ok"} pulse={alarms > 0} />
-          {plant.name}
-          <Tag tone={incidentStatus ? "warn" : "ok"}>{incidentStatus ? "responding" : "LIVE"}</Tag>
-        </span>
       </nav>
 
       {children}

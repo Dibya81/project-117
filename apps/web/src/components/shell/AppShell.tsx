@@ -109,7 +109,20 @@ function MobileTabs() {
 
 export function AppShell({ children }: { children: ReactNode }) {
   useBrightPageBackground();
-  const [expanded, setExpanded] = useState(true);
+  /**
+   * Navigation is a rail by default, not a permanent panel.
+   *
+   * A 232px column of text is what made this read as an admin dashboard and it
+   * took a sixth of the width from the plant. The rail shows icons; it expands
+   * when the pointer enters it and collapses when it leaves. `pinned` keeps it
+   * open for anyone who wants that, and the choice survives the session.
+   */
+  const [pinned, setPinned] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem("p117.rail.pinned") === "1";
+  });
+  const [hovered, setHovered] = useState(false);
+  const expanded = pinned || hovered;
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [notifsOpen, setNotifsOpen] = useState(false);
   const [rosterOpen, setRosterOpen] = useState(false);
@@ -146,14 +159,25 @@ export function AppShell({ children }: { children: ReactNode }) {
       <JourneyProvider>
         <Aurora calm />
         <div className={`cs cs-shell${expanded ? " cs-shell--expanded" : ""}`}>
-          <aside className="cs-rail">
+          <aside
+            className="cs-rail"
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+          >
             <button
               className="cs-rail__logo"
               style={{ background: "none", border: 0, cursor: "pointer", color: "var(--ink-1)" }}
-              onClick={() => setExpanded((v) => !v)}
-              aria-label={expanded ? "Collapse navigation" : "Expand navigation"}
+              onClick={() => setPinned((v) => {
+                const next = !v;
+                window.sessionStorage.setItem("p117.rail.pinned", next ? "1" : "0");
+                return next;
+              })}
+              title={pinned ? "Unpin navigation" : "Pin navigation open"}
+              aria-pressed={pinned}
+              aria-label={pinned ? "Unpin navigation" : "Pin navigation open"}
             >
               PROJECT <b>117</b>
+              <span className="cs-rail__pin" aria-hidden="true">{pinned ? "◀" : "▶"}</span>
             </button>
             <Rail expanded={expanded} approvalsPending={approvalsPending} runningTasks={runningTasks} />
             {/* Sovereignty posture — real readings from /health, never a

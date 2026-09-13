@@ -48,16 +48,25 @@ function pipes(ids: string[]): PlantDef["connections"] {
 }
 
 const REFINERY_EQUIPMENT = [
-  node("tank", "TK-100", "Crude Receipt", 130, 510, 2),
-  node("pump", "P-110", "Charge Pumps", 360, 510, 1),
-  node("vessel", "DS-120", "Desalter", 590, 510, 1),
-  node("furnace", "F-130", "Crude Furnace", 820, 360, 1),
-  node("column", "COL-140", "Crude Distillation", 1060, 360, 1),
-  node("column", "COL-150", "Vacuum Distillation", 1290, 360, 1),
-  node("vessel", "R-160", "Hydrotreating Reactor", 820, 660, 1),
-  node("exchanger", "E-170", "Reformer Feed Exchanger", 1060, 660, 2),
-  node("valve", "V-180", "Blend Header Control", 1290, 660, 2),
-  node("tank", "TK-190", "Product Storage", 1520, 510, 2),
+  node("tank", "T-101", "Crude Storage Tank", 130, 240, 2),
+  node("pump", "P-101", "Crude Charge Pump A/B", 130, 480, 1),
+  node("vessel", "D-101", "Desalter Unit", 360, 240, 1),
+  node("furnace", "F-101", "Crude Furnace", 360, 480, 1),
+  node("column", "C-101", "Atmospheric Distillation", 590, 200, 1),
+  node("column", "C-102", "Vacuum Distillation", 590, 480, 1),
+  node("column", "C-201", "FCC Unit", 820, 200, 1),
+  node("vessel", "H-201", "Hydrocracker Reactor", 820, 480, 1),
+  node("vessel", "A-301", "Amine Treating Unit", 1050, 160, 1),
+  node("safety", "FLARE-01", "Flare Stack & ESD", 1050, 320, 1),
+  node("vessel", "S-301", "SRU Sulfur Recovery", 1050, 480, 1),
+  node("vessel", "H-301", "Hydrotreater", 1050, 640, 1),
+  node("utility", "CT-401", "Cooling Tower", 1280, 160, 2),
+  node("furnace", "B-401", "Boiler Package", 1280, 320, 2),
+  node("motor", "PG-401", "Power Generator", 1280, 480, 2),
+  node("tank", "T-501", "LPG Storage Tank", 1510, 160, 2),
+  node("tank", "T-502", "Gasoline Storage Tank", 1510, 320, 2),
+  node("tank", "T-503", "Diesel Storage Tank", 1510, 480, 2),
+  node("tank", "T-504", "Jet Fuel Storage Tank", 1510, 640, 2),
 ];
 
 const STEEL_EQUIPMENT = [

@@ -2485,3 +2485,32 @@
 @media (prefers-reduced-motion: reduce) {
   .adb-box { animation: none !important; }
 }
+
+
+/* --- navigation rail: proximity expand, pin --------------------------------
+   The rail is a 64px icon strip by default; it expands to 232px when the
+   pointer enters it and collapses when it leaves. A 232px column of text
+   permanently on screen is what made the console read as an admin dashboard,
+   and it took a sixth of the width from the plant. Pinning keeps it open. */
+.cs-rail__logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 12px 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-align: left;
+}
+.cs-rail__pin {
+  margin-left: auto;
+  font-size: 8px;
+  color: var(--ink-3);
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+.cs-rail:hover .cs-rail__pin,
+.cs-rail__logo[aria-pressed="true"] .cs-rail__pin { opacity: 1; }
+.cs-shell:not(.cs-shell--expanded) .cs-rail__logo { font-size: 0; padding-left: 0; justify-content: center; }
+.cs-shell:not(.cs-shell--expanded) .cs-rail__logo b { font-size: 11px; }

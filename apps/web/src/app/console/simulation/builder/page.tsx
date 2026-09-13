@@ -45,27 +45,49 @@ interface SavedItem {
 }
 
 
-const PALETTE: { group: string; icon: IconName; items: { kind: EquipmentKind; label: string }[] }[] = [
+interface PaletteItem {
+  id: string;
+  kind: EquipmentKind;
+  label: string;
+}
+
+const PALETTE: { group: string; icon: IconName; items: PaletteItem[] }[] = [
   {
-    group: "Process", icon: "equipment",
+    group: "Crude & Distillation",
+    icon: "equipment",
     items: [
-      { kind: "tank", label: "Storage Tank" }, { kind: "vessel", label: "Vessel" },
-      { kind: "column", label: "Column" }, { kind: "exchanger", label: "Heat Exchanger" },
-      { kind: "furnace", label: "Furnace" },
+      { id: "crude_tank", kind: "tank", label: "Crude Storage Tank" },
+      { id: "desalter", kind: "vessel", label: "Desalter Unit" },
+      { id: "furnace", kind: "furnace", label: "Crude Furnace" },
+      { id: "atm_col", kind: "column", label: "Atmospheric Distillation" },
+      { id: "vac_col", kind: "column", label: "Vacuum Distillation" },
+      { id: "exchanger", kind: "exchanger", label: "Heat Exchanger" },
     ],
   },
   {
-    group: "Flow", icon: "pulse",
+    group: "Conversion & Treating",
+    icon: "pulse",
     items: [
-      { kind: "pump", label: "Centrifugal Pump" }, { kind: "valve", label: "Valve" },
-      { kind: "compressor", label: "Compressor" }, { kind: "motor", label: "Motor" },
-      { kind: "conveyor", label: "Conveyor" },
+      { id: "fcc", kind: "column", label: "FCC Unit" },
+      { id: "hydrocracker", kind: "vessel", label: "Hydrocracker Reactor" },
+      { id: "amine", kind: "vessel", label: "Amine Treating Unit" },
+      { id: "sru", kind: "vessel", label: "SRU Sulfur Recovery" },
+      { id: "hydrotreater", kind: "vessel", label: "Hydrotreater" },
+      { id: "compressor", kind: "compressor", label: "Gas Compressor" },
     ],
   },
   {
-    group: "Safety & utility", icon: "shield",
+    group: "Flow, Utilities & Safety",
+    icon: "shield",
     items: [
-      { kind: "safety", label: "ESD / Detector Station" }, { kind: "utility", label: "Utility Package" },
+      { id: "pump", kind: "pump", label: "Crude Charge Pump A/B" },
+      { id: "valve", kind: "valve", label: "Process Control Valve" },
+      { id: "cooling_tower", kind: "utility", label: "Cooling Tower" },
+      { id: "boiler", kind: "furnace", label: "Industrial Boiler" },
+      { id: "power_gen", kind: "motor", label: "Power Generator" },
+      { id: "flare", kind: "safety", label: "Flare Stack & ESD" },
+      { id: "lpg_tank", kind: "tank", label: "LPG Spherical Tank" },
+      { id: "product_tank", kind: "tank", label: "Refined Product Tank" },
     ],
   },
 ];
@@ -73,7 +95,7 @@ const PALETTE: { group: string; icon: IconName; items: { kind: EquipmentKind; la
 export default function BuilderPage() {
   const [equipment, setEquipment] = useState<EquipmentDef[]>([]);
   const [connections, setConnections] = useState<PlantDef["connections"]>([]);
-  const [armed, setArmed] = useState<EquipmentKind | null>(null);
+  const [armed, setArmed] = useState<PaletteItem | null>(null);
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const [selected, setSelected] = useState<EquipmentDef | null>(null);
   const [running, setRunning] = useState(false);
@@ -255,8 +277,7 @@ export default function BuilderPage() {
       const rect = dropRef.current.getBoundingClientRect();
       const x = Math.round(((e.clientX - rect.left) / rect.width) * 1800) + 60;
       const y = Math.round(((e.clientY - rect.top) / rect.height) * 1000) + 60;
-      const label = PALETTE.flatMap((g) => g.items).find((i) => i.kind === armed)?.label ?? armed;
-      setEquipment((cur) => [...cur, makeEquipment(armed, label, x, y, seq)]);
+      setEquipment((cur) => [...cur, makeEquipment(armed.kind, armed.label, x, y, seq)]);
       setSeq((s) => s + 1);
       setArmed(null);
     },
@@ -627,14 +648,16 @@ export default function BuilderPage() {
                 <h4>{g.group}</h4>
                 {g.items.map((item) => (
                   <button
-                    key={item.kind}
-                    className={`sm-palette-item${armed === item.kind ? " is-armed" : ""}`}
-                    onClick={() => setArmed(armed === item.kind ? null : item.kind)}
+                    key={item.id}
+                    className={`sm-palette-item${armed?.id === item.id ? " is-armed" : ""}`}
+                    onClick={() => setArmed(armed?.id === item.id ? null : item)}
                     disabled={running}
-                    title={armed === item.kind ? "Click the canvas to place" : `Place a ${item.label}`}
+                    title={armed?.id === item.id ? "Click the canvas to place" : `Place a ${item.label}`}
                   >
                     <SimSymbol type={symbolForEquipment(item.kind, item.label)} size={22} />
-                    {item.label}
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {item.label}
+                    </span>
                     <span className="cs-mono cs-dim" style={{ marginLeft: "auto", fontSize: 8.5 }}>
                       {defaultSensors(item.kind, "x", "0").length}
                     </span>

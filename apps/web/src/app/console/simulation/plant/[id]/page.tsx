@@ -27,6 +27,7 @@ import { AssessmentPanel } from "@/components/sim/AssessmentPanel";
 import { AgentResponseConsole } from "@/components/sim/AgentResponseConsole";
 import { AgentDispatchBoxes } from "@/components/sim/AgentDispatchBoxes";
 import { ProcessMap, type ProcessMapSelection } from "@/components/sim/ProcessMap";
+import { MeridianRefineryView } from "@/components/sim/MeridianRefineryView";
 import { SimulationConsole, buildSensorRows, type SimView } from "@/components/sim/SimulationConsole";
 import { PlantLowerDeck } from "@/components/sim/PlantLowerDeck";
 import {
@@ -132,11 +133,13 @@ export default function PlantTwinPage() {
    */
   const [modelRoles, setModelRoles] = useState<Record<string, string | null>>({});
   /**
-   * Two drawings of the same plant. `pipeline` is the P&ID an operator reads for
-   * process state; `schematic` is the swept stage view. Both render the same
-   * equipment, the same sensors and the same engine state.
+   * View mode of the plant.
+   * `overview` is the Meridian flagship visual digital twin;
+   * `3d` is the 3D isometric cutaway;
+   * `pipeline` is the vector P&ID;
+   * `schematic` is the swept stage view.
    */
-  const [viewMode, setViewMode] = useState<"pipeline" | "schematic">("pipeline");
+  const [viewMode, setViewMode] = useState<"overview" | "3d" | "pipeline" | "schematic">("overview");
   const [pipeSel, setPipeSel] = useState<ProcessMapSelection | null>(null);
   const [activeView, setActiveView] = useState<SimView>("process");
   /** The line an action is currently in flight for, and any error it returned. */
@@ -770,6 +773,28 @@ export default function PlantTwinPage() {
           <div className="pt-maphead">
             <span className="cs-panel__title">Live process map</span>
             <div className="pt-viewtoggle" role="tablist" aria-label="Map view">
+              {plantId === "refinery" && (
+                <>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={viewMode === "overview"}
+                    className={viewMode === "overview" ? "is-active" : undefined}
+                    onClick={() => setViewMode("overview")}
+                  >
+                    Overview
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={viewMode === "3d"}
+                    className={viewMode === "3d" ? "is-active" : undefined}
+                    onClick={() => setViewMode("3d")}
+                  >
+                    3D View
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 role="tab"
@@ -829,7 +854,38 @@ export default function PlantTwinPage() {
             </div>
           </div>
           <div className="pt-mapbody">
-            {viewMode === "pipeline" ? (
+            {viewMode === "overview" || viewMode === "3d" ? (
+              <>
+              <MeridianRefineryView
+                plant={displayPlant}
+                runtime={displayRuntime}
+                readings={readings}
+                selected={selected}
+                onSelectEquipment={onSelect}
+                viewMode={viewMode === "3d" ? "3d" : "overview"}
+                onViewModeChange={(m) => {
+                  if (m === "pid") setViewMode("pipeline");
+                  else setViewMode(m as "overview" | "3d");
+                }}
+                failover={
+                  activeResponseJob?.failover
+                    ? {
+                        from: activeResponseJob.failover.fromEquipmentId,
+                        to: activeResponseJob.failover.relatedEquipmentId,
+                      }
+                    : null
+                }
+                activeIncident={sim.activeIncident}
+                tasks={sim.tasks}
+                models={modelRoles}
+              />
+              {/* The three agent panels float over every drawing. They were only
+                  mounted on the P&ID branch, so disabling a transmitter in the
+                  default overview raised a real incident and the agents really
+                  ran — but nothing appeared on screen to say so. */}
+              <AgentDispatchBoxes tasks={sim.tasks} models={modelRoles} />
+              </>
+            ) : viewMode === "pipeline" ? (
               <>
               <ProcessMap
                 plant={displayPlant}
