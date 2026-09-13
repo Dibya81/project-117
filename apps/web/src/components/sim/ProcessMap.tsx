@@ -26,7 +26,7 @@
  */
 
 import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
-import { SimSymbol, symbolForEquipment } from "@/lib/sim/symbols";
+import { EquipmentShape } from "@/components/sim/EquipmentShape";
 import type { ConnectionDef, EquipmentDef, PlantDef, SensorDef } from "@/lib/sim/types";
 import type { CanvasRuntime, SpatialReading } from "@/components/sim/SchematicCanvas";
 
@@ -693,157 +693,34 @@ export function ProcessMap({
                   onSelect?.({ kind: "equipment", id: eq.id });
                 }}
               >
+                {/* The equipment itself — no frame, no card, no badge. A flag
+                    marks an incident by tinting the ground under the asset
+                    rather than boxing it in. */}
                 {flagged && (
-                  <rect
-                    className="pmap__eq-flag"
-                    x={box.x - 7}
-                    y={box.y - 7}
-                    width={box.w + 14}
-                    height={box.h + 14}
-                    rx={7}
+                  <ellipse
+                    className="pmap__eq-mark"
+                    cx={eq.x}
+                    cy={box.y + box.h * 0.95}
+                    rx={box.w * 0.54}
+                    ry={box.h * 0.14}
                   />
                 )}
-                {/* The body is shaped by kind, so a column reads as a tall
-                    tower and a tank as a squat drum before any label is read.
-                    The fill is a soft industrial tint, not white: a white card
-                    per asset is what made this look like a flowchart. */}
-                {eq.kind === "column" ? (
-                  <>
-                    {/* A distillation column: skirt, shell, dished head, trays,
-                        and the draw nozzles a real tower has. */}
-                    <rect
-                      className="pmap__eq-vessel"
-                      x={box.x + box.w * 0.16}
-                      y={box.y + box.h * 0.08}
-                      width={box.w * 0.68}
-                      height={box.h * 0.84}
-                      rx={box.w * 0.34}
-                      style={{ ["--tone" as string]: TONE_COLOR[tone] } as CSSProperties}
-                    />
-                    <rect
-                      className="pmap__eq-skirt"
-                      x={box.x + box.w * 0.3}
-                      y={box.y + box.h * 0.92}
-                      width={box.w * 0.4}
-                      height={box.h * 0.06}
-                    />
-                    <g className="pmap__eq-trays">
-                      {Array.from({ length: 9 }, (_, i) => {
-                        const y = box.y + box.h * 0.16 + (i * box.h * 0.68) / 8;
-                        return (
-                          <line key={i} x1={box.x + box.w * 0.22} y1={y} x2={box.x + box.w * 0.78} y2={y} />
-                        );
-                      })}
-                    </g>
-                  </>
-                ) : eq.kind === "tank" ? (
-                  <>
-                    {/* A storage tank: cylindrical shell, domed roof, level gauge
-                        and the bund wall it stands in. */}
-                    <rect
-                      className="pmap__eq-bund"
-                      x={box.x}
-                      y={box.y + box.h * 0.72}
-                      width={box.w}
-                      height={box.h * 0.28}
-                      rx={4}
-                    />
-                    <rect
-                      className="pmap__eq-vessel"
-                      x={box.x + box.w * 0.12}
-                      y={box.y + box.h * 0.18}
-                      width={box.w * 0.76}
-                      height={box.h * 0.56}
-                      style={{ ["--tone" as string]: TONE_COLOR[tone] } as CSSProperties}
-                    />
-                    <path
-                      className="pmap__eq-roof"
-                      d={`M ${box.x + box.w * 0.12} ${box.y + box.h * 0.18} q ${box.w * 0.38} ${-box.h * 0.18} ${box.w * 0.76} 0`}
-                    />
-                    <rect
-                      className="pmap__eq-level"
-                      x={box.x + box.w * 0.82}
-                      y={box.y + box.h * 0.32}
-                      width={5}
-                      height={box.h * 0.3}
-                      rx={2.5}
-                    />
-                  </>
-                ) : eq.kind === "furnace" ? (
-                  <>
-                    <rect
-                      className="pmap__eq-body"
-                      x={box.x}
-                      y={box.y}
-                      width={box.w}
-                      height={box.h}
-                      rx={6}
-                      style={{ ["--tone" as string]: TONE_COLOR[tone] } as CSSProperties}
-                    />
-                    {/* Firebox: the flame is what tells you it is a furnace. */}
-                    <rect
-                      className="pmap__eq-firebox"
-                      x={box.x + box.w * 0.1}
-                      y={box.y + box.h * 0.54}
-                      width={box.w * 0.8}
-                      height={box.h * 0.4}
-                      rx={4}
-                    />
-                    <g className="pmap__eq-flame">
-                      {[0.28, 0.5, 0.72].map((fx, i) => (
-                        <path
-                          key={i}
-                          d={`M ${box.x + box.w * fx} ${box.y + box.h * 0.9} q ${-box.w * 0.05} ${-box.h * 0.16} 0 ${-box.h * 0.28} q ${box.w * 0.05} ${box.h * 0.12} 0 ${box.h * 0.28} z`}
-                        />
-                      ))}
-                    </g>
-                  </>
-                ) : eq.kind === "vessel" ? (
-                  <>
-                    <rect
-                      className="pmap__eq-vessel"
-                      x={box.x}
-                      y={box.y + box.h * 0.14}
-                      width={box.w}
-                      height={box.h * 0.72}
-                      rx={box.w * 0.5}
-                      style={{ ["--tone" as string]: TONE_COLOR[tone] } as CSSProperties}
-                    />
-                    <line className="pmap__eq-trays" x1={box.x + 8} y1={box.y + box.h * 0.5} x2={box.x + box.w - 8} y2={box.y + box.h * 0.5} />
-                  </>
-                ) : (
-                  <rect
-                    className="pmap__eq-body"
-                    x={box.x}
-                    y={box.y}
-                    width={box.w}
-                    height={box.h}
-                    rx={5}
-                    style={{ ["--tone" as string]: TONE_COLOR[tone] } as CSSProperties}
+                {selected && (
+                  <ellipse
+                    className="pmap__eq-mark is-selected"
+                    cx={eq.x}
+                    cy={box.y + box.h * 0.95}
+                    rx={box.w * 0.54}
+                    ry={box.h * 0.14}
                   />
                 )}
-                <g
-                  transform={`translate(${eq.x - Math.min(box.w, box.h) * 0.42} ${eq.y - Math.min(box.w, box.h) * 0.42})`}
-                  className="pmap__eq-glyph"
-                  style={{ color: tone === "normal" ? "#243447" : TONE_COLOR[tone] }}
-                >
-                  <SimSymbol
-                    type={symbolForEquipment(eq.kind, eq.name)}
-                    state={state}
-                    size={Math.min(box.w, box.h) * 0.84}
-                    label={`${eq.tag} — ${eq.name}`}
-                  />
-                </g>
-                <text className="pmap__eq-tag" x={eq.x} y={box.y + box.h + 13}>
+                <EquipmentShape kind={eq.kind} box={box} />
+                <text className="pmap__eq-tag" x={eq.x} y={box.y + box.h + 14}>
                   {eq.tag}
                 </text>
-                {/* Names are printed only where they earn the space. At plant
-                    zoom, 58 of them collided into an unreadable ribbon; a real
-                    HMI leads with the tag and reveals the description on
-                    selection, which is what a tag is for. */}
                 {(selected || flagged || showAllInstruments) && (
-                  <text className="pmap__eq-name" x={eq.x} y={box.y + box.h + 24}>
-                    {eq.name.length > 22 ? `${eq.name.slice(0, 21)}…` : eq.name}
+                  <text className="pmap__eq-name" x={eq.x} y={box.y + box.h + 26}>
+                    {eq.name.length > 24 ? `${eq.name.slice(0, 23)}…` : eq.name}
                   </text>
                 )}
               </g>

@@ -2349,3 +2349,45 @@
    fills so a line is never lost behind a vessel. */
 .pmap__pipe-line { stroke-width: 3.4; }
 .pmap__pipe-flow { stroke-width: 3.4; stroke-dasharray: 5 16; }
+
+/* --- equipment is drawn as the machine, not as a card ---------------------
+   No frame, no glyph badge, no bounding box. The silhouettes come from
+   EquipmentShape.tsx; these rules only carry state and the ground marking. */
+.pmap__eq { cursor: pointer; }
+.pmap__eq-mark {
+  fill: rgba(220, 38, 38, 0.14);
+  stroke: rgba(220, 38, 38, 0.5);
+  stroke-width: 1.4;
+  stroke-dasharray: 5 4;
+}
+.pmap__eq-mark.is-selected {
+  fill: rgba(37, 99, 235, 0.14);
+  stroke: rgba(37, 99, 235, 0.6);
+}
+.pmap__eq-tag {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  fill: #16233a;
+  text-anchor: middle;
+  pointer-events: none;
+}
+.pmap__eq-name {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  fill: #5a6b80;
+  text-anchor: middle;
+  pointer-events: none;
+}
+/* The firebox breathes. Idle life, not a flashing screen. */
+@media (prefers-reduced-motion: no-preference) {
+  .eq-flame path { animation: eq-flame 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center bottom; }
+  .eq-flame path:nth-child(2) { animation-delay: 0.35s; }
+  .eq-flame path:nth-child(3) { animation-delay: 0.75s; }
+}
+@keyframes eq-flame {
+  0%, 100% { opacity: 0.72; transform: scaleY(0.9); }
+  50%      { opacity: 1;    transform: scaleY(1.08); }
+}
+.pmap__eq[data-state="critical"] .pmap__eq-mark,
+.pmap__eq[data-state="failed"] .pmap__eq-mark { fill: rgba(220, 38, 38, 0.2); }
