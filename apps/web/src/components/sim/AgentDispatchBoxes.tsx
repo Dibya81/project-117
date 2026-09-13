@@ -120,18 +120,10 @@ export function AgentDispatchBoxes({
     .filter((t) => t.agent !== "orchestrator")
     .slice(0, max);
 
-  if (!shown.length) {
-    return (
-      <div className="adb-layer" data-testid="agent-dispatch-boxes">
-        <div className="adb-box adb-box--empty">
-          <p className="adb-empty">
-            No agent has been dispatched. Boxes appear when the pipeline raises
-            work — they are not decoration that waits for something to say.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // A healthy plant shows nothing here. An empty panel announcing that nothing
+  // is happening is noise over the drawing an operator is trying to read, and
+  // the page already states that no anomaly is active.
+  if (!shown.length) return null;
 
   return (
     <div className="adb-layer" data-testid="agent-dispatch-boxes" data-count={shown.length}>

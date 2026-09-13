@@ -1394,13 +1394,25 @@
   stroke-width: 1;
   stroke-dasharray: 5 4;
 }
+/* Zone header band: the first thing read on a process drawing. */
+.pmap__area-band {
+  fill: #e8edf3;
+  stroke: rgba(148, 163, 184, 0.45);
+  stroke-width: 1;
+}
 .pmap__area-name {
   font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  fill: #64748b;
-  font-weight: 600;
+  fill: #334155;
+  font-weight: 700;
+}
+.pmap__area-count {
+  font-family: var(--mono);
+  font-size: 9px;
+  fill: #7c8899;
+  text-anchor: end;
 }
 
 /* --- process lines --- */

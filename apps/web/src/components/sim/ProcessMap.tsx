@@ -464,8 +464,18 @@ export function ProcessMap({
                 height={a.h}
                 rx={6}
               />
-              <text className="pmap__area-name" x={a.x + 10} y={a.y + 17}>
+              {/* Zone header band. A process drawing is read by zone, so each
+                  compartment is titled with a band rather than a caption, and
+                  the band carries the unit count so density is legible. */}
+              <path
+                className="pmap__area-band"
+                d={`M ${a.x} ${a.y + 6} a 6 6 0 0 1 6 -6 h ${a.w - 12} a 6 6 0 0 1 6 6 v 20 h ${-a.w} z`}
+              />
+              <text className="pmap__area-name" x={a.x + 10} y={a.y + 14.5}>
                 {a.name}
+              </text>
+              <text className="pmap__area-count" x={a.x + a.w - 10} y={a.y + 14.5}>
+                {plant.equipment.filter((e) => e.area_id === a.id).length}
               </text>
             </g>
           ))}
