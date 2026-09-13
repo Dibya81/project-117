@@ -220,6 +220,11 @@ export interface SimSnapshot {
   t: number;
   equipment: Record<string, { state: AssetState; capacity: number; faults: string[] }>;
   sensors: Record<string, { value: number; quality: TelemetryQuality; failed: boolean }>;
+  /**
+   * Live pipe state. The engine computes each line's flow every tick, so a
+   * process diagram that reads only the definition animates at zero forever.
+   */
+  connections?: Record<string, { flow: number; enabled: boolean; leaking: boolean; status: string }>;
   alarms: Alarm[];
   incidents: Incident[];
 }

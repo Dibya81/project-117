@@ -947,7 +947,9 @@ export function runtimeFromEngine(
   eng: {
     snapshot: () => {
       equipment: Record<string, { state: string; capacity: number }>;
-      sensors: Record<string, { value: number; quality: string; failed: boolean }>;
+        sensors: Record<string, { value: number; quality: string; failed: boolean }>;
+      /** Live pipe state, when the transport reports it. */
+      connections?: Record<string, { flow: number; enabled: boolean; leaking: boolean }>;
     };
     plant: PlantDef;
   },
@@ -961,7 +963,13 @@ export function runtimeFromEngine(
     base.qualities[id] = s.quality as CanvasRuntime["qualities"][string];
   }
   for (const c of plant.connections) {
-    base.pipes[c.id] = { leaking: c.leaking, enabled: c.enabled, flow: c.flow };
+    // The engine's live line state wins over the definition; the definition is
+    // only the starting position. Without this the diagram animated at zero
+    // flow forever, because the definition never carries a running rate.
+    const live = snap.connections?.[c.id];
+    base.pipes[c.id] = live
+      ? { leaking: live.leaking, enabled: live.enabled, flow: live.flow }
+      : { leaking: c.leaking, enabled: c.enabled, flow: c.flow };
   }
   return base;
 }

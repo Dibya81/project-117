@@ -1720,3 +1720,132 @@
 @media (prefers-reduced-motion: reduce) {
   .pmap__failover { stroke-dasharray: none; }
 }
+
+/* --- plant KPI strip ------------------------------------------------------
+   Answers "is the plant well?" before the reader inspects an asset. Figures
+   are computed from engine state (see SimulationConsole.computeKpis), and a
+   quantity the plant does not measure is absent rather than invented. */
+.simkpis {
+  /* The map body is absolutely positioned inside its section and would
+     otherwise sit over the chrome above it. */
+  position: relative;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 1px;
+  background: var(--line-2);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.simkpi {
+  background: #fff;
+  padding: 9px 13px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.simkpi__label {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.simkpi__value {
+  font-family: var(--mono);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.simkpi__value em {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ink-3);
+  margin-left: 5px;
+}
+.simkpi__detail {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- simulation secondary navigation ------------------------------------- */
+.simnav {
+  position: relative;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--line-2);
+  padding-bottom: 0;
+}
+.simnav button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 8px 12px 9px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.simnav button:hover { color: var(--ink-1); }
+.simnav button.is-active {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+  font-weight: 700;
+}
+.simnav__plant {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-2);
+}
+
+/* --- real data tables used by the secondary views ------------------------ */
+.simdata {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+.simdata th {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: left;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line-2);
+  position: sticky;
+  top: 0;
+  background: #fff;
+}
+.simdata td {
+  padding: 6px 10px;
+  border-bottom: 1px dashed var(--line);
+  font-family: var(--mono);
+  color: var(--ink-1);
+  white-space: nowrap;
+}
+.simdata tr:hover td { background: rgba(37, 99, 235, 0.04); }
+.simdata td.is-warning { color: var(--warn); }
+.simdata td.is-critical { color: var(--crit); }
+.simdata td.is-muted { color: var(--ink-3); }
+.simdata__scroll { max-height: 420px; overflow: auto; }

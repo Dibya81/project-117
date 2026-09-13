@@ -449,6 +449,18 @@ class SimulationEngine:
                 sid: {"value": rt.value, "quality": rt.quality.value, "failed": rt.failed}
                 for sid, rt in self.sensors.items()
             },
+            # Pipe state is part of "full state": the engine computes each
+            # line's flow every tick, and a late-joining UI cannot draw a process
+            # diagram without it. Omitting it left the drawing animated at zero.
+            "connections": {
+                c.id: {
+                    "flow": c.flow,
+                    "enabled": c.enabled,
+                    "leaking": c.leaking,
+                    "status": c.status.value,
+                }
+                for c in self.plant.connections
+            },
             "alarms": [a.model_dump() for a in self.alarms.values()],
             "incidents": [i.model_dump() for i in self.incidents.values()],
         }

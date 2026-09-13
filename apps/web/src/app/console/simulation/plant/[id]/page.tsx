@@ -27,6 +27,7 @@ import { AssessmentPanel } from "@/components/sim/AssessmentPanel";
 import { AgentResponseConsole } from "@/components/sim/AgentResponseConsole";
 import { AgentDispatchBoxes } from "@/components/sim/AgentDispatchBoxes";
 import { ProcessMap, type ProcessMapSelection } from "@/components/sim/ProcessMap";
+import { SimulationConsole, buildSensorRows, type SimView } from "@/components/sim/SimulationConsole";
 import { SensorRecoveryPanel, type RecoveryFocus } from "@/components/sim/SensorRecoveryPanel";
 import { simAdapter, asEmbedded } from "@/lib/sim/adapter";
 import { useSimulation } from "@/lib/sim/store";
@@ -128,6 +129,8 @@ export default function PlantTwinPage() {
    */
   const [viewMode, setViewMode] = useState<"pipeline" | "schematic">("pipeline");
   const [pipeSel, setPipeSel] = useState<ProcessMapSelection | null>(null);
+  const [activeView, setActiveView] = useState<SimView>("process");
+
   const [snap, setSnap] = useState<SimSnapshot | null>(null);
   const [busyScenario, setBusyScenario] = useState<string | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -186,6 +189,7 @@ export default function PlantTwinPage() {
     if (!sensorId || !runtime.qualities[sensorId]) return runtime;
     return { ...runtime, qualities: { ...runtime.qualities, [sensorId]: "substituted" as const } };
   }, [runtime, activeResponseJob]);
+
 
   const predictedIds = useMemo(
     () => activeResponseJob?.prediction.map((p) => p.equipmentId) ?? [],
@@ -260,8 +264,15 @@ export default function PlantTwinPage() {
         for (const [id, sx] of Object.entries(s.sensors)) {
           base.qualities[id] = sx.quality as any;
         }
+        // The engine's live line state, not the static definition — the
+        // definition never carries a running rate, so reading it here left
+        // every line animating at zero flow.
+        const pipeState = s.connections;
         for (const c of plant.connections) {
-          base.pipes[c.id] = { leaking: c.leaking, enabled: c.enabled, flow: c.flow };
+          const l = pipeState?.[c.id];
+          base.pipes[c.id] = l
+            ? { leaking: l.leaking, enabled: l.enabled, flow: l.flow }
+            : { leaking: c.leaking, enabled: c.enabled, flow: c.flow };
         }
         setRuntime(base);
       }).catch(() => undefined);
@@ -451,6 +462,12 @@ export default function PlantTwinPage() {
     }
     return out;
   }, [plant, plantId, embedded, snap]);
+  /** Instrument rows for the Sensors view, from the same readings the map uses. */
+  const sensorRows = useMemo(
+    () => (plant ? buildSensorRows(plant, displayRuntime ?? null, readings) : []),
+    [plant, displayRuntime, readings],
+  );
+
 
   /**
    * The unit the agent investigation is about: the incident's origin/affected
@@ -717,7 +734,147 @@ export default function PlantTwinPage() {
           </Panel>
         </div>
 
+          <SimulationConsole
+          plant={plant}
+          runtime={displayRuntime ?? runtime}
+          readings={readings}
+          alarms={sim.alarms}
+          health={health}
+          activeView={activeView}
+          onView={setActiveView}
+          incidentSeverity={sim.activeIncident?.severity ?? null}
+          incidentStatus={sim.activeIncident?.status ?? null}
+        />
+
         {/* CENTER — the sweeping spatial process map */}
+        {activeView !== "process" && (
+          <section className="pt-mapwrap">
+            <Panel
+              pad={false}
+              title={
+                activeView === "sensors" ? `Sensors — ${plant.equipment.reduce((n, e) => n + e.sensors.length, 0)} instruments`
+                : activeView === "equipment" ? `Equipment — ${plant.equipment.length} assets`
+                : activeView === "incidents" ? `Incidents — ${sim.incidents.length} recorded`
+                : `Agent activity — ${sim.tasks.length} task${sim.tasks.length === 1 ? "" : "s"}`
+              }
+              actions={
+                <span className="cs-mono cs-dim" style={{ fontSize: 9.5, letterSpacing: "0.14em" }}>
+                  LIVE · 4 HZ
+                </span>
+              }
+            >
+              {activeView === "sensors" && (
+                <div className="simdata__scroll">
+                  <table className="simdata" data-testid="sensor-table">
+                    <thead>
+                      <tr><th>Sensor</th><th>Equipment</th><th>Measure</th><th>Value</th><th>Normal range</th><th>Quality</th><th>State</th></tr>
+                    </thead>
+                    <tbody>
+                      {sensorRows.map((r) => (
+                        <tr
+                          key={r.sensor.id}
+                          data-sensor-row={r.sensor.id}
+                          onClick={() => {
+                            const eq = plant.equipment.find((e) => e.sensors.some((s) => s.id === r.sensor.id));
+                            if (eq) { onSelect(eq); setActiveView("process"); setFocusEquipmentId(eq.id); }
+                          }}
+                        >
+                          <td>{r.sensor.tag}</td>
+                          <td>{r.equipmentTag}</td>
+                          <td className="is-muted">{r.sensor.measurement}</td>
+                          <td className={r.state === "critical" ? "is-critical" : r.state === "warning" ? "is-warning" : undefined}>
+                            {r.value == null ? "—" : `${r.value} ${r.sensor.unit}`}
+                          </td>
+                          <td className="is-muted">{r.range}</td>
+                          <td className="is-muted">{r.quality}</td>
+                          <td className={r.state === "critical" ? "is-critical" : r.state === "warning" ? "is-warning" : undefined}>
+                            {r.quality === "bad" ? "OUT OF SERVICE" : r.state.toUpperCase()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {activeView === "equipment" && (
+                <div className="simdata__scroll">
+                  <table className="simdata" data-testid="equipment-table">
+                    <thead>
+                      <tr><th>Tag</th><th>Name</th><th>Type</th><th>Area</th><th>Crit.</th><th>Sensors</th><th>State</th></tr>
+                    </thead>
+                    <tbody>
+                      {plant.equipment.map((e) => {
+                        const st = displayRuntime?.states?.[e.id] ?? e.state ?? "normal";
+                        return (
+                          <tr
+                            key={e.id}
+                            data-equipment-row={e.id}
+                            onClick={() => { onSelect(e); setActiveView("process"); setFocusEquipmentId(e.id); }}
+                          >
+                            <td>{e.tag}</td>
+                            <td className="is-muted">{e.name}</td>
+                            <td className="is-muted">{e.kind}</td>
+                            <td className="is-muted">{e.area_id}</td>
+                            <td className="is-muted">{e.criticality}</td>
+                            <td className="is-muted">{e.sensors.length}</td>
+                            <td className={st !== "normal" ? "is-warning" : undefined}>{String(st).toUpperCase()}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {activeView === "incidents" && (
+                sim.incidents.length === 0 ? (
+                  <p className="cs-dim" style={{ margin: 0, padding: 18, fontSize: 12.5, lineHeight: 1.7 }}>
+                    No incident has been raised. Incidents appear here when the engine
+                    actually detects one — this list is the engine&apos;s record, not a log
+                    of everything the page has displayed.
+                  </p>
+                ) : (
+                  <div className="simdata__scroll">
+                    <table className="simdata" data-testid="incident-table">
+                      <thead>
+                        <tr><th>Incident</th><th>Equipment</th><th>Fault</th><th>Severity</th><th>Status</th><th>Affected</th></tr>
+                      </thead>
+                      <tbody>
+                        {sim.incidents.map((inc) => (
+                          <tr key={inc.id} data-incident-row={inc.id}>
+                            <td>{inc.id}</td>
+                            <td>{plant.equipment.find((e) => e.id === inc.origin_equipment)?.tag ?? inc.origin_equipment}</td>
+                            <td className="is-muted">{inc.failure_mode ?? inc.title ?? "—"}</td>
+                            <td className={inc.severity === "critical" ? "is-critical" : "is-warning"}>{String(inc.severity).toUpperCase()}</td>
+                            <td>{String(inc.status).replace(/_/g, " ")}</td>
+                            <td className="is-muted">{(inc.affected ?? []).length} unit(s)</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              )}
+
+              {activeView === "agents" && (
+                <div style={{ padding: 14 }}>
+                  {sim.tasks.length === 0 ? (
+                    <p className="cs-dim" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.7 }}>
+                      No agent has been dispatched. The workforce is idle until an incident
+                      raises work — nothing here animates to fill the space.
+                    </p>
+                  ) : (
+                    <AgentDispatchBoxes tasks={sim.tasks} models={modelRoles} max={6} />
+                  )}
+                </div>
+              )}
+            </Panel>
+          </section>
+        )}
+
+
+        {activeView === "process" && (
         <section className="pt-mapwrap">
           <div className="pt-maphead">
             <span className="cs-panel__title">Live process map</span>
@@ -759,7 +916,9 @@ export default function PlantTwinPage() {
                 plant={displayPlant}
                 runtime={displayRuntime}
                 readings={readings}
-                selection={pipeSel}
+                /* One selection across the whole page: a line picked on the
+                   drawing, or an asset picked from a list, both land here. */
+                selection={pipeSel ?? (selected ? { kind: "equipment", id: selected.id } : null)}
                 onSelect={(sel) => {
                   setPipeSel(sel);
                   if (sel?.kind === "equipment") {
@@ -889,6 +1048,7 @@ export default function PlantTwinPage() {
             )}
           </div>
         </section>
+        )}
       </div>
 
       {/* BOTTOM — event spine */}
