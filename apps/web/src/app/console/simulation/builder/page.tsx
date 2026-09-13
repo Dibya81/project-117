@@ -8,7 +8,8 @@
 import { type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Panel, StatusDot, Tag } from "@/components/ui/primitives";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import { SchematicCanvas, emptyRuntime, runtimeFromEngine } from "@/components/sim/SchematicCanvas";
+import { emptyRuntime, runtimeFromEngine } from "@/components/sim/SchematicCanvas";
+import { MeridianRefineryView } from "@/components/sim/MeridianRefineryView";
 import { AgentCommandCenter } from "@/components/sim/AgentCommandCenter";
 import { SimSymbol, symbolForEquipment } from "@/lib/sim/symbols";
 import { simAdapter, asEmbedded, asLive, DATA_MODE } from "@/lib/sim/adapter";
@@ -492,17 +493,25 @@ export default function BuilderPage() {
             </div>
           </div>
         ) : (
-          <SchematicCanvas
+          <>
+          {/* The Builder draws the plant with the same renderer the live
+              refinery uses. A plant built here must look identical when it is
+              opened for operation, so there is one renderer with two modes
+              rather than two renderers that drift. */}
+          <MeridianRefineryView
             plant={displayPlant}
             runtime={runtime}
-            selectedId={selected?.id ?? connectFrom}
-            affected={sim.activeIncident?.affected ?? []}
-            onSelect={onSelect}
-            onHover={() => undefined}
-            onBackground={() => {
-              setSelected(null);
-            }}
+            readings={{}}
+            selected={selected ?? null}
+            onSelectEquipment={(eq) => onSelect(eq)}
+            viewMode="overview"
+            onViewModeChange={() => undefined}
+            failover={null}
+            activeIncident={sim.activeIncident}
+            tasks={[]}
+            models={{}}
           />
+          </>
         )}
       </div>
 
