@@ -163,31 +163,31 @@ function route(a: Box, b: Box): { d: string; mid: { x: number; y: number }; hori
 /** Footprint in plant units, by kind, at the tier's own scale. */
 export function sizeForKind(kind: string): { w: number; h: number } {
   const tier = tierOf(kind);
-  // Sized to the plot: the dataset's areas are about 280x180 and hold roughly
-  // three assets, so a major unit can claim about a third of its area before
-  // it starts covering its neighbours. Larger than this looked better in
-  // isolation and worse on the plant, because equipment overlapped and the
-  // labels were hidden by whatever was drawn next.
+  // Sized so a major unit reads as a major unit at fit-plant zoom: roughly a
+  // tenth of the plot width, which is the proportion a real refinery drawing
+  // gives its towers and drums. The plant is wider than the viewport as a
+  // result, and that is the point — the drawing is panned and zoomed like a
+  // plot plan rather than compressed until nothing is legible.
   if (tier === "major") {
     switch (kind) {
       case "column":
-        return { w: 66, h: 138 };
+        return { w: 104, h: 246 };
       case "tank":
-        return { w: 124, h: 84 };
+        return { w: 232, h: 138 };
       case "furnace":
-        return { w: 108, h: 92 };
+        return { w: 188, h: 164 };
       default:
-        return { w: 104, h: 82 };
+        return { w: 178, h: 132 };
     }
   }
   if (tier === "process") {
     switch (kind) {
       case "vessel":
-        return { w: 78, h: 88 };
+        return { w: 136, h: 142 };
       case "exchanger":
-        return { w: 104, h: 58 };
+        return { w: 182, h: 92 };
       default:
-        return { w: 88, h: 72 };
+        return { w: 152, h: 116 };
     }
   }
   switch (kind) {
@@ -323,7 +323,7 @@ export function ProcessMap({
     const y0 = Math.min(...areas.map((a) => a.y));
     const x1 = Math.max(...areas.map((a) => a.x + a.w));
     const y1 = Math.max(...areas.map((a) => a.y + a.h));
-    const pad = 48;
+    const pad = 14;
     return { x: x0 - pad, y: y0 - pad, w: x1 - x0 + pad * 2, h: y1 - y0 + pad * 2 };
   }, [areas]);
 
@@ -672,7 +672,7 @@ export function ProcessMap({
           })()}
 
           {/* ---- equipment and its instrumentation */}
-          {equipment.map((eq) => {
+          {[...equipment].sort((a, b) => a.y - b.y).map((eq) => {
             const state = runtime?.states?.[eq.id] ?? eq.state ?? "normal";
             const tone = stateTone(state);
             const selected = selection?.kind === "equipment" && selection.id === eq.id;
