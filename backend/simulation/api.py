@@ -257,6 +257,46 @@ def restore_sensor(plant_id: str, sensor_id: str, principal: Principal = Depends
     return {"sensor_id": sensor_id, "state": "restored"}
 
 
+@router.post("/plants/{plant_id}/lines/{connection_id}/block")
+def block_line(plant_id: str, connection_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    """Block a process line. Starves everything downstream on the next tick."""
+    svc = _svc()
+    try:
+        return svc.block_line(plant_id, connection_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"no such line: {connection_id}") from exc
+
+
+@router.post("/plants/{plant_id}/lines/{connection_id}/restore")
+def restore_line(plant_id: str, connection_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    svc = _svc()
+    try:
+        return svc.restore_line(plant_id, connection_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"no such line: {connection_id}") from exc
+
+
+class LeakRequest(BaseModel):
+    leaking: bool = True
+
+
+@router.post("/plants/{plant_id}/lines/{connection_id}/leak")
+def leak_line(
+    plant_id: str,
+    connection_id: str,
+    body: LeakRequest | None = None,
+    principal: Principal = Depends(get_principal),
+) -> dict:
+    """Mark a line leaking, or seal it. A leaking line still carries flow, at
+    reduced capacity, so the drawing and the engine agree."""
+    svc = _svc()
+    leaking = True if body is None else body.leaking
+    try:
+        return svc.leak_line(plant_id, connection_id, leaking=leaking)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"no such line: {connection_id}") from exc
+
+
 @router.post("/plants/{plant_id}/reset")
 def reset(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
     """Return the plant to its pristine definition, discarding every

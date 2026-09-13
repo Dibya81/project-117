@@ -266,6 +266,81 @@ class SimulationService:
         )
         return {**context, "incident_id": incident_id}
 
+    # ------------------------------------------------------- process lines
+
+    def block_line(self, plant_id: str, connection_id: str) -> dict:
+        """Block a process line and put the agents on the resulting starvation.
+
+        This is the operator acting on the plant, so it is audited and it raises
+        an incident — the same path a sensor failure takes. The alternative
+        route the recovery agent finds is what makes the redirection visible.
+        """
+        rt = self.runtime(plant_id)
+        conn = rt.engine.set_line_enabled(connection_id, False)
+        rt.emit("line.blocked", {"connection_id": connection_id, "medium": conn.medium})
+        self.store.audit(event_type="line.blocked", actor="operator", plant_id=plant_id,
+                         sim_t=rt.engine.t, action="block_line", target=connection_id)
+        incident_id = self._raise_line_incident(
+            rt, conn, AlarmSeverity.WARNING, f"Line blocked — {connection_id}",
+        )
+        return {"connection_id": connection_id, "enabled": False, "incident_id": incident_id}
+
+    def restore_line(self, plant_id: str, connection_id: str) -> dict:
+        """Return a blocked line to service."""
+        rt = self.runtime(plant_id)
+        conn = rt.engine.set_line_enabled(connection_id, True)
+        rt.emit("line.restored", {"connection_id": connection_id})
+        self.store.audit(event_type="line.restored", actor="operator", plant_id=plant_id,
+                         sim_t=rt.engine.t, action="restore_line", target=connection_id)
+        return {"connection_id": connection_id, "enabled": conn.enabled}
+
+    def leak_line(self, plant_id: str, connection_id: str, *, leaking: bool = True) -> dict:
+        """Mark a line leaking (or seal it). Flow continues at reduced capacity."""
+        rt = self.runtime(plant_id)
+        conn = rt.engine.set_line_leaking(connection_id, leaking)
+        rt.emit("line.leaking" if leaking else "line.sealed",
+                {"connection_id": connection_id, "medium": conn.medium})
+        self.store.audit(event_type="line.leaking" if leaking else "line.sealed",
+                         actor="operator", plant_id=plant_id, sim_t=rt.engine.t,
+                         action="leak_line", target=connection_id)
+        incident_id = None
+        if leaking:
+            incident_id = self._raise_line_incident(
+                rt, conn, AlarmSeverity.WARNING, f"Line leaking — {connection_id}",
+            )
+        return {"connection_id": connection_id, "leaking": conn.leaking, "incident_id": incident_id}
+
+    def _raise_line_incident(self, rt, conn, severity, title) -> str | None:
+        """Raise an incident against the line's source equipment.
+
+        A line is not an asset, so the incident is filed against the machine it
+        leaves — that is where a crew would go, and it keeps the incident
+        pointing at something the plant model actually contains.
+        """
+        try:
+            incident = rt.engine.create_incident(
+                title=title,
+                severity=severity,
+                origin_equipment=conn.source,
+                origin_sensor=None,
+                failure_mode=None,
+            )
+        except Exception:  # noqa: BLE001 - an incident must not fail the action
+            return None
+        # The same sequence a sensor loss takes, so a blocked line runs the real
+        # pipeline rather than a parallel path that could drift from it.
+        self.store.upsert_incident(incident)
+        rt.emit("incident.created", incident.model_dump())
+        self._emit_perception(rt, incident, source="line.loss")
+        self.store.audit(
+            event_type="incident.created", actor="orchestrator", plant_id=rt.engine.plant.id,
+            incident_id=incident.id, sim_t=rt.engine.t, target=conn.source,
+            result=incident.severity.value, runtime=self.roster.runtime_label(),
+            payload={"affected": incident.affected, "connection_id": conn.id},
+        )
+        self._run_agents(rt, incident)
+        return incident.id
+
     def remove_sensor(self, plant_id: str, sensor_id: str) -> dict:
         """Delete a sensor outright and engage the agents on the loss.
 

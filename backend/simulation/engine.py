@@ -24,6 +24,7 @@ from backend.simulation.models import (
     Alarm,
     AlarmSeverity,
     AssetState,
+    Connection,
     ConnectionKind,
     Incident,
     IncidentStatus,
@@ -418,6 +419,35 @@ class SimulationEngine:
                         nxt.append(nb)
             frontier = nxt
         return {"affected": out}
+
+    # ------------------------------------------------------- process lines
+
+    def set_line_enabled(self, connection_id: str, enabled: bool) -> Connection:
+        """Open or block a process line.
+
+        Blocking is a real act, not a display toggle: it sets the line's state,
+        which the tick then propagates as starvation to everything downstream.
+        Raises KeyError for an unknown line so callers can answer 404 rather
+        than silently doing nothing.
+        """
+        conn = self.pipe_by_id.get(connection_id)
+        if conn is None:
+            raise KeyError(connection_id)
+        conn.enabled = enabled
+        conn.status = AssetState.NORMAL if enabled else AssetState.DISABLED
+        return conn
+
+    def set_line_leaking(self, connection_id: str, leaking: bool) -> Connection:
+        """Mark a line leaking. A leaking line still carries flow, at reduced
+        capacity — the tick applies that factor, so the drawing and the engine
+        agree about what a leak does."""
+        conn = self.pipe_by_id.get(connection_id)
+        if conn is None:
+            raise KeyError(connection_id)
+        conn.leaking = leaking
+        if leaking:
+            conn.status = AssetState.WARNING
+        return conn
 
     def alternate_sensors(self, sensor_id: str) -> list[Sensor]:
         """Redundant/related measurements: same measurement elsewhere on the

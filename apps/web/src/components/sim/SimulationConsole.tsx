@@ -17,12 +17,14 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 import type { PlantDef, SensorDef } from "@/lib/sim/types";
 import type { CanvasRuntime, SpatialReading } from "@/components/sim/SchematicCanvas";
 
-export type SimView = "process" | "equipment" | "sensors" | "incidents" | "agents";
+export type SimView = "process" | "equipment" | "sensors" | "control" | "scenarios" | "incidents" | "agents";
 
 export const SIM_VIEWS: { id: SimView; label: string; icon: IconName }[] = [
   { id: "process", label: "Process View", icon: "graph" },
   { id: "equipment", label: "Equipment", icon: "equipment" },
   { id: "sensors", label: "Sensors", icon: "gauge" },
+  { id: "control", label: "Control", icon: "cpu" },
+  { id: "scenarios", label: "Scenarios", icon: "play" },
   { id: "incidents", label: "Incidents", icon: "alert" },
   { id: "agents", label: "Agent Activity", icon: "cpu" },
 ];

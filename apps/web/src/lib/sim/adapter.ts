@@ -108,6 +108,10 @@ export interface SimAdapter {
   /** Take one sensor out of service (session-scoped; reset restores it).
    *  `incidentId` is the agent run raised for the loss, or null if none. */
   disableSensor(plantId: string, sensorId: string): Promise<{ incidentId: string | null }>;
+  /** Process-line actions. A blocked line starves everything downstream. */
+  blockLine(plantId: string, connectionId: string): Promise<{ incidentId: string | null }>;
+  restoreLine(plantId: string, connectionId: string): Promise<void>;
+  leakLine(plantId: string, connectionId: string, leaking: boolean): Promise<{ incidentId: string | null }>;
   /** Delete one sensor. Terminal for the session — reset brings it back. */
   removeSensor(plantId: string, sensorId: string): Promise<{ incidentId: string | null }>;
   /** Return a disabled sensor to service. */
@@ -264,6 +268,22 @@ class EmbeddedAdapter implements SimAdapter {
     const eng = this.engine(plantId);
     eng.disableSensor(sensorId);
     return { incidentId: this.raiseSensorIncident(plantId, sensorId, "disable") };
+  }
+
+  async blockLine(plantId: string, connectionId: string): Promise<{ incidentId: string | null }> {
+    // The embedded engine has no line model; refusing beats pretending.
+    void plantId; void connectionId;
+    throw new Error("line actions require the backend engine (live mode)");
+  }
+
+  async restoreLine(plantId: string, connectionId: string): Promise<void> {
+    void plantId; void connectionId;
+    throw new Error("line actions require the backend engine (live mode)");
+  }
+
+  async leakLine(plantId: string, connectionId: string, leaking: boolean): Promise<{ incidentId: string | null }> {
+    void plantId; void connectionId; void leaking;
+    throw new Error("line actions require the backend engine (live mode)");
   }
 
   async removeSensor(plantId: string, sensorId: string): Promise<{ incidentId: string | null }> {
@@ -434,6 +454,23 @@ class LiveAdapter implements SimAdapter {
   }
   restoreSensor(plantId: string, sensorId: string) {
     return this.req(`/plants/${plantId}/sensors/${sensorId}/restore`, { method: "POST" }).then(() => undefined);
+  }
+  async blockLine(plantId: string, connectionId: string): Promise<{ incidentId: string | null }> {
+    const r = await this.req<{ incident_id?: string | null }>(
+      `/plants/${plantId}/lines/${connectionId}/block`,
+      { method: "POST" },
+    );
+    return { incidentId: r.incident_id ?? null };
+  }
+  restoreLine(plantId: string, connectionId: string) {
+    return this.req(`/plants/${plantId}/lines/${connectionId}/restore`, { method: "POST" }).then(() => undefined);
+  }
+  async leakLine(plantId: string, connectionId: string, leaking: boolean): Promise<{ incidentId: string | null }> {
+    const r = await this.req<{ incident_id?: string | null }>(
+      `/plants/${plantId}/lines/${connectionId}/leak`,
+      { method: "POST", body: JSON.stringify({ leaking }) },
+    );
+    return { incidentId: r.incident_id ?? null };
   }
   resetPlant(plantId: string) {
     // Server-side the engine lives in RAM for the life of the process, so a

@@ -32,11 +32,47 @@ import type { CanvasRuntime, SpatialReading } from "@/components/sim/SchematicCa
 
 /* ------------------------------------------------------------------ geometry */
 
-/** Equipment footprint in plant units. The dataset's x/y is the centre. */
+/** Default equipment footprint in plant units. The dataset's x/y is the centre. */
 const EQ_W = 74;
 const EQ_H = 62;
 /** Lettering is placed below the body so it never covers the linework. */
 const LABEL_H = 30;
+
+/**
+ * Footprint by equipment kind.
+ *
+ * A refinery drawing has physical hierarchy: a column is tall and narrow, a
+ * tank is squat and wide, a pump is small. Drawing every asset in the same box
+ * threw that away and made the plant read as a diagram of identical nodes. The
+ * dataset's x/y is the centre, so a larger box simply claims more of its own
+ * area — which is how a real plot plan looks.
+ */
+export function sizeForKind(kind: string): { w: number; h: number } {
+  switch (kind) {
+    case "column":
+      return { w: 74, h: 132 };
+    case "furnace":
+      return { w: 104, h: 96 };
+    case "tank":
+      return { w: 118, h: 92 };
+    case "vessel":
+      return { w: 84, h: 108 };
+    case "exchanger":
+      return { w: 118, h: 66 };
+    case "compressor":
+      return { w: 106, h: 84 };
+    case "motor":
+      return { w: 84, h: 70 };
+    case "safety":
+      return { w: 80, h: 70 };
+    case "pump":
+      return { w: 80, h: 68 };
+    case "valve":
+      return { w: 68, h: 60 };
+    default:
+      return { w: 86, h: 72 };
+  }
+}
 
 export interface ProcessMapSelection {
   kind: "equipment" | "pipe";
@@ -184,6 +220,11 @@ export interface ProcessMapProps {
   focusId?: string | null;
   /** The switch the backend actually made: origin equipment -> alternate. */
   failover?: { from: string; to: string } | null;
+  /** Real line actions. Each hits the endpoint that mutates engine state. */
+  onLineAction?: (lineId: string, action: "block" | "restore" | "leak" | "seal") => void;
+  /** Lines the operator has acted on this session, so the panel can offer undo. */
+  busyLine?: string | null;
+  lineError?: string | null;
 }
 
 export function ProcessMap({
@@ -196,6 +237,9 @@ export function ProcessMap({
   isolateArea = null,
   focusId = null,
   failover = null,
+  onLineAction,
+  busyLine = null,
+  lineError = null,
 }: ProcessMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [view, setView] = useState({ x: 0, y: 0, k: 1 });
@@ -224,7 +268,8 @@ export function ProcessMap({
   const boxes0 = useMemo(() => {
     const m = new Map<string, Box>();
     for (const e of equipment) {
-      m.set(e.id, { x: e.x - EQ_W / 2, y: e.y - EQ_H / 2, w: EQ_W, h: EQ_H });
+      const { w, h } = sizeForKind(e.kind);
+      m.set(e.id, { x: e.x - w / 2, y: e.y - h / 2, w, h });
     }
     return m;
   }, [equipment]);
@@ -389,6 +434,45 @@ export function ProcessMap({
               <div><dt>Kind</dt><dd>{conn.kind}</dd></div>
               <div><dt>Status</dt><dd className={`is-${st}`}>{st.toUpperCase()}</dd></div>
             </dl>
+            {/* Real actions. Blocking a line starves everything downstream on
+                the next tick and raises an incident the agents respond to; a
+                leak keeps the line running at reduced capacity. */}
+            <div className="pmap__inspect-actions">
+              <button
+                type="button"
+                data-line-action="block"
+                disabled={!onLineAction || busyLine === conn.id || !conn.enabled}
+                onClick={() => onLineAction?.(conn.id, "block")}
+              >
+                {busyLine === conn.id ? "…" : "Block line"}
+              </button>
+              <button
+                type="button"
+                data-line-action="restore"
+                disabled={!onLineAction || busyLine === conn.id || conn.enabled}
+                onClick={() => onLineAction?.(conn.id, "restore")}
+              >
+                Restore
+              </button>
+            </div>
+            <div className="pmap__inspect-actions">
+              <button
+                type="button"
+                data-line-action="leak"
+                disabled={!onLineAction || busyLine === conn.id || conn.leaking}
+                onClick={() => onLineAction?.(conn.id, "leak")}
+              >
+                Simulate leak
+              </button>
+              <button
+                type="button"
+                data-line-action="seal"
+                disabled={!onLineAction || busyLine === conn.id || !conn.leaking}
+                onClick={() => onLineAction?.(conn.id, "seal")}
+              >
+                Seal
+              </button>
+            </div>
             <div className="pmap__inspect-actions">
               <button
                 type="button"
@@ -405,6 +489,7 @@ export function ProcessMap({
                 Destination →
               </button>
             </div>
+            {lineError && <p className="pmap__inspect-err">{lineError}</p>}
             <div className="pmap__inspect-trace">
               <p>
                 <b>Upstream</b> {upstream.length ? upstream.map((id) => plant.equipment.find((e) => e.id === id)?.tag ?? id).join(" · ") : "nothing feeds this line"}
@@ -413,12 +498,10 @@ export function ProcessMap({
                 <b>Downstream</b> {downstream.length ? downstream.map((id) => plant.equipment.find((e) => e.id === id)?.tag ?? id).join(" · ") : "nothing downstream"}
               </p>
             </div>
-            {/* Leak and block are genuinely not implemented: Connection carries
-                `leaking` and `enabled` and the drawing renders both, but no
-                endpoint mutates them. Saying so beats two dead buttons. */}
             <p className="pmap__inspect-note">
-              Leak and block simulation have no endpoint yet — the drawing shows both
-              states, but nothing on the backend can set them.
+              Blocking starves everything downstream on the next tick and raises an
+              incident the agents respond to. A leak keeps the line running at reduced
+              capacity.
             </p>
           </aside>
         );
@@ -577,6 +660,7 @@ export function ProcessMap({
                 key={eq.id}
                 data-node="equipment"
                 data-unit={eq.id}
+                data-kind={eq.kind}
                 data-state={state}
                 data-flagged={flagged ? "true" : undefined}
                 data-failover-target={failover?.to === eq.id ? "true" : undefined}
@@ -596,21 +680,72 @@ export function ProcessMap({
                     rx={7}
                   />
                 )}
-                <rect
-                  className="pmap__eq-body"
-                  x={box.x}
-                  y={box.y}
-                  width={box.w}
-                  height={box.h}
-                  rx={4}
-                  style={{ ["--tone" as string]: TONE_COLOR[tone] } as CSSProperties}
-                />
+                {/* The body is shaped by kind, so a column reads as a tall
+                    tower and a tank as a squat drum before any label is read.
+                    The fill is a soft industrial tint, not white: a white card
+                    per asset is what made this look like a flowchart. */}
+                {eq.kind === "column" || eq.kind === "vessel" ? (
+                  <>
+                    <rect
+                      className="pmap__eq-vessel"
+                      x={box.x}
+                      y={box.y + box.h * 0.09}
+                      width={box.w}
+                      height={box.h * 0.82}
+                      rx={box.w / 2}
+                      style={{ ["--tone" as string]: TONE_COLOR[tone] } as CSSProperties}
+                    />
+                    {/* Trays, drawn as the horizontal lines a real column has. */}
+                    <g className="pmap__eq-trays">
+                      {Array.from({ length: 5 }, (_, i) => {
+                        const y = box.y + box.h * 0.2 + (i * box.h * 0.62) / 4;
+                        return <line key={i} x1={box.x + 6} y1={y} x2={box.x + box.w - 6} y2={y} />;
+                      })}
+                    </g>
+                  </>
+                ) : eq.kind === "tank" ? (
+                  <>
+                    <rect
+                      className="pmap__eq-vessel"
+                      x={box.x}
+                      y={box.y + box.h * 0.12}
+                      width={box.w}
+                      height={box.h * 0.76}
+                      rx={7}
+                      style={{ ["--tone" as string]: TONE_COLOR[tone] } as CSSProperties}
+                    />
+                    {/* A level gauge: the one number an operator reads off a tank. */}
+                    <rect
+                      className="pmap__eq-level"
+                      x={box.x + box.w - 13}
+                      y={box.y + box.h * 0.12 + (box.h * 0.76) / 3}
+                      width={5}
+                      height={(box.h * 0.76 * 2) / 3}
+                      rx={2.5}
+                    />
+                  </>
+                ) : (
+                  <rect
+                    className="pmap__eq-body"
+                    x={box.x}
+                    y={box.y}
+                    width={box.w}
+                    height={box.h}
+                    rx={5}
+                    style={{ ["--tone" as string]: TONE_COLOR[tone] } as CSSProperties}
+                  />
+                )}
                 <g
-                  transform={`translate(${eq.x - 24} ${eq.y - 24})`}
+                  transform={`translate(${eq.x - Math.min(box.w, box.h) * 0.42} ${eq.y - Math.min(box.w, box.h) * 0.42})`}
                   className="pmap__eq-glyph"
                   style={{ color: tone === "normal" ? "#243447" : TONE_COLOR[tone] }}
                 >
-                  <SimSymbol type={symbolForEquipment(eq.kind, eq.name)} state={state} size={48} label={`${eq.tag} — ${eq.name}`} />
+                  <SimSymbol
+                    type={symbolForEquipment(eq.kind, eq.name)}
+                    state={state}
+                    size={Math.min(box.w, box.h) * 0.84}
+                    label={`${eq.tag} — ${eq.name}`}
+                  />
                 </g>
                 <text className="pmap__eq-tag" x={eq.x} y={box.y + box.h + 13}>
                   {eq.tag}

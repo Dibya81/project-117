@@ -19,13 +19,32 @@
 
 /* Two columns on purpose: the spatial map is the hero, so it takes every pixel
    the control rail does not need. Context lives in the rail. */
-.pt-layout {
-  display: grid;
-  grid-template-columns: 236px minmax(0, 1fr);
-  gap: 14px;
-  height: calc(100vh - 250px);
-  min-height: 560px;
+/* Process-area strip: a filter row, not a column. */
+.pt-areastrip {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  max-width: 62%;
+  scrollbar-width: none;
 }
+.pt-areastrip::-webkit-scrollbar { display: none; }
+.pt-areastrip button {
+  border: 0;
+  background: none;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 4px 9px;
+  border-radius: 5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pt-areastrip button:hover { color: var(--ink-1); background: rgba(15, 23, 42, 0.05); }
+.pt-areastrip button.is-active { background: var(--cyan); color: #fff; }
+.pt-areastrip button em { font-style: normal; opacity: 0.75; margin-left: 4px; }
 
 .pt-rail {
   display: flex;
@@ -1849,3 +1868,397 @@
 .simdata td.is-critical { color: var(--crit); }
 .simdata td.is-muted { color: var(--ink-3); }
 .simdata__scroll { max-height: 420px; overflow: auto; }
+
+.pmap__inspect-actions button[data-line-action] { font-weight: 600; }
+.pmap__inspect-err {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--crit);
+}
+
+/* --- lower information deck ------------------------------------------------
+   Three registers read together beneath the drawing: the selected asset, what
+   is moving through the plant, and what just happened. */
+.lowerdeck {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.05fr) minmax(320px, 1.35fr) minmax(240px, 0.95fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+@media (max-width: 1200px) {
+  .lowerdeck { grid-template-columns: 1fr 1fr; }
+  .ldcard--events { grid-column: 1 / -1; }
+}
+@media (max-width: 820px) {
+  .lowerdeck { grid-template-columns: 1fr; }
+}
+.ldcard {
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+.ldcard__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line-2);
+  background: #f8fafc;
+}
+.ldcard__title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  font-weight: 700;
+}
+.ldcard__sub {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--ink-3);
+}
+.ldcard__empty {
+  margin: 0;
+  padding: 16px 13px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+.ldscroll { max-height: 236px; overflow: auto; }
+
+/* selected asset */
+.ldsel {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px 8px;
+}
+.ldsel__glyph { color: #243447; display: flex; }
+.ldsel__glyph.is-warning { color: var(--warn); }
+.ldsel__glyph.is-critical, .ldsel__glyph.is-failed { color: var(--crit); }
+.ldsel__id { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ldsel__id b { font-family: var(--mono); font-size: 13px; }
+.ldsel__id > span { font-size: 11.5px; color: var(--ink-2); }
+.ldsel__meta { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3) !important; }
+.ldsel__kpis {
+  margin: 0;
+  padding: 0 13px 12px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px 10px;
+}
+.ldsel__kpi { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ldsel__kpi dt {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+.ldsel__kpi dd { margin: 0; font-family: var(--mono); font-size: 12px; font-weight: 700; }
+.ldsel__kpi dd.is-critical { color: var(--crit); }
+.ldsel__range { font-family: var(--mono); font-size: 8.5px; color: var(--ink-3); }
+
+/* streams */
+.ldstream__dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  margin-right: 7px;
+  vertical-align: middle;
+}
+.simdata tr.is-selected td { background: rgba(37, 99, 235, 0.1); }
+
+/* events */
+.ldevents { list-style: none; margin: 0; padding: 6px 0; max-height: 236px; overflow: auto; }
+.ldevents li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 13px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+}
+.ldevents__dot { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; }
+.ldevents__dot.is-ok { background: var(--ok); }
+.ldevents__dot.is-warn { background: var(--warn); }
+.ldevents__dot.is-crit { background: var(--crit); }
+.ldevents__seq { color: var(--ink-3); }
+.ldevents__type { color: var(--ink-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ldevents__t { margin-left: auto; color: var(--ink-3); }
+
+/* --- reference panel shell -------------------------------------------------
+   One anatomy for every console panel: coloured title bar, filter row, dense
+   table, detail column. The accent encodes the panel's domain; state is always
+   carried inside the rows, never by the chrome. */
+.simpanel {
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  /* Fills the space the process drawing occupies, so switching views does not
+     leave the page half empty. */
+  height: clamp(460px, calc(100vh - 300px), 780px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+.simpanel__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  min-height: 52px;
+}
+.simpanel__badge {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.18);
+  flex: 0 0 auto;
+}
+.simpanel__id { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.simpanel__title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.simpanel__sub { font-size: 11px; opacity: 0.85; }
+.simpanel__actions { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+
+.simpanel__filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--line-2);
+  background: #f8fafc;
+}
+.simpanel__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.simpanel__filter select {
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  background: #fff;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  padding: 3px 6px;
+  color: var(--ink-1);
+  max-width: 130px;
+}
+.simpanel__search {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  background: #fff;
+  padding: 4px 9px;
+  min-width: 210px;
+}
+.simpanel__search input {
+  border: 0;
+  outline: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  width: 100%;
+  background: none;
+  color: var(--ink-1);
+}
+
+.simpanel__body { flex: 1; display: flex; min-height: 0; }
+.simpanel__table { flex: 1; overflow: auto; min-width: 0; }
+.simpanel__body.has-detail .simpanel__table { flex: 1 1 62%; }
+.simpanel__detail {
+  flex: 0 0 34%;
+  min-width: 250px;
+  border-left: 1px solid var(--line-2);
+  background: #fbfcfe;
+  padding: 12px 14px;
+  overflow: auto;
+}
+@media (max-width: 1080px) {
+  .simpanel__body.has-detail { flex-direction: column; }
+  .simpanel__detail { flex: none; border-left: 0; border-top: 1px solid var(--line-2); min-width: 0; }
+}
+
+/* Detail column atoms, shared by every panel. */
+.simdetail__title {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-1);
+  display: block;
+}
+.simdetail__sub { font-size: 11.5px; color: var(--ink-2); display: block; margin-top: 2px; }
+.simdetail__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 11.5px;
+}
+.simdetail__row dt { color: var(--ink-3); font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; }
+.simdetail__row dd { margin: 0; font-family: var(--mono); color: var(--ink-1); }
+.simdetail__hint { font-size: 11.5px; color: var(--ink-3); line-height: 1.6; margin: 0; }
+
+
+/* --- composition: the plant is the page ------------------------------------
+   These come last on purpose. The rules above were written for a layout where
+   a 236px rail held context, process areas and scenarios beside the drawing;
+   that rail took a third of the width for what is really a filter row. The
+   selected asset now lives in the lower deck and scenarios have their own
+   view, so the drawing takes the full width. Everything here overrides the
+   earlier definitions by cascade order. */
+
+.pt-layout {
+  display: block;
+  min-height: 0;
+}
+.pt-rail { display: none !important; }
+
+.pt-mapwrap {
+  display: flex;
+  flex-direction: column;
+  /* The refinery plan is about 2.7:1. A taller container would letterbox it and
+     the dead space would read as an unfinished panel, so the height tracks the
+     plant's own aspect rather than the viewport's. */
+  height: clamp(440px, calc((100vw - 320px) / 2.55), 660px);
+}
+.pt-mapbody { flex: 1; min-height: 0; }
+
+/* Process-area strip: a filter row across the head of the drawing. */
+.pt-areastrip {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  max-width: 60%;
+  scrollbar-width: none;
+}
+.pt-areastrip::-webkit-scrollbar { display: none; }
+.pt-areastrip button {
+  border: 0;
+  background: none;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 4px 9px;
+  border-radius: 5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pt-areastrip button:hover { color: var(--ink-1); background: rgba(15, 23, 42, 0.05); }
+.pt-areastrip button.is-active { background: var(--cyan); color: #fff; }
+.pt-areastrip button em { font-style: normal; opacity: 0.75; margin-left: 4px; }
+
+@media (max-width: 1080px) {
+  .pt-areastrip { max-width: 100%; order: 3; width: 100%; }
+  .pt-mapwrap { height: 620px; }
+}
+
+.ldsel__act {
+  margin-top: 3px;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  background: #fff;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.ldsel__act:hover:not(:disabled) { border-color: var(--crit); color: var(--crit); }
+.ldsel__act:disabled { opacity: 0.5; cursor: default; }
+.ldsel__act[data-sensor-action="restore"]:hover { border-color: var(--ok); color: var(--ok); }
+
+/* --- equipment as industrial objects ---------------------------------------
+   Each kind is drawn with the silhouette it actually has: a column is a tall
+   tower with trays, a tank a squat drum with a level gauge, a machine a block
+   with its own glyph. The fill is a soft industrial tint rather than white,
+   which is what stops the plant reading as a flowchart of cards. */
+
+.pmap__eq-vessel {
+  fill: #eef2f7;
+  stroke: rgba(36, 52, 71, 0.42);
+  stroke-width: 1.3;
+}
+.pmap__eq-trays line {
+  stroke: rgba(36, 52, 71, 0.22);
+  stroke-width: 1;
+}
+.pmap__eq-level {
+  fill: #7fb2d9;
+  stroke: rgba(36, 52, 71, 0.35);
+  stroke-width: 0.7;
+}
+.pmap__eq-body {
+  fill: #f1f5f9;
+  stroke: rgba(36, 52, 71, 0.42);
+  stroke-width: 1.3;
+}
+.pmap__eq.is-selected .pmap__eq-body,
+.pmap__eq.is-selected .pmap__eq-vessel {
+  stroke: var(--cyan);
+  stroke-width: 2.2;
+  fill: #e4f0fb;
+}
+.pmap__eq.is-flagged .pmap__eq-body,
+.pmap__eq.is-flagged .pmap__eq-vessel {
+  stroke: var(--crit);
+  stroke-width: 2;
+}
+.pmap__eq[data-state="warning"] .pmap__eq-body,
+.pmap__eq[data-state="warning"] .pmap__eq-vessel { stroke: var(--warn); }
+.pmap__eq[data-state="critical"] .pmap__eq-body,
+.pmap__eq[data-state="critical"] .pmap__eq-vessel,
+.pmap__eq[data-state="failed"] .pmap__eq-body,
+.pmap__eq[data-state="failed"] .pmap__eq-vessel { stroke: var(--crit); }
+
+/* Process lines carry more weight: they are what the drawing is about. */
+.pmap__pipe-line { stroke-width: 2.8; }
+.pmap__pipe-flow { stroke-width: 2.8; stroke-dasharray: 4 15; }
+
+.pmap__eq-tag { font-size: 11px; }
+
+
+/* Kind tinting: the plant should not be monochrome. A soft, restrained family
+   per equipment class gives the drawing structure without turning it into a
+   colour chart — process lines keep the saturated colours, because those carry
+   the medium. */
+.pmap__eq[data-kind="tank"] .pmap__eq-vessel { fill: #e7eef6; }
+.pmap__eq[data-kind="column"] .pmap__eq-vessel { fill: #e6edf5; }
+.pmap__eq[data-kind="vessel"] .pmap__eq-vessel { fill: #e9f0f7; }
+.pmap__eq[data-kind="furnace"] .pmap__eq-body { fill: #fbeee3; }
+.pmap__eq[data-kind="exchanger"] .pmap__eq-body { fill: #e8f2f0; }
+.pmap__eq[data-kind="compressor"] .pmap__eq-body { fill: #eceef8; }
+.pmap__eq[data-kind="pump"] .pmap__eq-body { fill: #eaf0f8; }
+.pmap__eq[data-kind="valve"] .pmap__eq-body { fill: #eef1f5; }
+.pmap__eq[data-kind="motor"] .pmap__eq-body { fill: #edf1f6; }
+.pmap__eq[data-kind="safety"] .pmap__eq-body { fill: #fdeeee; }

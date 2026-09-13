@@ -28,6 +28,15 @@ import { AgentResponseConsole } from "@/components/sim/AgentResponseConsole";
 import { AgentDispatchBoxes } from "@/components/sim/AgentDispatchBoxes";
 import { ProcessMap, type ProcessMapSelection } from "@/components/sim/ProcessMap";
 import { SimulationConsole, buildSensorRows, type SimView } from "@/components/sim/SimulationConsole";
+import { PlantLowerDeck } from "@/components/sim/PlantLowerDeck";
+import {
+  SensorsPanel,
+  EquipmentPanel,
+  ControlPanel,
+  ScenariosPanel,
+  IncidentsPanel,
+  AgentsPanel,
+} from "@/components/sim/SimulationViews";
 import { SensorRecoveryPanel, type RecoveryFocus } from "@/components/sim/SensorRecoveryPanel";
 import { simAdapter, asEmbedded } from "@/lib/sim/adapter";
 import { useSimulation } from "@/lib/sim/store";
@@ -130,6 +139,10 @@ export default function PlantTwinPage() {
   const [viewMode, setViewMode] = useState<"pipeline" | "schematic">("pipeline");
   const [pipeSel, setPipeSel] = useState<ProcessMapSelection | null>(null);
   const [activeView, setActiveView] = useState<SimView>("process");
+  /** The line an action is currently in flight for, and any error it returned. */
+  const [busyLine, setBusyLine] = useState<string | null>(null);
+  const [lineError, setLineError] = useState<string | null>(null);
+  const [busySensor, setBusySensor] = useState<string | null>(null);
 
   const [snap, setSnap] = useState<SimSnapshot | null>(null);
   const [busyScenario, setBusyScenario] = useState<string | null>(null);
@@ -569,6 +582,22 @@ export default function PlantTwinPage() {
         </div>
       </div>
 
+      {/* The console and the record panels span the full page width. They used
+          to sit inside the two-column layout, which squeezed the tab row into a
+          236px cell and clipped the panels at a fixed height. */}
+      <SimulationConsole
+        plant={plant}
+        runtime={displayRuntime ?? runtime}
+        readings={readings}
+        alarms={sim.alarms}
+        health={health}
+        activeView={activeView}
+        onView={setActiveView}
+        incidentSeverity={sim.activeIncident?.severity ?? null}
+        incidentStatus={sim.activeIncident?.status ?? null}
+      />
+
+      {activeView === "process" && (
       <div className="pt-layout">
         {/* LEFT — context, areas, scenarios. The rail holds everything the map
             does not need, so the spatial map keeps the whole remaining width. */}
@@ -734,145 +763,7 @@ export default function PlantTwinPage() {
           </Panel>
         </div>
 
-          <SimulationConsole
-          plant={plant}
-          runtime={displayRuntime ?? runtime}
-          readings={readings}
-          alarms={sim.alarms}
-          health={health}
-          activeView={activeView}
-          onView={setActiveView}
-          incidentSeverity={sim.activeIncident?.severity ?? null}
-          incidentStatus={sim.activeIncident?.status ?? null}
-        />
-
         {/* CENTER — the sweeping spatial process map */}
-        {activeView !== "process" && (
-          <section className="pt-mapwrap">
-            <Panel
-              pad={false}
-              title={
-                activeView === "sensors" ? `Sensors — ${plant.equipment.reduce((n, e) => n + e.sensors.length, 0)} instruments`
-                : activeView === "equipment" ? `Equipment — ${plant.equipment.length} assets`
-                : activeView === "incidents" ? `Incidents — ${sim.incidents.length} recorded`
-                : `Agent activity — ${sim.tasks.length} task${sim.tasks.length === 1 ? "" : "s"}`
-              }
-              actions={
-                <span className="cs-mono cs-dim" style={{ fontSize: 9.5, letterSpacing: "0.14em" }}>
-                  LIVE · 4 HZ
-                </span>
-              }
-            >
-              {activeView === "sensors" && (
-                <div className="simdata__scroll">
-                  <table className="simdata" data-testid="sensor-table">
-                    <thead>
-                      <tr><th>Sensor</th><th>Equipment</th><th>Measure</th><th>Value</th><th>Normal range</th><th>Quality</th><th>State</th></tr>
-                    </thead>
-                    <tbody>
-                      {sensorRows.map((r) => (
-                        <tr
-                          key={r.sensor.id}
-                          data-sensor-row={r.sensor.id}
-                          onClick={() => {
-                            const eq = plant.equipment.find((e) => e.sensors.some((s) => s.id === r.sensor.id));
-                            if (eq) { onSelect(eq); setActiveView("process"); setFocusEquipmentId(eq.id); }
-                          }}
-                        >
-                          <td>{r.sensor.tag}</td>
-                          <td>{r.equipmentTag}</td>
-                          <td className="is-muted">{r.sensor.measurement}</td>
-                          <td className={r.state === "critical" ? "is-critical" : r.state === "warning" ? "is-warning" : undefined}>
-                            {r.value == null ? "—" : `${r.value} ${r.sensor.unit}`}
-                          </td>
-                          <td className="is-muted">{r.range}</td>
-                          <td className="is-muted">{r.quality}</td>
-                          <td className={r.state === "critical" ? "is-critical" : r.state === "warning" ? "is-warning" : undefined}>
-                            {r.quality === "bad" ? "OUT OF SERVICE" : r.state.toUpperCase()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {activeView === "equipment" && (
-                <div className="simdata__scroll">
-                  <table className="simdata" data-testid="equipment-table">
-                    <thead>
-                      <tr><th>Tag</th><th>Name</th><th>Type</th><th>Area</th><th>Crit.</th><th>Sensors</th><th>State</th></tr>
-                    </thead>
-                    <tbody>
-                      {plant.equipment.map((e) => {
-                        const st = displayRuntime?.states?.[e.id] ?? e.state ?? "normal";
-                        return (
-                          <tr
-                            key={e.id}
-                            data-equipment-row={e.id}
-                            onClick={() => { onSelect(e); setActiveView("process"); setFocusEquipmentId(e.id); }}
-                          >
-                            <td>{e.tag}</td>
-                            <td className="is-muted">{e.name}</td>
-                            <td className="is-muted">{e.kind}</td>
-                            <td className="is-muted">{e.area_id}</td>
-                            <td className="is-muted">{e.criticality}</td>
-                            <td className="is-muted">{e.sensors.length}</td>
-                            <td className={st !== "normal" ? "is-warning" : undefined}>{String(st).toUpperCase()}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {activeView === "incidents" && (
-                sim.incidents.length === 0 ? (
-                  <p className="cs-dim" style={{ margin: 0, padding: 18, fontSize: 12.5, lineHeight: 1.7 }}>
-                    No incident has been raised. Incidents appear here when the engine
-                    actually detects one — this list is the engine&apos;s record, not a log
-                    of everything the page has displayed.
-                  </p>
-                ) : (
-                  <div className="simdata__scroll">
-                    <table className="simdata" data-testid="incident-table">
-                      <thead>
-                        <tr><th>Incident</th><th>Equipment</th><th>Fault</th><th>Severity</th><th>Status</th><th>Affected</th></tr>
-                      </thead>
-                      <tbody>
-                        {sim.incidents.map((inc) => (
-                          <tr key={inc.id} data-incident-row={inc.id}>
-                            <td>{inc.id}</td>
-                            <td>{plant.equipment.find((e) => e.id === inc.origin_equipment)?.tag ?? inc.origin_equipment}</td>
-                            <td className="is-muted">{inc.failure_mode ?? inc.title ?? "—"}</td>
-                            <td className={inc.severity === "critical" ? "is-critical" : "is-warning"}>{String(inc.severity).toUpperCase()}</td>
-                            <td>{String(inc.status).replace(/_/g, " ")}</td>
-                            <td className="is-muted">{(inc.affected ?? []).length} unit(s)</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )
-              )}
-
-              {activeView === "agents" && (
-                <div style={{ padding: 14 }}>
-                  {sim.tasks.length === 0 ? (
-                    <p className="cs-dim" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.7 }}>
-                      No agent has been dispatched. The workforce is idle until an incident
-                      raises work — nothing here animates to fill the space.
-                    </p>
-                  ) : (
-                    <AgentDispatchBoxes tasks={sim.tasks} models={modelRoles} max={6} />
-                  )}
-                </div>
-              )}
-            </Panel>
-          </section>
-        )}
-
 
         {activeView === "process" && (
         <section className="pt-mapwrap">
@@ -898,6 +789,34 @@ export default function PlantTwinPage() {
                 Areas
               </button>
             </div>
+            {/* Process areas as a compact strip. They used to occupy a
+                236px column, which took a third of the width from the plant
+                for a list that is really a filter. */}
+            <div className="pt-areastrip" role="tablist" aria-label="Process areas">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={areaFocus === null}
+                className={areaFocus === null ? "is-active" : undefined}
+                onClick={() => setAreaFocus(null)}
+              >
+                Whole plant <em>{plant.equipment.length}</em>
+              </button>
+              {plant.areas.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={areaFocus === a.id}
+                  className={areaFocus === a.id ? "is-active" : undefined}
+                  data-area-chip={a.id}
+                  onClick={() => setAreaFocus(areaFocus === a.id ? null : a.id)}
+                >
+                  {a.name}
+                </button>
+              ))}
+            </div>
+
             <div className="pt-legend">
               <span><i className="is-ok" /> normal</span>
               <span><i className="is-warn" /> warning</span>
@@ -931,6 +850,21 @@ export default function PlantTwinPage() {
                 highlight={sim.activeIncident ? [sim.activeIncident.origin_equipment, ...(sim.activeIncident.affected ?? [])].filter(Boolean) as string[] : []}
                 isolateArea={areaFocus}
                 focusId={focusEquipmentId}
+                busyLine={busyLine}
+                lineError={lineError}
+                onLineAction={async (lineId, action) => {
+                  setBusyLine(lineId);
+                  setLineError(null);
+                  try {
+                    if (action === "block") await simAdapter.blockLine(plantId, lineId);
+                    else if (action === "restore") await simAdapter.restoreLine(plantId, lineId);
+                    else await simAdapter.leakLine(plantId, lineId, action === "leak");
+                  } catch (e) {
+                    setLineError(e instanceof Error ? e.message : String(e));
+                  } finally {
+                    setBusyLine(null);
+                  }
+                }}
                 failover={
                   activeResponseJob?.failover
                     ? {
@@ -1050,6 +984,92 @@ export default function PlantTwinPage() {
         </section>
         )}
       </div>
+      )}
+
+          {activeView === "sensors" && (
+            <SensorsPanel
+              rows={sensorRows}
+              runtime={displayRuntime ?? null}
+              plant={plant}
+              onFocus={(sensorId) => {
+                const eq = plant.equipment.find((e) => e.sensors.some((x) => x.id === sensorId));
+                if (eq) {
+                  onSelect(eq);
+                  setFocusEquipmentId(eq.id);
+                  setActiveView("process");
+                }
+              }}
+            />
+          )}
+
+          {activeView === "equipment" && (
+            <EquipmentPanel
+              plant={plant}
+              runtime={displayRuntime ?? null}
+              onFocus={(id) => {
+                const eq = plant.equipment.find((e) => e.id === id);
+                if (eq) {
+                  onSelect(eq);
+                  setFocusEquipmentId(id);
+                  setActiveView("process");
+                }
+              }}
+            />
+          )}
+
+          {activeView === "control" && (
+            <ControlPanel plant={plant} runtime={displayRuntime ?? null} readings={readings} />
+          )}
+
+          {activeView === "scenarios" && (
+            <ScenariosPanel
+              scenarios={scenarios}
+              running={busyScenario}
+              onRun={(id) => {
+                const sc = scenarios.find((x) => x.id === id);
+                if (sc) runScenario(sc);
+              }}
+            />
+          )}
+
+          {activeView === "incidents" && (
+            <IncidentsPanel
+              incidents={sim.incidents}
+              plant={plant}
+              onFocus={(id) => {
+                const eq = plant.equipment.find((e) => e.id === id);
+                if (eq) {
+                  onSelect(eq);
+                  setFocusEquipmentId(id);
+                  setActiveView("process");
+                }
+              }}
+            />
+          )}
+
+          {activeView === "agents" && <AgentsPanel tasks={sim.tasks} models={modelRoles} now={sim.t} />}
+
+      {/* LOWER DECK — selected asset, live streams, recent events */}
+      <PlantLowerDeck
+        plant={plant}
+        runtime={displayRuntime ?? null}
+        readings={readings}
+        selected={selected}
+        events={sim.events}
+        onSelectEquipment={onSelect}
+        onSelectLine={(id) => setPipeSel({ kind: "pipe", id })}
+        selectedLineId={pipeSel?.kind === "pipe" ? pipeSel.id : null}
+        busySensor={busySensor}
+        onSensorAction={(sensorId, action) => {
+          const eq = plant.equipment.find((e) => e.sensors.some((x) => x.id === sensorId));
+          const sensor = eq?.sensors.find((x) => x.id === sensorId);
+          if (!eq || !sensor) return;
+          setBusySensor(sensorId);
+          const run =
+            action === "disable" ? actOnSensor(eq, sensor, "disable") : restoreSensor(sensorId);
+          void run.finally(() => setBusySensor(null));
+        }}
+      />
 
       {/* BOTTOM — event spine */}
       <div className="pt-spine">
