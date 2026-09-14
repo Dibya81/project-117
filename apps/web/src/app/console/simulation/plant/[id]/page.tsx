@@ -26,6 +26,7 @@ import { AgentCommandCenter } from "@/components/sim/AgentCommandCenter";
 import { AssessmentPanel } from "@/components/sim/AssessmentPanel";
 import { AgentResponseConsole } from "@/components/sim/AgentResponseConsole";
 import { AgentDispatchBoxes } from "@/components/sim/AgentDispatchBoxes";
+import { RecoveryExperience, RecoverySummary, type DecisionView } from "@/components/sim/RecoveryExperience";
 import { ProcessMap, type ProcessMapSelection } from "@/components/sim/ProcessMap";
 import { MeridianRefineryView } from "@/components/sim/MeridianRefineryView";
 import { SimulationConsole, buildSensorRows, type SimView } from "@/components/sim/SimulationConsole";
@@ -211,6 +212,95 @@ export default function PlantTwinPage() {
     () => activeResponseJob?.prediction.map((p) => p.equipmentId) ?? [],
     [activeResponseJob],
   );
+
+  /**
+   * The validated recovery decision the three agents produced. Read straight
+   * from the `response.decision` event — the route ids are whatever the backend
+   * returned, never a local default.
+   */
+  const recoveryDecision = useMemo<DecisionView | null>(() => {
+    const ev = [...sim.events].reverse().find((e) => e.type === "response.decision");
+    if (!ev) return null;
+    const p = ev.payload as Record<string, unknown>;
+    const list = (k: string) => (Array.isArray(p[k]) ? (p[k] as unknown[]).map(String) : []);
+    return {
+      available: p.available === true,
+      model: p.model ? String(p.model) : null,
+      error: p.error ? String(p.error) : null,
+      diagnosis: String(p.diagnosis ?? ""),
+      route: list("route"),
+      block: list("block"),
+      restore: list("restore"),
+      safety_confirmed: p.safety_confirmed === true,
+      safety_concerns: list("safety_concerns"),
+      rationale: String(p.rationale ?? ""),
+    };
+  }, [sim.events]);
+
+  /**
+   * The three-agent view opens on a new incident and stays up after it resolves
+   * so the outcome is readable.
+   *
+   * Keyed on the incident id rather than `sim.activeIncident`: a fast incident
+   * can open and close between two store polls, and watching the "active" flag
+   * meant the view never appeared at all. `sim.incidents` keeps every incident
+   * the log has seen, including resolved ones, so the panel still has an
+   * incident to render once it is over.
+   */
+  const [openIncidentId, setOpenIncidentId] = useState<string | null>(null);
+  // The stream replays from seq 0, so on load `sim.incidents` already contains
+  // every past incident. Only incidents that appear *after* the first render
+  // should take over the screen — otherwise opening the page pops the panel for
+  // an incident that finished before the operator arrived.
+  const seenIncidentIds = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const ids = new Set(sim.incidents.map((i) => i.id));
+    if (seenIncidentIds.current === null) {
+      seenIncidentIds.current = ids;
+      return;
+    }
+    const fresh = sim.incidents.find((i) => !seenIncidentIds.current!.has(i.id));
+    if (fresh) {
+      seenIncidentIds.current.add(fresh.id);
+      setOpenIncidentId(fresh.id);
+    }
+  }, [sim.incidents]);
+  const recoveryIncident = useMemo(
+    () => sim.incidents.find((i) => i.id === openIncidentId) ?? null,
+    [sim.incidents, openIncidentId],
+  );
+
+  /**
+   * Return to the plant once the incident is over.
+   *
+   * The view closes on the real `incident.resolved` event, never on a timer —
+   * the delay only holds the final state on screen long enough to read before
+   * the plant takes the space back.
+   */
+  useEffect(() => {
+    if (!openIncidentId || !recoveryIncident) return;
+    if (recoveryIncident.status !== "resolved" && recoveryIncident.status !== "escalated") return;
+    const t = setTimeout(() => setOpenIncidentId(null), 2800);
+    return () => clearTimeout(t);
+  }, [openIncidentId, recoveryIncident]);
+
+  /**
+   * Run the agents' decision once the evidence pack is in.
+   *
+   * The backend computes the RecoveryDecision on approval, so the console
+   * grants it as soon as the orchestrator has dispatched the tasks — otherwise
+   * the demo would stall on a button and the agents would never reach the
+   * model. Guarded per incident so it fires exactly once.
+   */
+  const decidedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const inc = sim.activeIncident;
+    if (!inc || sim.tasks.length === 0) return;
+    if (decidedRef.current.has(inc.id)) return;
+    if (sim.events.some((e) => e.type === "response.decision")) return;
+    decidedRef.current.add(inc.id);
+    void simAdapter.decide(plantId, inc.id, true);
+  }, [sim.activeIncident, sim.tasks.length, sim.events, plantId]);
 
   // load dataset + boot engine
   useEffect(() => {
@@ -542,6 +632,24 @@ export default function PlantTwinPage() {
 
   return (
     <div className={`pt-page${consoleOpen ? " pt-page--console-open" : ""}`}>
+      {/* The three-agent experience takes the whole screen while an incident is
+          open. Every panel is fed by the backend event stream; closing it just
+          returns to the plant, the incident keeps running either way. */}
+      {recoveryIncident && (
+        <RecoveryExperience
+          events={sim.events}
+          incident={recoveryIncident}
+          decision={recoveryDecision}
+          plantName={plant.name}
+          onClose={() => setOpenIncidentId(null)}
+        />
+      )}
+
+      {/* The decision stays on the plant after the full view closes. */}
+      {!recoveryIncident && recoveryDecision && (
+        <RecoverySummary decision={recoveryDecision} events={sim.events} />
+      )}
+
       {/* TOP BAR */}
       <div className="cs-pagehead pt-pagehead">
         <div>
