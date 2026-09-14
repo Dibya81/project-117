@@ -248,6 +248,13 @@ export interface ProcessMapProps {
   /** Lines the operator has acted on this session, so the panel can offer undo. */
   busyLine?: string | null;
   lineError?: string | null;
+  recoveryDecision?: {
+    available: boolean;
+    route: string[];
+    block: string[];
+    restore: string[];
+    safety_confirmed: boolean;
+  } | null;
 }
 
 export function ProcessMap({
@@ -263,6 +270,7 @@ export function ProcessMap({
   onLineAction,
   busyLine = null,
   lineError = null,
+  recoveryDecision = null,
 }: ProcessMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   /**
@@ -338,6 +346,38 @@ export function ProcessMap({
     }
     return m;
   }, [pipes, boxes0]);
+
+  const decisionLineIds = useMemo(
+    () => ({
+      route: new Set(recoveryDecision?.available ? recoveryDecision.route : []),
+      block: new Set(recoveryDecision?.available ? recoveryDecision.block : []),
+      restore: new Set(recoveryDecision?.available ? recoveryDecision.restore : []),
+    }),
+    [recoveryDecision],
+  );
+
+  const recoveringEquipmentIds = useMemo(() => {
+    if (!recoveryDecision?.available || !recoveryDecision.safety_confirmed) return new Set<string>();
+    const out = new Set<string>();
+    const blocked = new Set(recoveryDecision.block);
+    const restoredTargets = recoveryDecision.restore
+      .map((id) => plant.connections.find((c) => c.id === id)?.target)
+      .filter(Boolean) as string[];
+    let frontier = restoredTargets;
+    for (let depth = 0; depth < 5; depth++) {
+      const next: string[] = [];
+      for (const eqId of frontier) {
+        if (out.has(eqId)) continue;
+        out.add(eqId);
+        for (const c of plant.connections) {
+          if (blocked.has(c.id) || c.source !== eqId) continue;
+          next.push(c.target);
+        }
+      }
+      frontier = next;
+    }
+    return out;
+  }, [plant.connections, recoveryDecision]);
 
   const extent = useMemo(() => {
     if (!areas.length) return { x: 0, y: 0, w: 800, h: 600 };
@@ -625,6 +665,9 @@ export function ProcessMap({
               const flow = runtime?.pipes?.[c.id]?.flow ?? c.flow ?? 0;
               const colour = mediumColor(c.medium);
               const selected = selection?.kind === "pipe" && selection.id === c.id;
+              const isDecisionRoute = decisionLineIds.route.has(c.id);
+              const isDecisionBlock = decisionLineIds.block.has(c.id);
+              const isDecisionRestore = decisionLineIds.restore.has(c.id);
               return (
                 <g
                   key={c.id}
@@ -632,7 +675,10 @@ export function ProcessMap({
                   data-pipe={c.id}
                   data-line-state={st}
                   data-line-medium={c.medium}
-                  className={`pmap__pipe${selected ? " is-selected" : ""}`}
+                  data-recovery-route={isDecisionRoute ? "true" : undefined}
+                  data-recovery-block={isDecisionBlock ? "true" : undefined}
+                  data-recovery-restore={isDecisionRestore ? "true" : undefined}
+                  className={`pmap__pipe${selected ? " is-selected" : ""}${isDecisionRoute ? " is-route" : ""}${isDecisionBlock ? " is-blocking" : ""}${isDecisionRestore ? " is-restoring" : ""}`}
                 >
                   <path
                     d={r.d}
@@ -645,6 +691,13 @@ export function ProcessMap({
                       d={r.d}
                       className="pmap__pipe-flow"
                       style={{ stroke: colour, animationDuration: `${Math.max(0.7, 8 / Math.max(6, flow))}s` }}
+                    />
+                  )}
+                  {isDecisionRoute && recoveryDecision?.safety_confirmed && (
+                    <path
+                      d={r.d}
+                      className="pmap__pipe-route"
+                      style={{ stroke: isDecisionRestore ? "#16a34a" : colour }}
                     />
                   )}
                   {st === "blocked" && (
@@ -707,6 +760,7 @@ export function ProcessMap({
             const tone = stateTone(state);
             const selected = selection?.kind === "equipment" && selection.id === eq.id;
             const flagged = highlight.includes(eq.id);
+            const recovering = recoveringEquipmentIds.has(eq.id);
             const box = boxes.get(eq.id)!;
             return (
               <g
@@ -716,8 +770,9 @@ export function ProcessMap({
                 data-kind={eq.kind}
                 data-state={state}
                 data-flagged={flagged ? "true" : undefined}
+                data-recovering={recovering ? "true" : undefined}
                 data-failover-target={failover?.to === eq.id ? "true" : undefined}
-                className={`pmap__eq${selected ? " is-selected" : ""}${flagged ? " is-flagged" : ""}`}
+                className={`pmap__eq${selected ? " is-selected" : ""}${flagged ? " is-flagged" : ""}${recovering ? " is-recovering" : ""}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelect?.({ kind: "equipment", id: eq.id });
@@ -744,7 +799,14 @@ export function ProcessMap({
                     ry={box.h * 0.14}
                   />
                 )}
-                <EquipmentShape kind={eq.kind} box={box} />
+                <EquipmentShape
+                  kind={eq.kind}
+                  box={box}
+                  id={eq.tag}
+                  name={eq.name}
+                  status={recovering ? "recovering" : state}
+                  selected={selected}
+                />
                 <text className="pmap__eq-tag" x={eq.x} y={box.y + box.h + 14}>
                   {eq.tag}
                 </text>

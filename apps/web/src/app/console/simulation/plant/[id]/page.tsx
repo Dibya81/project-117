@@ -29,6 +29,7 @@ import { AgentDispatchBoxes } from "@/components/sim/AgentDispatchBoxes";
 import { RecoveryExperience, RecoverySummary, type DecisionView } from "@/components/sim/RecoveryExperience";
 import { ProcessMap, type ProcessMapSelection } from "@/components/sim/ProcessMap";
 import { MeridianRefineryView } from "@/components/sim/MeridianRefineryView";
+import { EquipmentRenderer, normalizeEquipmentAsset, preferredAssetSize } from "@/components/equipment";
 import { SimulationConsole, buildSensorRows, type SimView } from "@/components/sim/SimulationConsole";
 import { PlantLowerDeck } from "@/components/sim/PlantLowerDeck";
 import {
@@ -67,6 +68,23 @@ import "@/styles/plant.css";
  * moving between console pages; only a reload discards it.
  */
 const plantReset = new Map<string, Promise<void>>();
+
+function PlantEquipmentAsset({ equipment, status, selected = true }: { equipment: EquipmentDef; status?: string; selected?: boolean }) {
+  const asset = normalizeEquipmentAsset(equipment.kind, equipment.name, equipment.tag);
+  const preferred = preferredAssetSize[asset];
+  const scale = Math.min(210 / preferred.w, 160 / preferred.h);
+  const box = {
+    x: (236 - preferred.w * scale) / 2,
+    y: (178 - preferred.h * scale) / 2 + 4,
+    w: preferred.w * scale,
+    h: preferred.h * scale,
+  };
+  return (
+    <svg className="pt-selected-asset" viewBox="0 0 236 196" role="img" aria-label={`${equipment.tag} ${equipment.name}`}>
+      <EquipmentRenderer asset={asset} kind={equipment.kind} name={equipment.name} id={equipment.tag} status={status ?? equipment.state ?? "healthy"} selected={selected} box={box} />
+    </svg>
+  );
+}
 
 function ensurePlantIsFresh(plantId: string): Promise<void> {
   const inFlight = plantReset.get(plantId);
@@ -190,40 +208,16 @@ export default function PlantTwinPage() {
     if (!responseJobs.length) return null;
     return responseJobs.find((j) => j.jobId === consoleJobId) ?? responseJobs[responseJobs.length - 1];
   }, [responseJobs, consoleJobId]);
-  /**
-   * The canvas runtime with the failover overlay applied.
-   *
-   * When the backend switched to an alternate transmitter, that transmitter is
-   * now the source of the measurement — but the engine's quality field still
-   * reads "good", because nothing changed about it. Marking it `substituted`
-   * is what makes the rewire visible on the diagram: the reading has moved, and
-   * the operator can see where to. Derived from the real `related_sensor_id`
-   * the backend reported, never assumed.
-   */
-  const displayRuntime = useMemo(() => {
-    if (!runtime) return runtime;
-    const sensorId = activeResponseJob?.failover?.relatedSensorId;
-    if (!sensorId || !runtime.qualities[sensorId]) return runtime;
-    return { ...runtime, qualities: { ...runtime.qualities, [sensorId]: "substituted" as const } };
-  }, [runtime, activeResponseJob]);
-
-
   const predictedIds = useMemo(
     () => activeResponseJob?.prediction.map((p) => p.equipmentId) ?? [],
     [activeResponseJob],
   );
 
-  /**
-   * The validated recovery decision the three agents produced. Read straight
-   * from the `response.decision` event — the route ids are whatever the backend
-   * returned, never a local default.
-   */
-  const recoveryDecision = useMemo<DecisionView | null>(() => {
-    const ev = [...sim.events].reverse().find((e) => e.type === "response.decision");
-    if (!ev) return null;
+  const decisionFromEvent = useCallback((ev: (typeof sim.events)[number]): DecisionView => {
     const p = ev.payload as Record<string, unknown>;
     const list = (k: string) => (Array.isArray(p[k]) ? (p[k] as unknown[]).map(String) : []);
     return {
+      incidentId: p.incident_id ? String(p.incident_id) : p.job_id ? String(p.job_id) : null,
       available: p.available === true,
       model: p.model ? String(p.model) : null,
       error: p.error ? String(p.error) : null,
@@ -235,18 +229,8 @@ export default function PlantTwinPage() {
       safety_concerns: list("safety_concerns"),
       rationale: String(p.rationale ?? ""),
     };
-  }, [sim.events]);
+  }, []);
 
-  /**
-   * The three-agent view opens on a new incident and stays up after it resolves
-   * so the outcome is readable.
-   *
-   * Keyed on the incident id rather than `sim.activeIncident`: a fast incident
-   * can open and close between two store polls, and watching the "active" flag
-   * meant the view never appeared at all. `sim.incidents` keeps every incident
-   * the log has seen, including resolved ones, so the panel still has an
-   * incident to render once it is over.
-   */
   const [openIncidentId, setOpenIncidentId] = useState<string | null>(null);
   // The stream replays from seq 0, so on load `sim.incidents` already contains
   // every past incident. Only incidents that appear *after* the first render
@@ -270,6 +254,73 @@ export default function PlantTwinPage() {
     [sim.incidents, openIncidentId],
   );
 
+  /**
+   * The validated recovery decision the three agents produced. Read straight
+   * from the `response.decision` event — the route ids are whatever the backend
+   * returned, never a local default.
+   */
+  const recoveryDecision = useMemo<DecisionView | null>(() => {
+    const wantedIncidentId = openIncidentId ?? sim.activeIncident?.id ?? consoleJobId;
+    const ev = [...sim.events].reverse().find((e) => {
+      if (e.type !== "response.decision") return false;
+      if (!wantedIncidentId) return true;
+      const p = e.payload as Record<string, unknown>;
+      return String(p.incident_id ?? p.job_id ?? "") === wantedIncidentId;
+    });
+    if (!ev) return null;
+    return decisionFromEvent(ev);
+  }, [sim.events, openIncidentId, sim.activeIncident?.id, consoleJobId, decisionFromEvent]);
+
+  const lastVerifiedDecision = useMemo<DecisionView | null>(() => {
+    const ev = [...sim.events].reverse().find((e) => {
+      if (e.type !== "response.decision") return false;
+      const p = e.payload as Record<string, unknown>;
+      return p.available === true && p.safety_confirmed === true;
+    });
+    return ev ? decisionFromEvent(ev) : null;
+  }, [sim.events, decisionFromEvent]);
+
+  /**
+   * The canvas runtime with the failover and verified topology overlays
+   * applied. Both overlays are copied from backend events and decision ids:
+   * no local path or connection id is invented here.
+   */
+  const displayRuntime = useMemo(() => {
+    if (!runtime) return runtime;
+    const sensorId = activeResponseJob?.failover?.relatedSensorId;
+    const next: CanvasRuntime = {
+      ...runtime,
+      qualities: { ...runtime.qualities },
+      pipes: Object.fromEntries(Object.entries(runtime.pipes).map(([id, pipe]) => [id, { ...pipe }])),
+    };
+    if (sensorId && runtime.qualities[sensorId]) {
+      next.qualities[sensorId] = "substituted" as const;
+    }
+    if (lastVerifiedDecision?.available && lastVerifiedDecision.safety_confirmed) {
+      const known = new Set(plant?.connections.map((c) => c.id) ?? []);
+      for (const id of lastVerifiedDecision.block) {
+        if (!known.has(id) || !next.pipes[id]) continue;
+        next.pipes[id] = { ...next.pipes[id], enabled: false, flow: 0 };
+      }
+      for (const id of lastVerifiedDecision.restore) {
+        if (!known.has(id) || !next.pipes[id]) continue;
+        const base = plant?.connections.find((c) => c.id === id);
+        next.pipes[id] = { ...next.pipes[id], enabled: true, leaking: false, flow: Math.max(next.pipes[id].flow ?? 0, base?.flow ?? 0, 8) };
+      }
+    }
+    return next;
+  }, [runtime, activeResponseJob, lastVerifiedDecision, plant?.connections]);
+
+  /**
+   * The three-agent view opens on a new incident and stays up after it resolves
+   * so the outcome is readable.
+   *
+   * Keyed on the incident id rather than `sim.activeIncident`: a fast incident
+   * can open and close between two store polls, and watching the "active" flag
+   * meant the view never appeared at all. `sim.incidents` keeps every incident
+   * the log has seen, including resolved ones, so the panel still has an
+   * incident to render once it is over.
+   */
   /**
    * Return to the plant once the incident is over.
    *
@@ -297,7 +348,11 @@ export default function PlantTwinPage() {
     const inc = sim.activeIncident;
     if (!inc || sim.tasks.length === 0) return;
     if (decidedRef.current.has(inc.id)) return;
-    if (sim.events.some((e) => e.type === "response.decision")) return;
+    if (sim.events.some((e) => {
+      if (e.type !== "response.decision") return false;
+      const p = e.payload as Record<string, unknown>;
+      return String(p.incident_id ?? p.job_id ?? "") === inc.id;
+    })) return;
     decidedRef.current.add(inc.id);
     void simAdapter.decide(plantId, inc.id, true);
   }, [sim.activeIncident, sim.tasks.length, sim.events, plantId]);
@@ -715,6 +770,7 @@ export default function PlantTwinPage() {
         <div className="pt-rail">
           {selected ? (
             <Panel title={`${selected.tag} — ${selected.name}`} pad>
+              <PlantEquipmentAsset equipment={selected} status={selectedRt?.state ?? selected.state ?? "normal"} />
               <div style={{ display: "flex", flexDirection: "column", gap: 0, marginBottom: 12 }}>
                 <div className="sm-kv"><span className="cs-dim">Type</span><b>{selected.kind}</b></div>
                 <div className="sm-kv"><span className="cs-dim">State</span>
@@ -986,6 +1042,7 @@ export default function PlantTwinPage() {
                 activeIncident={sim.activeIncident}
                 tasks={sim.tasks}
                 models={modelRoles}
+                recoveryDecision={recoveryDecision ?? lastVerifiedDecision}
               />
               {/* The three agent panels float over every drawing. They were only
                   mounted on the P&ID branch, so disabling a transmitter in the
@@ -1037,6 +1094,7 @@ export default function PlantTwinPage() {
                       }
                     : null
                 }
+                recoveryDecision={recoveryDecision ?? lastVerifiedDecision}
               />
               {/* The three agent panels float over whichever drawing is shown,
                   so the P&ID is not a lesser view. */}

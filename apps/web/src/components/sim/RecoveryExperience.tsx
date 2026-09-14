@@ -70,6 +70,7 @@ interface TaskView {
 }
 
 export interface DecisionView {
+  incidentId?: string | null;
   available: boolean;
   model: string | null;
   error: string | null;

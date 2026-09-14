@@ -11,9 +11,33 @@ import { Button, EmptyState, Kpi, Panel, SkeletonRows, StatusDot, Tabs, Tag, tim
 import { TrendChart } from "@/components/ui/TrendChart";
 import { Icon } from "@/components/ui/Icon";
 import { consoleData } from "@/lib/data/console";
-import { TwinDiagram } from "@/components/console/TwinDiagram";
+import { EquipmentRenderer, normalizeEquipmentAsset, preferredAssetSize } from "@/components/equipment";
 import { useJourney } from "@/lib/journey";
 import type { EquipmentDetailData } from "@/types/console";
+
+function DetailEquipmentAsset({ data }: { data: EquipmentDetailData }) {
+  const asset = normalizeEquipmentAsset(data.kind, data.name, data.id, data.registerName);
+  const preferred = preferredAssetSize[asset];
+  const scale = Math.min(330 / preferred.w, 250 / preferred.h);
+  const box = {
+    x: (360 - preferred.w * scale) / 2,
+    y: (282 - preferred.h * scale) / 2 + 6,
+    w: preferred.w * scale,
+    h: preferred.h * scale,
+  };
+  return (
+    <div className="cs-equipment-hero">
+      <svg className="cs-equipment-hero__svg" viewBox="0 0 360 306" role="img" aria-label={`${data.name} refinery asset`}>
+        <EquipmentRenderer asset={asset} kind={data.kind} name={data.name} id={data.registerTag ?? data.id} status={data.status} selected box={box} />
+      </svg>
+      <div className="cs-equipment-hero__meta">
+        <span className="cs-mono">{data.registerTag ?? data.id}</span>
+        <b>{data.name}</b>
+        <small>{data.kind} · {data.zone}</small>
+      </div>
+    </div>
+  );
+}
 
 export default function EquipmentDetailPage() {
   const params = useParams<{ id: string }>();
@@ -157,14 +181,23 @@ export default function EquipmentDetailPage() {
           {tab === "overview" && (
             <div className="cs-stack">
               <div className="cs-grid-2" style={{ gridTemplateColumns: "minmax(0, 1.15fr) minmax(0, 1fr)" }}>
-                <Panel title="Digital twin" hud pad={false}>
-                  <div className="cs-scan" style={{ borderRadius: "0 0 10px 10px" }}>
-                    <TwinDiagram
-                      kind={data.kind}
-                      status={data.status}
-                      sensors={twinSensors}
-                      onSensorClick={() => setTab("sensors")}
-                    />
+                <Panel title="Refinery asset" hud pad={false}>
+                  <DetailEquipmentAsset data={data} />
+                  <div className="cs-equipment-sensor-strip">
+                    {twinSensors.length === 0 ? (
+                      <button type="button" onClick={() => setTab("sensors")}>No live sensor readings available</button>
+                    ) : (
+                      twinSensors.map((s) => {
+                        const state = s.critAbove != null && s.value >= s.critAbove ? "critical" : s.warnAbove != null && s.value >= s.warnAbove ? "warning" : "ok";
+                        return (
+                          <button key={s.key} type="button" onClick={() => setTab("sensors")} className={`cs-equipment-sensor cs-equipment-sensor--${state}`}>
+                            <StatusDot state={state} pulse={state === "critical"} />
+                            <span>{s.label}</span>
+                            <b className="cs-mono">{s.value} {s.unit}</b>
+                          </button>
+                        );
+                      })
+                    )}
                   </div>
                 </Panel>
                 <Panel title="Chain of evidence" pad>

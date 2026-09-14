@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { Panel, Ring, SkeletonRows, StatusDot, Tag } from "@/components/ui/primitives";
 import { Tilt } from "@/components/fx/Tilt";
 import { Icon } from "@/components/ui/Icon";
+import { EquipmentRenderer, normalizeEquipmentAsset, preferredAssetSize } from "@/components/equipment";
 import { consoleData } from "@/lib/data/console";
 import type { Equipment, HealthState } from "@/types";
 
@@ -27,6 +28,23 @@ function healthOf(e: Equipment): number {
 
 function ringTone(h: number): "ok" | "warn" | "crit" {
   return h >= 85 ? "ok" : h >= 65 ? "warn" : "crit";
+}
+
+function EquipmentAssetPreview({ equipment }: { equipment: Equipment }) {
+  const asset = normalizeEquipmentAsset(equipment.kind, equipment.name, equipment.id);
+  const preferred = preferredAssetSize[asset];
+  const scale = Math.min(154 / preferred.w, 118 / preferred.h);
+  const box = {
+    x: (170 - preferred.w * scale) / 2,
+    y: (126 - preferred.h * scale) / 2 + 2,
+    w: preferred.w * scale,
+    h: preferred.h * scale,
+  };
+  return (
+    <svg className="cs-eqasset" viewBox="0 0 170 136" role="img" aria-label={`${equipment.name} equipment asset`}>
+      <EquipmentRenderer asset={asset} kind={equipment.kind} name={equipment.name} id={equipment.id} status={equipment.status} box={box} />
+    </svg>
+  );
 }
 
 export default function EquipmentPage() {
@@ -101,6 +119,9 @@ export default function EquipmentPage() {
                   onKeyDown={(ev) => ev.key === "Enter" && router.push(`/console/equipment/${e.id}`)}
                   aria-label={`Open ${e.name}`}
                 >
+                  <div className="cs-eqcard__asset">
+                    <EquipmentAssetPreview equipment={e} />
+                  </div>
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 9 }}>

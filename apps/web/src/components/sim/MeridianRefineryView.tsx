@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Icon } from "@/components/ui/Icon";
 import { MeridianRefineryCanvas } from "@/components/sim/MeridianRefineryCanvas";
+import type { TopologyRecoveryDecision } from "@/components/sim/MeridianRefineryCanvas";
 import type { AgentTask, EquipmentDef, PlantDef } from "@/lib/sim/types";
 import type { CanvasRuntime, SpatialReading } from "@/components/sim/SchematicCanvas";
 
@@ -19,6 +20,7 @@ export function MeridianRefineryView({
   activeIncident = null,
   tasks = [],
   models = {},
+  recoveryDecision = null,
 }: {
   plant: PlantDef;
   runtime: CanvasRuntime | null;
@@ -31,6 +33,7 @@ export function MeridianRefineryView({
   activeIncident?: any;
   tasks?: AgentTask[];
   models?: Record<string, string | null>;
+  recoveryDecision?: TopologyRecoveryDecision | null;
 }) {
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -209,6 +212,7 @@ export function MeridianRefineryView({
             activeIncident={activeIncident}
             tasks={tasks}
             models={models}
+            recoveryDecision={recoveryDecision}
           />
         )}
       </div>

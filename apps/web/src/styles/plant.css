@@ -1465,6 +1465,36 @@
 .pmap__pipe-line.is-signal { stroke-dasharray: 2 4; stroke-width: 1.6; }
 .pmap__pipe.is-selected .pmap__pipe-line { stroke-width: 3.4; }
 .pmap__pipe.is-selected .pmap__pipe-hit { stroke: rgba(37, 99, 235, 0.1); }
+.pmap__pipe.is-blocking .pmap__pipe-line {
+  stroke: #dc2626 !important;
+  stroke-dasharray: 7 5;
+  animation: pmap-block-pulse 0.9s ease-in-out infinite;
+}
+.pmap__pipe.is-restoring .pmap__pipe-line {
+  stroke: #16a34a !important;
+  stroke-width: 3.2;
+}
+.pmap__pipe.is-route .pmap__pipe-line {
+  stroke-width: 3;
+}
+.pmap__pipe-route {
+  fill: none;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 10 18;
+  opacity: 0.82;
+  marker-end: url(#pmap-arrow);
+  animation: pmap-route-flow 1.05s linear infinite;
+  filter: drop-shadow(0 0 5px rgba(22, 163, 74, 0.35));
+  pointer-events: none;
+}
+@keyframes pmap-block-pulse {
+  50% { opacity: 0.45; }
+}
+@keyframes pmap-route-flow {
+  to { stroke-dashoffset: -56; }
+}
 .pmap__pipe-label {
   font-family: var(--mono);
   font-size: 8px;
@@ -1483,6 +1513,18 @@
 
 /* --- equipment --- */
 .pmap__eq { cursor: pointer; }
+.pmap__eq.is-recovering {
+  animation: pmap-node-recover 1.5s ease-in-out infinite;
+}
+@keyframes pmap-node-recover {
+  50% { filter: drop-shadow(0 0 8px rgba(22, 163, 74, 0.48)); }
+}
+.pmap__eq.is-flagged {
+  animation: pmap-node-fault 1s ease-in-out infinite;
+}
+@keyframes pmap-node-fault {
+  50% { filter: drop-shadow(0 0 8px rgba(220, 38, 38, 0.42)); }
+}
 .pmap__eq-body {
   fill: #ffffff;
   stroke: rgba(36, 52, 71, 0.45);
@@ -1574,7 +1616,11 @@
 /* Reduced motion: the process still reads — lines keep their arrows and state
    markers — it simply does not travel. */
 @media (prefers-reduced-motion: reduce) {
-  .pmap__pipe-flow { animation: none; opacity: 0.55; }
+  .pmap__pipe-flow,
+  .pmap__pipe-route,
+  .pmap__pipe.is-blocking .pmap__pipe-line,
+  .pmap__eq.is-recovering,
+  .pmap__eq.is-flagged { animation: none; opacity: 0.8; }
 }
 
 /* Map view switch — P&ID (the process drawing) or Areas (the swept view). */
@@ -1600,6 +1646,50 @@
   cursor: pointer;
 }
 .pt-viewtoggle button.is-active { background: var(--cyan); color: #fff; }
+
+.mr-topology-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 620px;
+  overflow: hidden;
+  background: #f3f5f7;
+}
+
+.mr-topology-status,
+.mr-recovery-strip {
+  position: absolute;
+  left: 14px;
+  z-index: 12;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 28px);
+  padding: 6px 8px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  color: #334155;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.mr-topology-status { top: 12px; }
+.mr-topology-status .is-critical { color: #dc2626; }
+.mr-recovery-strip {
+  top: 46px;
+  border-color: rgba(22, 163, 74, 0.45);
+  color: #166534;
+}
+.mr-recovery-strip b {
+  color: #0f172a;
+  font-weight: 800;
+}
 
 /* --- line inspector -------------------------------------------------------
    Real data only: the pipe's own record, plus upstream/downstream walked from
@@ -2134,10 +2224,12 @@
    earlier definitions by cascade order. */
 
 .pt-layout {
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  gap: 14px;
   min-height: 0;
 }
-.pt-rail { display: none !important; }
+.pt-rail { display: flex !important; max-height: clamp(620px, calc(100vh - 250px), 1400px); }
 
 .pt-mapwrap {
   display: flex;
@@ -2148,6 +2240,22 @@
      area is now as tall as the page allows and the camera decides what is in
      frame. */
   height: clamp(620px, calc(100vh - 250px), 1400px);
+}
+.pt-selected-asset {
+  display: block;
+  width: 100%;
+  height: 196px;
+  margin: -2px 0 10px;
+  overflow: visible;
+  border: 1px solid rgba(83, 104, 127, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.9), rgba(241,245,249,0.7)),
+    repeating-linear-gradient(90deg, rgba(83,104,127,0.06) 0 1px, transparent 1px 20px);
+}
+@media (max-width: 1050px) {
+  .pt-layout { grid-template-columns: 1fr; }
+  .pt-rail { max-height: none; }
 }
 .pt-mapbody { flex: 1; min-height: 0; }
 

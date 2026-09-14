@@ -22,8 +22,8 @@ from backend.simulation import decision
 def _fake_ask(role: str, system: str, user: str) -> tuple[str, str]:
     """A test double that answers the three agents with a valid route.
 
-    ``operations`` restores every process line the evidence pack names — those
-    lines touch the incident scope by construction — so the recovery resolves
+    ``operations`` restores the first process line in the evidence pack. That
+    line touches the incident scope by construction, so the recovery resolves
     and verification runs against real engine state. Nothing here knows a tag.
     """
     if role == "safety":
@@ -35,7 +35,7 @@ def _fake_ask(role: str, system: str, user: str) -> tuple[str, str]:
             "test-model",
         )
     # operations: the route is the real connection ids in the evidence pack.
-    ids = list(dict.fromkeys(re.findall(r'pl-\d+', user)))
+    ids = list(dict.fromkeys(re.findall(r'pl-\d+', user)))[:1]
     return (
         json.dumps({
             "route": ids,

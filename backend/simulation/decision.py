@@ -277,6 +277,69 @@ def _extract_json(text: str) -> dict[str, Any]:
 def _json_field(data: dict[str, Any], key: str, default: Any = None) -> Any:
     return data.get(key, default)
 
+def _validate_recovery_decision(
+    engine: SimulationEngine,
+    incident: Incident,
+    decision: RecoveryDecision,
+) -> list[str]:
+    by_id = {c.id: c for c in engine.plant.connections}
+    errors: list[str] = []
+    block = list(dict.fromkeys(decision.block))
+    restore = list(dict.fromkeys(decision.restore))
+    route = list(dict.fromkeys(decision.route))
+    decision.block = block
+    decision.restore = restore
+    decision.route = route
+
+    overlap = sorted(set(block) & set(restore))
+    if overlap:
+        errors.append(f"block and restore overlap: {', '.join(overlap)}")
+
+    for cid in [*route, *block, *restore]:
+        if cid not in by_id:
+            errors.append(f"unknown connection id: {cid}")
+
+    if restore and not route:
+        errors.append("restore requires an explicit route")
+
+    blocked = set(block)
+    for cid in route:
+        if cid in blocked:
+            errors.append(f"route depends on blocked connection: {cid}")
+
+    if route and all(cid in by_id for cid in route):
+        prev = by_id[route[0]]
+        for cid in route[1:]:
+            cur = by_id[cid]
+            if prev.target != cur.source:
+                errors.append(
+                    f"route is not ordered topology: {prev.id} ends at {prev.target}, "
+                    f"{cur.id} starts at {cur.source}"
+                )
+                break
+            prev = cur
+
+        route_start = by_id[route[0]].source
+        route_end = by_id[route[-1]].target
+        scope = {incident.origin_equipment, *incident.affected}
+        if route_start not in scope and route_end not in scope:
+            errors.append(
+                "route must start or end inside the incident circuit "
+                f"({incident.origin_equipment})"
+            )
+
+    for cid in restore:
+        if cid in by_id:
+            c = by_id[cid]
+            scope = {incident.origin_equipment, *incident.affected}
+            if c.source not in scope and c.target not in scope and cid not in route:
+                errors.append(f"restored connection is not an alternative incident path: {cid}")
+
+    if decision.safety_confirmed is not True:
+        errors.append("safety did not confirm the final route")
+
+    return errors
+
 
 #: Signature of the model-call seam. Tests inject a fake here so the suite runs
 #: hermetically; production uses :func:`_ask` (the real local model).
@@ -376,6 +439,14 @@ def run_incident_decision(
         models.append("safety")
         decision.safety_confirmed = bool(_json_field(sf, "safe", False))
         decision.safety_concerns = [str(c) for c in _json_field(sf, "concerns", [])]
+
+        validation_errors = _validate_recovery_decision(engine, incident, decision)
+        if validation_errors:
+            decision.available = False
+            decision.error = "INVALID RECOVERY DECISION — " + "; ".join(validation_errors)
+            decision.safety_confirmed = False
+            decision.safety_concerns = [*decision.safety_concerns, *validation_errors]
+            return decision
 
         decision.available = True
         decision.model = ",".join(dict.fromkeys(models))

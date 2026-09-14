@@ -80,3 +80,35 @@ class TestUnavailableModelIsNotSilent:
         rt = svc.runtime("refinery")
         assert not any(e.type == "action.completed" for e in rt.events)
         assert not any(e.type == "incident.resolved" for e in rt.events)
+
+
+class TestInvalidDecisionIsRejected:
+    def test_block_restore_overlap_cannot_execute(self, svc, monkeypatch):
+        def ask(role: str, system: str, user: str) -> tuple[str, str]:
+            if role == "diagnostic":
+                return (
+                    '{"affected_equipment": [], "diagnosis": "sensor failure", '
+                    '"failure_mode": "sensor_failure"}',
+                    "test-model",
+                )
+            if role == "operations":
+                return (
+                    '{"route": ["pl-004"], "block": ["pl-004"], '
+                    '"restore": ["pl-004"], "rationale": "no-op"}',
+                    "test-model",
+                )
+            return '{"safe": true, "concerns": []}', "test-model"
+
+        monkeypatch.setattr(decision, "_ask_override", ask)
+        out = svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
+        res = svc.decide("refinery", out["incident"]["id"], True)
+
+        assert res["verified"] is False
+        assert res["available"] is False
+        assert "block and restore overlap" in " ".join(res["findings"])
+        ev = _decision_event(svc)
+        assert ev.payload["available"] is False
+        assert "INVALID RECOVERY DECISION" in (ev.payload["error"] or "")
+        rt = svc.runtime("refinery")
+        assert not any(e.type == "action.completed" for e in rt.events)
+        assert not any(e.type == "incident.resolved" for e in rt.events)
