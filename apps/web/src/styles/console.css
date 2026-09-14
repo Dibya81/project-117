@@ -2778,29 +2778,33 @@
   background: radial-gradient(ellipse 70% 60% at 50% 40%, #ffffff, #eef3f9 70%, #e6edf6);
 }
 .k3 canvas { display: block; }
-.k3__badge {
-  position: absolute;
-  left: 50%;
-  bottom: 16px;
-  transform: translateX(-50%);
+/* The core's nameplate, anchored on the plinth inside the 3D scene. */
+.k3-plate {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  padding: 7px 20px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(238, 244, 251, 0.96));
+  border: 1px solid rgba(148, 176, 214, 0.55);
+  box-shadow: 0 10px 26px rgba(30, 64, 120, 0.18);
   pointer-events: none;
-  text-align: center;
+  white-space: nowrap;
 }
-.k3__badge b {
-  font-size: 12.5px;
-  letter-spacing: 0.16em;
+.k3-plate b {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--ink-1);
+  color: #16233a;
 }
-.k3__badge span {
+.k3-plate span {
   font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  color: var(--ink-3);
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6b7f96;
 }
 /* Satellite labels live in the 3D scene as HTML, so they must survive on top of
    the canvas without a card behind them. */
@@ -2926,45 +2930,79 @@
   z-index: 5;
   pointer-events: none;
 }
+.k3-ring__path {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.k3-ring__path ellipse {
+  fill: none;
+  stroke: rgba(96, 138, 196, 0.28);
+  stroke-width: 0.22;
+  stroke-dasharray: 1.4 1.8;
+}
+/* Each system is its logo alone. The name is revealed on hover, so the ring is
+   a quiet set of marks around the core rather than eight labelled cards. */
 .k3-card {
   position: absolute;
   left: 50%;
   top: 50%;
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 13px 8px 8px;
-  border: 1px solid rgba(203, 213, 225, 0.9);
-  border-radius: 11px;
+  gap: 0;
+  padding: 7px;
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  border-radius: 14px;
   background: #fff;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
   cursor: pointer;
   white-space: nowrap;
   pointer-events: auto;
-  z-index: calc(2 + var(--sd, 0.5) * 4);
-  transform:
-    translate(-50%, -50%)
-    translate(var(--sx, 0px), var(--sy, 0px))
-    scale(calc(0.86 + var(--sd, 0.5) * 0.24));
-  opacity: calc(0.5 + var(--sd, 0.5) * 0.5);
-  transition: border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+  z-index: 6;
+  transform: translate(-50%, -50%) translate(var(--sx, 0px), var(--sy, 0px));
+  opacity: 1;
+  transition: border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease,
+    gap 180ms ease, padding 180ms ease;
   will-change: transform;
 }
 .k3-card__tile {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
   color: #fff;
   flex: 0 0 auto;
+  /* A soft inner highlight so the tile reads as a physical mark, not a flat
+     coloured square. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 3px 8px rgba(15, 23, 42, 0.16);
 }
-.k3-card__body { display: flex; flex-direction: column; gap: 1px; text-align: left; }
+/* Collapsed by default: the label costs no space until the pointer is on it. */
+.k3-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width 200ms ease, opacity 160ms ease, margin-left 200ms ease;
+}
+.k3-card.is-hot,
+.k3-card:focus-visible {
+  border-color: #38bdf8;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
+}
+.k3-card.is-hot .k3-card__body,
+.k3-card:focus-visible .k3-card__body {
+  max-width: 190px;
+  opacity: 1;
+  margin-left: 9px;
+}
 .k3-card__body b { font-size: 12px; color: #0f172a; }
 .k3-card__body span { font-size: 10px; color: #64748b; }
-.k3-card.is-hot {
-  border-color: #38bdf8;
-  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.26);
-  transform: scale(1.06);
-}
-.k3-card.is-dim { opacity: 0.42; }
+.k3-card.is-hot { transform-origin: center; }
+.k3-card.is-dim { opacity: 0.34; }

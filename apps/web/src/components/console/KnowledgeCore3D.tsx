@@ -25,7 +25,6 @@ import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { useRouter } from "next/navigation";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import { PlantPart, Pipe, type PartKind } from "@/components/console/PlantParts3D";
 
 export interface Satellite {
   id: string;
@@ -110,61 +109,60 @@ function Core({ reduced, hovered }: { reduced: boolean; hovered: boolean }) {
 
       {/* The three intelligence layers. Translucent, turning at different rates
           so the depth is legible as depth. */}
-      <mesh ref={shellA}>
+      <mesh ref={shellA} castShadow>
         <icosahedronGeometry args={[2.0, 1]} />
-        <meshPhysicalMaterial
-          color="#60a5fa"
+        <meshStandardMaterial
+          color="#2f6fe0"
           transparent
-          opacity={0.22}
-          roughness={0.15}
-          metalness={0.1}
-          transmission={0.35}
-          thickness={0.6}
+          opacity={0.34}
+          roughness={0.12}
+          metalness={0.25}
           emissive="#1d4ed8"
-          emissiveIntensity={0.85 * glow}
+          emissiveIntensity={0.55 * glow}
+          flatShading
         />
       </mesh>
       <mesh ref={shellB}>
         <icosahedronGeometry args={[1.58, 1]} />
-        <meshPhysicalMaterial
-          color="#93c5fd"
+        <meshStandardMaterial
+          color="#5b9bf0"
           transparent
-          opacity={0.3}
-          roughness={0.1}
-          transmission={0.3}
-          thickness={0.5}
+          opacity={0.5}
+          roughness={0.08}
+          metalness={0.2}
           emissive="#2563eb"
-          emissiveIntensity={1.0 * glow}
+          emissiveIntensity={0.8 * glow}
+          flatShading
         />
       </mesh>
       <mesh ref={shellC}>
         <icosahedronGeometry args={[1.18, 0]} />
-        <meshPhysicalMaterial
-          color="#bfdbfe"
+        <meshStandardMaterial
+          color="#9cc6f8"
           transparent
-          opacity={0.42}
-          roughness={0.05}
-          transmission={0.25}
-          thickness={0.4}
+          opacity={0.72}
+          roughness={0.06}
+          metalness={0.15}
           emissive="#3b82f6"
-          emissiveIntensity={1.5 * glow}
+          emissiveIntensity={1.2 * glow}
+          flatShading
         />
       </mesh>
 
       {/* Inner graph — what the core actually is. */}
       <group ref={graph}>
         <mesh>
-          <sphereGeometry args={[0.5, 24, 24]} />
+          <sphereGeometry args={[0.62, 28, 28]} />
           <meshStandardMaterial
             color="#dbeafe"
             emissive="#60a5fa"
-            emissiveIntensity={2.2 * glow}
+            emissiveIntensity={2.8 * glow}
             roughness={0.2}
           />
         </mesh>
         {nodes.map((p, i) => (
           <mesh key={i} position={p}>
-            <sphereGeometry args={[0.045, 10, 10]} />
+            <sphereGeometry args={[0.07, 12, 12]} />
             <meshBasicMaterial color="#e0f2fe" transparent opacity={1} />
           </mesh>
         ))}
@@ -174,7 +172,7 @@ function Core({ reduced, hovered }: { reduced: boolean; hovered: boolean }) {
               attach="geometry"
               onUpdate={(g) => g.setFromPoints([a, b])}
             />
-            <lineBasicMaterial color="#7dd3fc" transparent opacity={0.55} />
+            <lineBasicMaterial color="#bfdbfe" transparent opacity={0.9} />
           </line>
         ))}
       </group>
@@ -191,82 +189,6 @@ function Core({ reduced, hovered }: { reduced: boolean; hovered: boolean }) {
  * intelligence layer over a physical facility, not that this is a refinery
  * drawing. The process map belongs on the Simulation page.
  */
-function PlantSurround() {
-  /**
-   * A designed miniature plant, not scattered primitives.
-   *
-   * Each cluster is a coherent process unit — a column with its reboiler and
-   * pump, a tank farm with its transfer pumps, an exchanger bank — laid out on
-   * the engineering grid. Positions are fixed so the plant looks the same every
-   * load; a facility that rearranges itself is not a facility.
-   */
-  const clusters: {
-    x: number;
-    z: number;
-    rot: number;
-    parts: { kind: PartKind; at: [number, number, number]; s: number }[];
-  }[] = [
-    {
-      x: -9.4, z: 1.2, rot: 0.3,
-      parts: [
-        { kind: "tank", at: [0, 0, 0], s: 1.25 },
-        { kind: "tank", at: [1.5, 0, 0.4], s: 1.05 },
-        { kind: "pump", at: [0.7, 0, 1.5], s: 0.9 },
-        { kind: "cabinet", at: [0.4, 0, 2.4], s: 0.85 },
-      ],
-    },
-    {
-      x: -6.2, z: -3.4, rot: -0.5,
-      parts: [
-        { kind: "column", at: [0, 0, 0], s: 1.35 },
-        { kind: "exchanger", at: [1.6, 0, 0.6], s: 0.95 },
-        { kind: "pump", at: [1.4, 0, -0.9], s: 0.85 },
-        { kind: "vessel", at: [-1.4, 0, 0.9], s: 0.9 },
-      ],
-    },
-    {
-      x: 8.2, z: 2.6, rot: 0.9,
-      parts: [
-        { kind: "column", at: [0, 0, 0], s: 1.15 },
-        { kind: "vessel", at: [1.3, 0, 0.5], s: 0.85 },
-        { kind: "compressor", at: [1.1, 0, -1.1], s: 0.9 },
-      ],
-    },
-    {
-      x: 7.0, z: -4.2, rot: -0.9,
-      parts: [
-        { kind: "exchanger", at: [0, 0, 0], s: 1.0 },
-        { kind: "exchanger", at: [0, 0, 1.0], s: 1.0 },
-        { kind: "pump", at: [-1.4, 0, 0.5], s: 0.85 },
-      ],
-    },
-  ];
-
-  return (
-    <group position={[0, -1.95, 0]}>
-      <gridHelper args={[48, 48, "#d7dfe9", "#e7edf4"]} position={[0, -0.02, 0]} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]}>
-        <planeGeometry args={[48, 48]} />
-        <meshStandardMaterial color="#f2f6fa" transparent opacity={0.62} />
-      </mesh>
-
-      {clusters.map((c, ci) => (
-        <group key={ci} position={[c.x, 0, c.z]} rotation={[0, c.rot, 0]}>
-          {c.parts.map((p, pi) => (
-            <group key={pi} position={p.at}>
-              <PlantPart kind={p.kind} s={p.s} />
-            </group>
-          ))}
-          {/* The units in a cluster are piped together, which is what makes it
-              read as a process rather than a row of objects. */}
-          <Pipe from={[0, 0.5, 0]} to={[1.5, 0.42, 0.4]} />
-          <Pipe from={[1.5, 0.42, 0.4]} to={[0.8, 0.3, 1.4]} />
-        </group>
-      ))}
-    </group>
-  );
-}
-
 /**
  * The eight systems as a balanced ring of cards around the 3D core.
  *
@@ -288,40 +210,47 @@ function SatelliteRing({
   const wrap = useRef<HTMLDivElement>(null);
   const [hot, setHot] = useState<string | null>(null);
 
+  /**
+   * Eight logos at eight fixed points on one ellipse.
+   *
+   * A moving orbit was the wrong call here: as the ring turned, the cards
+   * drifted into whatever arrangement the moment produced, which read as
+   * scattered rather than composed. The reference is a stable arrangement with
+   * each system in a known place. They are evenly spaced at 45°, so the ring is
+   * symmetric and the same every time the page opens; the core's own rotation
+   * carries the life.
+   */
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
-    let raf = 0;
-    let t = 0;
-    let last = performance.now();
-    const tick = (now: number) => {
-      if (!reduced) t += (now - last) * 0.00005;
-      last = now;
+    const place = () => {
       const w = el.clientWidth;
       const h = el.clientHeight;
-      for (const sat of satellites) {
-        const a = sat.phase + t;
-        const ring = sat.ring;
-        // Two concentric ellipses, so the eight cards never collide.
-        const rx = (ring === 0 ? 0.30 : 0.42) * w;
-        const ry = (ring === 0 ? 0.30 : 0.40) * h;
-        const x = Math.cos(a) * rx;
-        const y = Math.sin(a) * ry;
-        const depth = (Math.sin(a) + 1) / 2; // 0 back .. 1 front
+      const rx = w * 0.40;
+      const ry = h * 0.335;
+      satellites.forEach((sat, i) => {
+        // Start at the top and step clockwise.
+        const a = -Math.PI / 2 + (i / satellites.length) * Math.PI * 2;
         const node = el.querySelector<HTMLElement>(`[data-satellite="${sat.id}"]`);
-        if (!node) continue;
-        node.style.setProperty("--sx", `${x.toFixed(1)}px`);
-        node.style.setProperty("--sy", `${y.toFixed(1)}px`);
-        node.style.setProperty("--sd", depth.toFixed(3));
-      }
-      raf = requestAnimationFrame(tick);
+        if (!node) return;
+        node.style.setProperty("--sx", `${(Math.cos(a) * rx).toFixed(1)}px`);
+        node.style.setProperty("--sy", `${(Math.sin(a) * ry).toFixed(1)}px`);
+      });
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [satellites, reduced]);
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [satellites]);
+  void reduced;
 
   return (
-    <div className="k3-ring" ref={wrap} aria-hidden={false}>
+    <div className="k3-ring" ref={wrap}>
+      {/* The orbit the logos sit on, so the arrangement reads as a system
+          rather than eight marks dropped on a background. */}
+      <svg className="k3-ring__path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <ellipse cx="50" cy="50" rx="40" ry="33.5" />
+      </svg>
       {satellites.map((s) => {
         const dim = hot !== null && hot !== s.id;
         return (
@@ -336,7 +265,7 @@ function SatelliteRing({
             aria-label={`${s.label} — ${s.descriptor}`}
           >
             <span className="k3-card__tile" style={{ background: s.tone }}>
-              <Icon name={s.icon} size={16} />
+              <Icon name={s.icon} size={21} strokeWidth={1.5} />
             </span>
             <span className="k3-card__body">
               <b>{s.label}</b>
@@ -385,8 +314,6 @@ export function KnowledgeCore3D({
         <directionalLight position={[-7, 4, -5]} intensity={0.5} color="#bfdbfe" />
         <pointLight position={[0, 0.4, 0]} intensity={2.6} color="#60a5fa" distance={9} />
 
-        <PlantSurround />
-
         <group
           onPointerOver={(e) => {
             e.stopPropagation();
@@ -402,6 +329,14 @@ export function KnowledgeCore3D({
           <Core reduced={reduced} hovered={coreHover} />
         </group>
 
+        {/* The nameplate sits on the front of the plinth, inside the scene, so
+            it belongs to the object instead of floating beneath it. */}
+        <Html center position={[0, -0.92, 0]} zIndexRange={[10, 0]}>
+          <div className="k3-plate" aria-hidden="true">
+            <b>Knowledge Core</b>
+            <span>documents · procedures · history · engineering data</span>
+          </div>
+        </Html>
       </Canvas>
 
       {/* The systems are laid out as a balanced ring of DOM cards around the
@@ -411,10 +346,6 @@ export function KnowledgeCore3D({
           symmetric and nothing leaves the frame. */}
       <SatelliteRing satellites={satellites} reduced={reduced} />
 
-      <div className="k3__badge" aria-hidden="true">
-        <b>Knowledge Core</b>
-        <span>documents · procedures · history · engineering data · AI agents</span>
-      </div>
     </div>
   );
 }
