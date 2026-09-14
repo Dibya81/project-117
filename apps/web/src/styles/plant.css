@@ -3526,3 +3526,14 @@
 }
 .mr-sensorctl .sm-scenario:hover:not(:disabled) { border-color: var(--crit); color: var(--crit); }
 .mr-sensorctl .sm-scenario:disabled { opacity: 0.5; cursor: default; }
+
+/* Two record panels under one navigation tab, each keeping its own scrolling. */
+.simtwo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+@media (max-width: 1200px) {
+  .simtwo { grid-template-columns: 1fr; }
+}

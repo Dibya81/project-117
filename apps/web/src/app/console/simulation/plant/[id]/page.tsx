@@ -1073,8 +1073,22 @@ export default function PlantTwinPage() {
             />
           )}
 
+          {/* One tab, both panels. The navigation label is "Control &
+              Scenarios"; a single control panel left the scenario list
+              unreachable, so the scenarios the engine can actually run are
+              shown beside the loops they act on. */}
           {activeView === "control" && (
-            <ControlPanel plant={plant} runtime={displayRuntime ?? null} readings={readings} />
+            <div className="simtwo">
+              <ControlPanel plant={plant} runtime={displayRuntime ?? null} readings={readings} />
+              <ScenariosPanel
+                scenarios={scenarios}
+                running={busyScenario}
+                onRun={(id) => {
+                  const sc = scenarios.find((x) => x.id === id);
+                  if (sc) runScenario(sc);
+                }}
+              />
+            </div>
           )}
 
           {activeView === "scenarios" && (

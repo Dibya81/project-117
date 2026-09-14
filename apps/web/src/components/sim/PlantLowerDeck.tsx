@@ -403,20 +403,44 @@ export function PlantLowerDeck({
               </tr>
             </thead>
             <tbody>
-              {DEFAULT_STREAMS.map((s) => (
-                <tr key={s.stream}>
-                  <td>
-                    <span className="mr-stream-dot" style={{ background: s.color }} />
-                    <span className="mr-stream-name">{s.stream}</span>
-                  </td>
-                  <td className="mr-mono">{s.flow}</td>
-                  <td className="mr-mono">{s.temp} °C</td>
-                  <td className="mr-mono">{s.press} bar</td>
-                  <td>
-                    <span className="mr-stream-status-dot is-ok" />
-                  </td>
-                </tr>
-              ))}
+              {/* Every process line in the plant, with the engine's own flow and
+                  the readings of the asset that feeds it. This table used to be
+                  a fixed constant, so it showed the same four numbers whatever
+                  the plant was doing. */}
+              {plant.connections.map((c) => {
+                const live = runtime?.pipes?.[c.id];
+                const enabled = live ? live.enabled : c.enabled !== false;
+                const leaking = Boolean(live ? live.leaking : c.leaking);
+                const src = plant.equipment.find((e) => e.id === c.source);
+                const meas: Record<string, number> = {};
+                for (const sensor of src?.sensors ?? []) {
+                  const r = readings[sensor.id];
+                  if (r && Number.isFinite(r.value) && meas[sensor.measurement] == null) {
+                    meas[sensor.measurement] = r.value;
+                  }
+                }
+                const tone = leaking ? "warn" : enabled ? "ok" : "crit";
+                return (
+                  <tr
+                    key={c.id}
+                    data-stream-row={c.id}
+                    className={selectedLineId === c.id ? "is-selected" : undefined}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => onSelectLine(c.id)}
+                  >
+                    <td>
+                      <span className="mr-stream-dot" style={{ background: mediumColor(c.medium) }} />
+                      <span className="mr-stream-name">{c.medium ?? c.id}</span>
+                    </td>
+                    <td className="mr-mono">{enabled ? (live?.flow ?? c.flow ?? 0).toFixed(1) : "blocked"}</td>
+                    <td className="mr-mono">{meas.temperature != null ? `${meas.temperature.toFixed(1)} °C` : "—"}</td>
+                    <td className="mr-mono">{meas.pressure != null ? `${meas.pressure.toFixed(2)} bar` : "—"}</td>
+                    <td>
+                      <span className={`mr-stream-status-dot is-${tone}`} />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

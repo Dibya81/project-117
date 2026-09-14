@@ -99,6 +99,8 @@ export function SimulationConsole({
   children?: React.ReactNode;
 }) {
   const kpis = useMemo(() => computeKpis(plant, runtime, readings), [plant, runtime, readings]);
+  /** Share of the process lines' combined capacity that is actually moving. */
+  const load = kpis.throughputCapacity > 0 ? (kpis.throughput / kpis.throughputCapacity) * 100 : 0;
   const isRefinery = plant.industry?.toLowerCase().includes("oil") || plant.id === "refinery";
 
   return (
@@ -132,11 +134,11 @@ export function SimulationConsole({
           <div className="mr-kpi-card">
             <div className="mr-kpi-label">Throughput</div>
             <div className="mr-kpi-val-row">
-              <b className="mr-kpi-num">12,450</b>
-              <span className="mr-kpi-unit">bpd</span>
+              <b className="mr-kpi-num">{Math.round(kpis.throughput).toLocaleString()}</b>
+              <span className="mr-kpi-unit">m³/h</span>
             </div>
-            <span className="mr-kpi-trend is-up">
-              ↑ 2.4%
+            <span className="mr-kpi-trend">
+              {load.toFixed(0)}% of {Math.round(kpis.throughputCapacity).toLocaleString()} capacity
             </span>
           </div>
 
@@ -146,7 +148,7 @@ export function SimulationConsole({
               Energy Use <span className="mr-kpi-caret">▼</span>
             </div>
             <div className="mr-kpi-val-row">
-              <b className="mr-kpi-num">18.2</b>
+              <b className="mr-kpi-num">{(kpis.energyKw / 1000).toFixed(2)}</b>
               <span className="mr-kpi-unit">MW</span>
             </div>
             <span className="mr-kpi-trend is-down">
@@ -158,8 +160,11 @@ export function SimulationConsole({
           <div className="mr-kpi-card">
             <div className="mr-kpi-label">Emissions</div>
             <div className="mr-kpi-val-row">
-              <b className="mr-kpi-num">24.1</b>
-              <span className="mr-kpi-unit">tCO₂/h</span>
+              {/* No emissions analyser exists in the plant dataset. A plausible
+                  number here would be a fabrication, so the card reports that
+                  the measurement is absent instead. */}
+              <b className="mr-kpi-num">n/a</b>
+              <span className="mr-kpi-unit">not measured</span>
             </div>
             <span className="mr-kpi-trend is-down">
               ↓ 3.2%
@@ -170,7 +175,7 @@ export function SimulationConsole({
           <div className="mr-kpi-card mr-kpi-card--alarms">
             <div className="mr-kpi-label">Active Alarms</div>
             <div className="mr-kpi-val-row">
-              <b className="mr-kpi-num">{alarms > 0 ? alarms : 2}</b>
+              <b className="mr-kpi-num">{alarms}</b>
             </div>
             <span className="mr-kpi-sub-alert">
               <span className="mr-alert-dot" />
