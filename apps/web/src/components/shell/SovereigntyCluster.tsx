@@ -3,6 +3,7 @@
 /** Sovereignty cluster — the trust whisper in the top bar. */
 import { useEffect, useRef, useState } from "react";
 import { StatusDot } from "@/components/ui/primitives";
+import { Icon } from "@/components/ui/Icon";
 import type { HealthState } from "@/types";
 import type { SystemPosture } from "@/types/console";
 
@@ -39,22 +40,21 @@ export function SovereigntyCluster({ posture }: { posture: SystemPosture | null 
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
+      {/* Compact: a single lock glyph with a status dot. The full posture is one
+          click away in the dropdown; a four-part sentence across the top bar is
+          what made the header read as a dashboard. */}
       <button
-        className="cs-sovereignty"
+        className="cs-sovereignty cs-sovereignty--compact"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label="Sovereignty status — data stays inside this environment"
+        title="Local · Isolated · Egress denied"
       >
-        <span>
+        <span className="cs-sovereignty__lock" aria-hidden="true">
           <StatusDot state={gatewayTone(p)} />
-          <span>MODELS: {p ? p.model_gateway.toUpperCase() : "UNKNOWN"}</span>
+          <Icon name="lock" size={13} />
         </span>
-        <span>
-          <StatusDot state={sandboxTone} />
-          <span>SANDBOX: {p ? p.sandbox.toUpperCase() : "UNKNOWN"}</span>
-        </span>
-        <span>EGRESS: {p ? p.egress.toUpperCase() : "UNKNOWN"}</span>
-        <span>EXTERNAL: {p ? p.external_calls_24h : "—"}</span>
+        <span className="cs-sovereignty__label">LOCAL</span>
       </button>
       {open && (
         <div

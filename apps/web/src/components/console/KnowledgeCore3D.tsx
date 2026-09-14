@@ -19,7 +19,7 @@
  * names.
  */
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -45,8 +45,8 @@ export interface Satellite {
   descriptor: string;
 }
 
-const RING_RADIUS = [4.6, 6.4];
-const RING_TILT = [0.30, 0.20];
+const RING_RADIUS = [5.2, 7.0];
+const RING_TILT = [0.34, 0.24];
 /** Seconds for one full revolution. Slow on purpose: this is not a spinner. */
 const RING_PERIOD = [150, 215];
 
@@ -267,123 +267,85 @@ function PlantSurround() {
   );
 }
 
-function SatelliteNode({
-  sat,
+/**
+ * The eight systems as a balanced ring of cards around the 3D core.
+ *
+ * Positions come from an ellipse, not from projecting a tilted orbit through
+ * the camera. That projection clustered the cards and clipped some at the frame
+ * edge; a DOM ring is symmetric by construction and every card stays in frame.
+ * The orbit still reads as an orbit — the ring slowly rotates, a card at the
+ * back is dimmer and smaller, one at the front is larger and on top — but the
+ * geometry is legible.
+ */
+function SatelliteRing({
+  satellites,
   reduced,
-  onHover,
-  active,
 }: {
-  sat: Satellite;
-  reduced: boolean;
-  onHover: (id: string | null) => void;
-  active: string | null;
+  satellites: Satellite[];
+  reduced?: boolean;
 }) {
   const router = useRouter();
-  const group = useRef<THREE.Group>(null);
-  const [hovered, setHovered] = useState(false);
-  const radius = RING_RADIUS[sat.ring];
-  const tilt = RING_TILT[sat.ring];
-  const period = RING_PERIOD[sat.ring];
+  const wrap = useRef<HTMLDivElement>(null);
+  const [hot, setHot] = useState<string | null>(null);
 
-  useFrame(({ clock }) => {
-    if (!group.current) return;
-    const t = reduced ? 0 : (clock.getElapsedTime() / period) * Math.PI * 2;
-    const a = sat.phase + t;
-    const x = Math.cos(a) * radius;
-    const z = Math.sin(a) * radius;
-    const y = z * tilt;
-    group.current.position.set(x, y, z);
-    // Depth reads from z: behind the core is quieter and smaller, in front is
-    // larger. This is what makes the ring a plane rather than a circle.
-    const depth = (z / radius + 1) / 2;
-    const near = hovered ? 1 : 0;
-    const s = 0.72 + depth * 0.42 + near * 0.22;
-    group.current.scale.setScalar(s);
-  });
-
-  const dim = active !== null && active !== sat.id;
-
-  return (
-    <group ref={group}>
-      <Html
-        center
-        distanceFactor={5.5}
-        position={[0, 0, 0]}
-        zIndexRange={[30, 0]}
-        style={{ pointerEvents: "auto" }}
-      >
-        <button
-          type="button"
-          className={`k3-card${hovered ? " is-hot" : ""}${dim ? " is-dim" : ""}`}
-          data-satellite={sat.id}
-          onMouseEnter={() => {
-            setHovered(true);
-            onHover(sat.id);
-          }}
-          onMouseLeave={() => {
-            setHovered(false);
-            onHover(null);
-          }}
-          onClick={() => router.push(sat.href)}
-          aria-label={`${sat.label} — ${sat.descriptor}`}
-        >
-          <span className="k3-card__tile" style={{ background: sat.tone }}>
-            <Icon name={sat.icon} size={17} />
-          </span>
-          <span className="k3-card__body">
-            <b>{sat.label}</b>
-            <span>{sat.descriptor}</span>
-          </span>
-        </button>
-      </Html>
-    </group>
-  );
-}
-
-/** The path from a satellite to the core, with a pulse travelling along it. */
-function Link({ sat, reduced }: { sat: Satellite; reduced: boolean }) {
-  const dot = useRef<THREE.Mesh>(null);
-  const radius = RING_RADIUS[sat.ring];
-  const tilt = RING_TILT[sat.ring];
-  const period = RING_PERIOD[sat.ring];
-
-  const curve = useMemo(() => {
-    const a = Math.cos(sat.phase) * radius;
-    const z = Math.sin(sat.phase) * radius;
-    const y = z * tilt;
-    return new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(a * 0.5, y * 0.5 + 1.1, z * 0.5),
-      new THREE.Vector3(a, y, z),
-    );
-  }, [sat.phase, sat.ring, radius, tilt]);
-
-  useFrame(({ clock }) => {
-    if (!dot.current) return;
-    const t = reduced ? 0.5 : (clock.getElapsedTime() / period) * Math.PI * 2;
-    const k = (Math.sin(t + sat.phase) + 1) / 2;
-    const p = curve.getPoint(k);
-    dot.current.position.copy(p);
-    dot.current.visible = k > 0.05 && k < 0.95;
-  });
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    let raf = 0;
+    let t = 0;
+    let last = performance.now();
+    const tick = (now: number) => {
+      if (!reduced) t += (now - last) * 0.00005;
+      last = now;
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      for (const sat of satellites) {
+        const a = sat.phase + t;
+        const ring = sat.ring;
+        // Two concentric ellipses, so the eight cards never collide.
+        const rx = (ring === 0 ? 0.30 : 0.42) * w;
+        const ry = (ring === 0 ? 0.30 : 0.40) * h;
+        const x = Math.cos(a) * rx;
+        const y = Math.sin(a) * ry;
+        const depth = (Math.sin(a) + 1) / 2; // 0 back .. 1 front
+        const node = el.querySelector<HTMLElement>(`[data-satellite="${sat.id}"]`);
+        if (!node) continue;
+        node.style.setProperty("--sx", `${x.toFixed(1)}px`);
+        node.style.setProperty("--sy", `${y.toFixed(1)}px`);
+        node.style.setProperty("--sd", depth.toFixed(3));
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [satellites, reduced]);
 
   return (
-    <group>
-      <primitive
-        object={useMemo(() => {
-          const pts = curve.getPoints(28);
-          const g = new THREE.BufferGeometry().setFromPoints(pts);
-          return new THREE.Line(
-            g,
-            new THREE.LineBasicMaterial({ color: "#93c5fd", transparent: true, opacity: 0.3 }),
-          );
-        }, [curve])}
-      />
-      <mesh ref={dot}>
-        <sphereGeometry args={[0.055, 10, 10]} />
-        <meshBasicMaterial color="#3b82f6" />
-      </mesh>
-    </group>
+    <div className="k3-ring" ref={wrap} aria-hidden={false}>
+      {satellites.map((s) => {
+        const dim = hot !== null && hot !== s.id;
+        return (
+          <button
+            key={s.id}
+            type="button"
+            className={`k3-card${dim ? " is-dim" : ""}${hot === s.id ? " is-hot" : ""}`}
+            data-satellite={s.id}
+            onMouseEnter={() => setHot(s.id)}
+            onMouseLeave={() => setHot(null)}
+            onClick={() => router.push(s.href)}
+            aria-label={`${s.label} — ${s.descriptor}`}
+          >
+            <span className="k3-card__tile" style={{ background: s.tone }}>
+              <Icon name={s.icon} size={16} />
+            </span>
+            <span className="k3-card__body">
+              <b>{s.label}</b>
+              <span>{s.descriptor}</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -406,9 +368,14 @@ export function KnowledgeCore3D({
       <Canvas
         shadows
         dpr={[1, 1.75]}
-        camera={{ position: [0, 3.6, 11.2], fov: 42 }}
+        camera={{ position: [4.4, 4.0, 8.6], fov: 46 }}
         gl={{ antialias: true, alpha: true }}
         frameloop={reduced ? "demand" : "always"}
+        onCreated={({ camera }) => {
+          // Elevated three-quarter view, locked on the core. One fixed frame —
+          // the camera is not a prop, it is the composition.
+          camera.lookAt(0, 0.05, 0);
+        }}
       >
         <color attach="background" args={["#f4f7fb"]} />
         <fog attach="fog" args={["#eef2f7", 13, 36]} />
@@ -435,13 +402,14 @@ export function KnowledgeCore3D({
           <Core reduced={reduced} hovered={coreHover} />
         </group>
 
-        {satellites.map((s) => (
-          <Link key={`l-${s.id}`} sat={s} reduced={reduced} />
-        ))}
-        {satellites.map((s) => (
-          <SatelliteNode key={s.id} sat={s} reduced={reduced} active={active} onHover={setActive} />
-        ))}
       </Canvas>
+
+      {/* The systems are laid out as a balanced ring of DOM cards around the
+          core, not as 3D objects projected through a tilted camera (which
+          clustered them and clipped some). One rAF loop drives the orbit; the
+          positions are computed from a clean ellipse so the composition is
+          symmetric and nothing leaves the frame. */}
+      <SatelliteRing satellites={satellites} reduced={reduced} />
 
       <div className="k3__badge" aria-hidden="true">
         <b>Knowledge Core</b>

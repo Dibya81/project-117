@@ -2920,7 +2920,16 @@
 /* --- Home satellite cards --------------------------------------------------
    The reference shows each system as a coloured icon tile with a bold title and
    a small subtitle, sitting on its orbital position. The card is the object. */
+.k3-ring {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
 .k3-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -2931,7 +2940,15 @@
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
   cursor: pointer;
   white-space: nowrap;
-  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+  pointer-events: auto;
+  z-index: calc(2 + var(--sd, 0.5) * 4);
+  transform:
+    translate(-50%, -50%)
+    translate(var(--sx, 0px), var(--sy, 0px))
+    scale(calc(0.86 + var(--sd, 0.5) * 0.24));
+  opacity: calc(0.5 + var(--sd, 0.5) * 0.5);
+  transition: border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+  will-change: transform;
 }
 .k3-card__tile {
   display: grid;

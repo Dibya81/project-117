@@ -5,7 +5,6 @@ import { Icon } from "@/components/ui/Icon";
 import { SovereigntyCluster } from "./SovereigntyCluster";
 import { NotificationBell } from "./NotificationCenter";
 import { useRole } from "@/lib/role";
-import { ConsoleCommandDock } from "@/components/threeui/ThreeUIScenes";
 import type { ConsoleRole, SystemPosture } from "@/types/console";
 
 const ROLES: ConsoleRole[] = ["operator", "engineer", "maintenance", "safety", "manager", "admin"];
@@ -28,8 +27,6 @@ export function TopBar({
 
   return (
     <header className="cs-topbar">
-      <ConsoleCommandDock />
-
       <span className="cs-topbar__brand">PROJECT 117</span>
       {/* The plant's own name from the dataset. This read "Plant Alpha", a
           hardcoded label for a plant that does not exist — the console was
