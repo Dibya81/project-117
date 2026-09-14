@@ -6,8 +6,6 @@ verified after download (`node .p117-audit/vendor-threeui.mjs` at the repo root)
 
 | File | SHA-256 | Source |
 | --- | --- | --- |
-| `neuform-isolated/NeuformIsolatedEffects.tsx` | `fe9856234253bc3c1a13b3afb84f3d84644dfa6d578e7203bb3e1dd5eced1b75` | [logic-core.json](https://threeui.com/source-code/logic-core.json) |
-| `neuform-isolated/sources/platform-core.html` | `0f6889add89b389ba687fc6828c1f9415e5d8d54005492a91f3a79641ba42e31` | [logic-core.json](https://threeui.com/source-code/logic-core.json) |
 | `character-carousel/CharacterCarousel.tsx` | `3bc9c80e8201be3cde79697e8cddba6f4f8b1a3c4a5fb7ce7533dd6479409472` | [character-filmstrip.json](https://threeui.com/source-code/character-filmstrip.json) |
 | `character-carousel/sources/character-filmstrip.html` | `4c98939e0e2b67efabcb8561c8b2e53b8c756e97bda44906b235ee7bc8f68b1c` | [character-filmstrip.json](https://threeui.com/source-code/character-filmstrip.json) |
 | `animated-top-dock/AnimatedTopDock.tsx` | `50ddbba7ebc81565f42bd14dda34efb45e7b18c1aa47e97f196256ffedb4478f` | [animated-top-dock.json](https://threeui.com/source-code/animated-top-dock.json) |
