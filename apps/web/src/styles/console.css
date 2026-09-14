@@ -2778,152 +2778,6 @@
   background: radial-gradient(ellipse 70% 60% at 50% 40%, #ffffff, #eef3f9 70%, #e6edf6);
 }
 .k3 canvas { display: block; }
-/* The core's nameplate, anchored on the plinth inside the 3D scene. */
-.k3-plate {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 7px 20px;
-  border-radius: 8px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(238, 244, 251, 0.96));
-  border: 1px solid rgba(148, 176, 214, 0.55);
-  box-shadow: 0 10px 26px rgba(30, 64, 120, 0.18);
-  pointer-events: none;
-  white-space: nowrap;
-}
-.k3-plate b {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: #16233a;
-}
-.k3-plate span {
-  font-family: var(--mono);
-  font-size: 8.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #6b7f96;
-}
-/* Satellite labels live in the 3D scene as HTML, so they must survive on top of
-   the canvas without a card behind them. */
-.k3-label {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  padding: 4px 9px;
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--line-2);
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
-  white-space: nowrap;
-  transition: opacity 160ms ease, border-color 160ms ease;
-}
-.k3-label b { font-size: 11px; color: var(--ink-1); }
-.k3-label span {
-  font-family: var(--mono);
-  font-size: 8.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.k3-label em {
-  font-style: normal;
-  font-size: 10px;
-  color: var(--ink-2);
-  max-width: 210px;
-  white-space: normal;
-  text-align: center;
-  margin-top: 2px;
-}
-.k3-label.is-hot { border-color: var(--cyan); box-shadow: 0 10px 24px rgba(37, 99, 235, 0.26); }
-.k3-label.is-dim { opacity: 0.45; }
-
-.home-side { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
-.home-card {
-  border: 1px solid var(--line-2);
-  border-radius: 12px;
-  background: var(--panel);
-  padding: 12px 14px;
-}
-.home-card > header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-.home-card > header > span,
-.home-card__label {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.home-stat {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 5px 0;
-  border-bottom: 1px dashed var(--line);
-}
-.home-stat:last-child { border-bottom: 0; }
-.home-stat b { font-size: 17px; color: var(--ink-1); }
-.home-stat b.is-crit { color: var(--crit); }
-.home-stat span { font-size: 11.5px; color: var(--ink-3); }
-.home-empty { margin: 4px 0 0; font-size: 11.5px; line-height: 1.6; color: var(--ink-3); }
-.home-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
-.home-feed li { display: flex; align-items: center; gap: 8px; font-size: 11.5px; }
-.home-feed__dot { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; background: var(--ok); }
-.home-feed__dot.is-crit { background: var(--crit); }
-.home-feed__dot.is-ai { background: var(--violet); }
-.home-feed__text {
-  flex: 1;
-  min-width: 0;
-  color: var(--ink-2);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-transform: capitalize;
-}
-.home-feed__at { font-family: var(--mono); font-size: 9px; color: var(--ink-3); }
-
-.home-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-.home-card--row { display: flex; flex-direction: column; gap: 8px; }
-.home-card__big { display: block; margin-top: 4px; font-size: 22px; color: var(--ink-1); }
-.home-card__sub { font-size: 11px; color: var(--ink-3); }
-.home-quick { display: flex; flex-wrap: wrap; gap: 6px; }
-.home-quick button {
-  border: 1px solid var(--line-2);
-  border-radius: 6px;
-  background: #fff;
-  padding: 4px 9px;
-  font-size: 11px;
-  color: var(--ink-2);
-  cursor: pointer;
-}
-.home-quick button:hover { border-color: var(--cyan); color: var(--blue); }
-
-@media (max-width: 1200px) {
-  .home-main { grid-template-columns: 1fr; }
-  .home-side { flex-direction: row; }
-  .home-side > * { flex: 1; }
-  .home-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 720px) {
-  .home-side { flex-direction: column; }
-  .home-strip { grid-template-columns: 1fr; }
-}
-
-/* --- Home satellite cards --------------------------------------------------
-   The reference shows each system as a coloured icon tile with a bold title and
-   a small subtitle, sitting on its orbital position. The card is the object. */
 .k3-ring {
   position: absolute;
   inset: 0;
@@ -2938,12 +2792,40 @@
 }
 .k3-ring__path ellipse {
   fill: none;
-  stroke: rgba(96, 138, 196, 0.28);
+  stroke: rgba(96, 138, 196, 0.3);
   stroke-width: 0.22;
   stroke-dasharray: 1.4 1.8;
 }
-/* Each system is its logo alone. The name is revealed on hover, so the ring is
-   a quiet set of marks around the core rather than eight labelled cards. */
+
+/* The core's name, sitting on the object rather than on a card over it.
+   No background, no border: white type with a soft shadow so it reads against
+   the blue surface it is printed on. */
+.k3-plate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  pointer-events: none;
+  white-space: nowrap;
+  text-align: center;
+}
+.k3-plate b {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow: 0 1px 7px rgba(18, 48, 105, 0.7);
+}
+.k3-plate span {
+  font-family: var(--mono);
+  font-size: 7.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.86);
+  text-shadow: 0 1px 6px rgba(18, 48, 105, 0.65);
+}
+
 .k3-card {
   position: absolute;
   left: 50%;
