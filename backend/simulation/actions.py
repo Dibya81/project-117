@@ -29,9 +29,9 @@ from dataclasses import dataclass
 from typing import Any
 
 from backend.simulation.engine import SimulationEngine
-from backend.simulation.models import AssetState, Incident
+from backend.simulation.models import AssetState, Incident, TelemetryQuality
 
-ALLOWED_KINDS = {"repair_sensor", "restore_equipment", "reduce_load", "sandbox_command"}
+ALLOWED_KINDS = {"repair_sensor", "restore_equipment", "reduce_load", "reroute", "sandbox_command"}
 
 
 @dataclass
@@ -66,6 +66,17 @@ def check_policy(engine: SimulationEngine, incident: Incident, action: dict) -> 
         return PolicyDecision(False, "sandbox_command requires a command payload", "sandbox")
 
     scope = {incident.origin_equipment, *incident.affected}
+    if kind == "reroute":
+        lines = [*action.get("block", []), *action.get("restore", [])]
+        if not lines:
+            return PolicyDecision(False, "reroute requires block/restore line ids", "plant_actuator")
+        for cid in lines:
+            conn = engine.pipe_by_id.get(cid)
+            if conn is None:
+                return PolicyDecision(False, f"unknown line {cid!r}", "plant_actuator")
+            if conn.source not in scope and conn.target not in scope:
+                return PolicyDecision(False, f"line {cid!r} is outside the incident scope", "plant_actuator")
+        return PolicyDecision(True, "route change within incident scope", "plant_actuator")
     if kind == "repair_sensor":
         model = engine.sensor_model.get(target)
         if model is None:
@@ -141,7 +152,7 @@ class SandboxExecutor:
 class PlantActuator:
     """Applies an approved change to engine state and reads it back."""
 
-    def run(self, engine: SimulationEngine, action: dict) -> ActionOutcome:
+    def run(self, engine: SimulationEngine, action: dict, incident: Incident) -> ActionOutcome:
         kind = action["kind"]
         target = action["target"]
         try:
@@ -160,6 +171,27 @@ class PlantActuator:
                           "capacity_before": before, "capacity_after": rt.capacity,
                           "faults_cleared": not rt.faults}
                 status = "completed" if rt.capacity > before or not rt.faults else "failed"
+            elif kind == "reroute":
+                blocked, restored = [], []
+                for cid in action.get("block", []):
+                    engine.set_line_enabled(cid, False)
+                    blocked.append(cid)
+                for cid in action.get("restore", []):
+                    engine.set_line_enabled(cid, True)
+                    restored.append(cid)
+                # Sealing and restoring the path clears latched detectors in the
+                # affected area — the same reset restore_equipment performs, and
+                # the reason a leak incident can close instead of tripping forever.
+                area_ids = {
+                    engine._area_of(eq) for eq in {incident.origin_equipment, *incident.affected}
+                }
+                for sid, m in engine.sensor_model.items():
+                    if m.is_detector and sid in engine.sensors and engine._area_of(m.equipment_id) in area_ids:
+                        engine.sensors[sid].value = 0.0
+                        engine.sensors[sid].quality = TelemetryQuality.GOOD
+                detail = {"executed": kind, "blocked": blocked, "restored": restored,
+                          "route": action.get("route", [])}
+                status = "completed" if (blocked or restored) else "failed"
             elif kind == "reduce_load":
                 rt = engine.eq[target]
                 before = rt.capacity
@@ -185,4 +217,4 @@ def execute_action(engine: SimulationEngine, incident: Incident, action: dict, *
         )
     if decision.executor == "sandbox":
         return SandboxExecutor().run(str(action["command"]), job_id=job_id)
-    return PlantActuator().run(engine, action)
+    return PlantActuator().run(engine, action, incident)

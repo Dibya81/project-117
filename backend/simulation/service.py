@@ -20,6 +20,7 @@ from typing import Any
 from backend.simulation.actions import execute_action
 from backend.simulation.agent_bridge import get_roster
 from backend.simulation.agents import AgentTask, IncidentPlan, build_pipeline, verify_plan
+from backend.simulation.decision import RecoveryDecision, run_incident_decision
 from backend.simulation.engine import SimulationEngine
 from backend.simulation.models import (
     AlarmSeverity,
@@ -71,6 +72,7 @@ class PlantRuntime:
         self.incident_tasks: dict[str, list[AgentTask]] = {}
         self.incident_plans: dict[str, IncidentPlan] = {}
         self.pending_approval: dict[str, str] = {}  # incident_id -> plan json
+        self.incident_decisions: dict[str, RecoveryDecision] = {}
         self.artifacts: list[dict] = []
 
     def emit(self, type_: str, payload: dict, at: float | None = None) -> SimulationEvent:
@@ -678,6 +680,38 @@ class SimulationService:
             rt.emit("incident.updated", incident.model_dump())
             return {"status": incident.status.value}
 
+        # The recovery is decided by the three agents, not by the deterministic
+        # plan. Different sensors change the evidence pack, so the agents may
+        # choose a different route; the engine executes exactly what they chose.
+        decision = run_incident_decision(rt.engine, incident)
+        rt.incident_decisions[incident.id] = decision
+        rt.emit("response.decision", {
+            "job_id": incident_id,
+            "incident_id": incident_id,
+            "equipment_id": incident.origin_equipment,
+            "available": decision.available,
+            "model": decision.model,
+            "error": decision.error,
+            "diagnosis": decision.diagnosis,
+            "route": decision.route,
+            "block": decision.block,
+            "restore": decision.restore,
+            "safety_confirmed": decision.safety_confirmed,
+            "safety_concerns": decision.safety_concerns,
+            "rationale": decision.rationale,
+        })
+        if not decision.available:
+            # Never silently "recover" without the agents. The incident stays
+            # open and the frontend shows LOCAL MODEL UNAVAILABLE.
+            incident.status = IncidentStatus.INVESTIGATING
+            self.store.upsert_incident(incident)
+            rt.emit("incident.updated", incident.model_dump())
+            return {
+                "status": incident.status.value, "verified": False,
+                "available": False,
+                "findings": [decision.error or "LOCAL MODEL UNAVAILABLE"],
+            }
+
         incident.status = IncidentStatus.ACTING
         self.store.upsert_incident(incident)
         rt.emit("incident.updated", incident.model_dump())
@@ -685,7 +719,7 @@ class SimulationService:
         # Policy gate → executor. A blocked or failed action never reaches
         # verification and never reports success.
         action_id = f"ACT-{incident_id}"
-        outcome = execute_action(rt.engine, incident, plan.action, job_id=incident_id)
+        outcome = execute_action(rt.engine, incident, decision.reroute, job_id=incident_id)
         self.store.start_action(action_id, incident_id, approval_id, plan.action["kind"],
                                 str(plan.action.get("target")), outcome.executor,
                                 outcome.policy, outcome.policy_reason)
@@ -770,7 +804,7 @@ class SimulationService:
                 event_type="incident.resolved", actor="operator", plant_id=plant_id,
                 incident_id=incident_id, sim_t=rt.engine.t, action="incident.resolved",
                 verification_id=verification_id, approval_id=approval_id,
-                target=str(plan.action.get("target")), result="resolved",
+                target=",".join(decision.reroute["block"] + decision.reroute["restore"]), result="resolved",
                 evidence_count=sum(len(t.evidence) for t in rt.incident_tasks.get(incident_id, [])),
                 runtime=self.roster.runtime_label(),
             )
