@@ -24,6 +24,7 @@ import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { useRouter } from "next/navigation";
+import { PlantPart, Pipe, type PartKind } from "@/components/console/PlantParts3D";
 
 export interface Satellite {
   id: string;
@@ -37,9 +38,13 @@ export interface Satellite {
   /** Phase in radians, so the satellites spread around the ring. */
   phase: number;
   tone: string;
+  /** The miniature industrial object that represents this system. */
+  part: PartKind;
+  /** The one-line descriptor shown on hover, as the reference labels it. */
+  descriptor: string;
 }
 
-const RING_RADIUS = [5.0, 6.9];
+const RING_RADIUS = [4.5, 6.2];
 const RING_TILT = [0.30, 0.20];
 /** Seconds for one full revolution. Slow on purpose: this is not a spinner. */
 const RING_PERIOD = [150, 215];
@@ -186,44 +191,75 @@ function Core({ reduced, hovered }: { reduced: boolean; hovered: boolean }) {
  * drawing. The process map belongs on the Simulation page.
  */
 function PlantSurround() {
-  const sticks = useMemo(() => {
-    // Deterministic layout, so the plant looks the same every load.
-    const out: { x: number; z: number; h: number; r: number }[] = [];
-    let seed = 117;
-    const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
-    for (let i = 0; i < 26; i++) {
-      const a = (i / 26) * Math.PI * 2 + rnd() * 0.3;
-      const rad = 8.6 + rnd() * 3.4;
-      out.push({
-        x: Math.cos(a) * rad,
-        z: Math.sin(a) * rad,
-        h: 0.35 + rnd() * 1.0,
-        r: 0.07 + rnd() * 0.12,
-      });
-    }
-    return out;
-  }, []);
+  /**
+   * A designed miniature plant, not scattered primitives.
+   *
+   * Each cluster is a coherent process unit — a column with its reboiler and
+   * pump, a tank farm with its transfer pumps, an exchanger bank — laid out on
+   * the engineering grid. Positions are fixed so the plant looks the same every
+   * load; a facility that rearranges itself is not a facility.
+   */
+  const clusters: {
+    x: number;
+    z: number;
+    rot: number;
+    parts: { kind: PartKind; at: [number, number, number]; s: number }[];
+  }[] = [
+    {
+      x: -9.4, z: 1.2, rot: 0.3,
+      parts: [
+        { kind: "tank", at: [0, 0, 0], s: 1.25 },
+        { kind: "tank", at: [1.5, 0, 0.4], s: 1.05 },
+        { kind: "pump", at: [0.7, 0, 1.5], s: 0.9 },
+        { kind: "cabinet", at: [0.4, 0, 2.4], s: 0.85 },
+      ],
+    },
+    {
+      x: -6.2, z: -3.4, rot: -0.5,
+      parts: [
+        { kind: "column", at: [0, 0, 0], s: 1.35 },
+        { kind: "exchanger", at: [1.6, 0, 0.6], s: 0.95 },
+        { kind: "pump", at: [1.4, 0, -0.9], s: 0.85 },
+        { kind: "vessel", at: [-1.4, 0, 0.9], s: 0.9 },
+      ],
+    },
+    {
+      x: 8.2, z: 2.6, rot: 0.9,
+      parts: [
+        { kind: "column", at: [0, 0, 0], s: 1.15 },
+        { kind: "vessel", at: [1.3, 0, 0.5], s: 0.85 },
+        { kind: "compressor", at: [1.1, 0, -1.1], s: 0.9 },
+      ],
+    },
+    {
+      x: 7.0, z: -4.2, rot: -0.9,
+      parts: [
+        { kind: "exchanger", at: [0, 0, 0], s: 1.0 },
+        { kind: "exchanger", at: [0, 0, 1.0], s: 1.0 },
+        { kind: "pump", at: [-1.4, 0, 0.5], s: 0.85 },
+      ],
+    },
+  ];
 
   return (
-    <group position={[0, -1.9, 0]}>
-      {/* Engineering grid floor. */}
-      <gridHelper args={[40, 40, "#d3dce7", "#e4eaf1"]} position={[0, -0.01, 0]} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
-        <planeGeometry args={[34, 34]} />
-        <meshStandardMaterial color="#eef2f7" transparent opacity={0.5} />
+    <group position={[0, -1.95, 0]}>
+      <gridHelper args={[48, 48, "#d7dfe9", "#e7edf4"]} position={[0, -0.02, 0]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]}>
+        <planeGeometry args={[48, 48]} />
+        <meshStandardMaterial color="#f2f6fa" transparent opacity={0.62} />
       </mesh>
-      {sticks.map((s, i) => (
-        <group key={i} position={[s.x, 0, s.z]}>
-          <mesh position={[0, s.h / 2, 0]}>
-            <cylinderGeometry args={[s.r, s.r * 1.1, s.h, 10]} />
-            <meshStandardMaterial color="#cdd7e2" metalness={0.35} roughness={0.7} />
-          </mesh>
-          {i % 5 === 0 && (
-            <mesh position={[0, s.h + 0.12, 0]}>
-              <sphereGeometry args={[s.r * 1.5, 10, 10]} />
-              <meshStandardMaterial color="#d6e0ec" metalness={0.5} roughness={0.5} />
-            </mesh>
-          )}
+
+      {clusters.map((c, ci) => (
+        <group key={ci} position={[c.x, 0, c.z]} rotation={[0, c.rot, 0]}>
+          {c.parts.map((p, pi) => (
+            <group key={pi} position={p.at}>
+              <PlantPart kind={p.kind} s={p.s} />
+            </group>
+          ))}
+          {/* The units in a cluster are piped together, which is what makes it
+              read as a process rather than a row of objects. */}
+          <Pipe from={[0, 0.5, 0]} to={[1.5, 0.42, 0.4]} />
+          <Pipe from={[1.5, 0.42, 0.4]} to={[0.8, 0.3, 1.4]} />
         </group>
       ))}
     </group>
@@ -275,7 +311,7 @@ function SatelliteNode({
 
   return (
     <group ref={group}>
-      <mesh
+      <group
         onPointerOver={(e: ThreeEvent<PointerEvent>) => {
           e.stopPropagation();
           setHovered(true);
@@ -289,39 +325,46 @@ function SatelliteNode({
         }}
         onClick={() => router.push(sat.href)}
       >
-        <boxGeometry args={[0.62, 0.16, 0.62]} />
-        <meshStandardMaterial
-          color={hovered ? "#dbeafe" : "#eef2f7"}
-          emissive={sat.tone}
-          emissiveIntensity={hovered ? 0.9 : 0.35}
-          metalness={0.4}
-          roughness={0.35}
-          transparent
-          opacity={dim ? 0.4 : 1}
-        />
+        {/* Each system is the equipment it is about, not a shared disc: a tank
+            for Operations, an exchanger for Insights, and so on. This is what
+            stops the ring reading as identical chips. */}
+        <group scale={hovered ? 0.34 : 0.28}>
+          <PlantPart kind={sat.part} s={1} />
+        </group>
+        {/* A disc under the object, tinted with the system's own colour — the
+            only thing the satellites share, so the family reads as one set. */}
+        <mesh position={[0, -0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.22, 0.3, 28]} />
+          <meshBasicMaterial
+            color={sat.tone}
+            transparent
+            opacity={dim ? 0.22 : hovered ? 0.95 : 0.55}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      </group>
+      {/* The label is anchored to the object by a mast, so it reads as part of
+          the same component rather than a card that happens to float nearby. */}
+      <mesh position={[0, hovered ? -0.4 : -0.36, 0]}>
+        <cylinderGeometry args={[0.008, 0.008, 0.16, 6]} />
+        <meshBasicMaterial color={sat.tone} transparent opacity={dim ? 0.25 : 0.7} />
       </mesh>
-      {/* A mast and a beacon so each satellite reads as an object, not a tile. */}
-      <mesh position={[0, 0.22, 0]}>
-        <cylinderGeometry args={[0.03, 0.03, 0.3, 8]} />
-        <meshStandardMaterial color="#94a3b8" transparent opacity={dim ? 0.4 : 1} />
-      </mesh>
-      <mesh position={[0, 0.4, 0]}>
-        <sphereGeometry args={[0.075, 12, 12]} />
-        <meshStandardMaterial
-          color={sat.tone}
-          emissive={sat.tone}
-          emissiveIntensity={hovered ? 2.2 : 1.1}
-          transparent
-          opacity={dim ? 0.4 : 1}
-        />
-      </mesh>
-      <Html center distanceFactor={11} position={[0, -0.42, 0]} zIndexRange={[20, 0]}>
+      <Html
+        center
+        distanceFactor={12}
+        position={[0, hovered ? -0.72 : -0.68, 0]}
+        zIndexRange={[20, 0]}
+      >
         <div className={`k3-label${hovered ? " is-hot" : ""}${dim ? " is-dim" : ""}`}>
           <b>{sat.label}</b>
-          <span>
-            {sat.count == null ? sat.countLabel : `${sat.count.toLocaleString()} ${sat.countLabel}`}
-          </span>
-          {hovered && <em>{sat.detail}</em>}
+          <span>{sat.descriptor}</span>
+          {hovered && (
+            <em>
+              {sat.count == null
+                ? "open"
+                : `${sat.count.toLocaleString()} ${sat.countLabel}`}
+            </em>
+          )}
         </div>
       </Html>
     </group>
@@ -394,7 +437,7 @@ export function KnowledgeCore3D({
       <Canvas
         shadows
         dpr={[1, 1.75]}
-        camera={{ position: [0, 3.2, 8.6], fov: 44 }}
+        camera={{ position: [0, 3.6, 11.2], fov: 42 }}
         gl={{ antialias: true, alpha: true }}
         frameloop={reduced ? "demand" : "always"}
       >
