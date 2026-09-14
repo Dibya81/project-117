@@ -2514,3 +2514,239 @@
 .cs-rail__logo[aria-pressed="true"] .cs-rail__pin { opacity: 1; }
 .cs-shell:not(.cs-shell--expanded) .cs-rail__logo { font-size: 0; padding-left: 0; justify-content: center; }
 .cs-shell:not(.cs-shell--expanded) .cs-rail__logo b { font-size: 11px; }
+
+/* --- Knowledge Core orbital ------------------------------------------------
+   The Home page's centre of gravity. Nodes are positioned from
+   --ox/--oy (percent of the half-extent) and --od (depth, 0 back .. 1 front),
+   written by one animation frame loop in KnowledgeCoreOrbital.tsx. Depth drives
+   scale, opacity and blur, so the ring reads as a plane with the core at its
+   centre rather than as chips arranged in a circle. */
+
+.kc {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 480px;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+}
+.kc__rings { position: absolute; inset: 0; width: 100%; height: 100%; }
+.kc__rings ellipse {
+  fill: none;
+  stroke: rgba(37, 99, 235, 0.16);
+  stroke-width: 0.5;
+  stroke-dasharray: 2 3;
+}
+
+/* The core: a lit slab with the identity inside, not a brain icon. */
+.kc__core {
+  position: relative;
+  /* Above every orbiting node. The nodes keep their own depth ordering relative
+     to each other (that is the parallax cue), but the core is the one object
+     that must never be covered — with a lower stack order a front node sat over
+     it and swallowed the click. */
+  z-index: 20;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.kc__core-slab {
+  position: absolute;
+  width: 176px;
+  height: 176px;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(96, 165, 250, 0.9), rgba(37, 99, 235, 0.72) 55%, rgba(23, 63, 158, 0.85));
+  box-shadow:
+    0 0 0 1px rgba(147, 197, 253, 0.5),
+    0 24px 60px rgba(37, 99, 235, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transform: rotate(45deg) scale(0.78);
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.kc__core:hover .kc__core-slab { transform: rotate(45deg) scale(0.84); }
+.kc__core.is-open .kc__core-slab { transform: rotate(45deg) scale(0.9); }
+.kc__core-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  color: #fff;
+  width: 176px;
+}
+.kc__core-inner b {
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.kc__core-inner em {
+  font-family: var(--mono);
+  font-style: normal;
+  font-size: 8.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.kc__layers {
+  position: absolute;
+  z-index: 21;
+  inset: auto 0 0 auto;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-content: center;
+  gap: 6px;
+  padding: 0 12%;
+  pointer-events: none;
+}
+.kc__layer {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px;
+  border: 1px solid rgba(37, 99, 235, 0.28);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+.kc__layer b { font-size: 11.5px; color: var(--ink-1); }
+.kc__layer span { font-size: 10.5px; color: var(--ink-3); }
+
+/* Orbiting capability nodes. */
+.kc__node {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: calc(2 + var(--od, 0.5) * 6);
+  transform:
+    translate(-50%, -50%)
+    translate(var(--ox, 0px), var(--oy, 0px))
+    scale(calc(0.72 + var(--od, 0.5) * 0.44));
+  opacity: calc(0.42 + var(--od, 0.5) * 0.58);
+  filter: blur(calc((1 - var(--od, 0.5)) * 1.5px));
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  padding: 8px 12px 8px 10px;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.09);
+  transition: border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+  text-align: left;
+  will-change: transform;
+}
+.kc__node.is-dim { opacity: calc((0.42 + var(--od, 0.5) * 0.58) * 0.45); }
+.kc__node.is-hot {
+  border-color: var(--cyan);
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.28);
+}
+.kc__node-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex: 0 0 auto;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--blue);
+}
+.kc__node[data-tone="ok"] .kc__node-icon { background: rgba(16, 185, 129, 0.12); color: var(--ok); }
+.kc__node[data-tone="warn"] .kc__node-icon { background: rgba(245, 158, 11, 0.14); color: var(--warn); }
+.kc__node[data-tone="ai"] .kc__node-icon { background: rgba(124, 58, 237, 0.12); color: var(--violet); }
+.kc__node-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.kc__node-body b { font-size: 11.5px; color: var(--ink-1); white-space: nowrap; }
+.kc__node-count {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+/* The description is the hover layer: it explains the node rather than the
+   node merely growing. */
+.kc__node-detail {
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--ink-2);
+  max-width: 200px;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 200ms ease, opacity 200ms ease, margin-top 200ms ease;
+}
+.kc__node.is-hot .kc__node-detail { max-height: 40px; opacity: 1; margin-top: 3px; }
+
+.kc__spoke {
+  position: absolute;
+  left: -28px;
+  top: 50%;
+  width: 26px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.5));
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.kc__node.is-hot .kc__spoke { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kc__node { filter: none; }
+}
+@media (max-width: 900px) {
+  .kc { min-height: 380px; }
+  .kc__node { transform: translate(-50%, -50%) translate(var(--ox, 0px), var(--oy, 0px)) scale(calc(0.62 + var(--od, 0.5) * 0.3)); }
+}
+
+/* --- knowledge core stage --------------------------------------------------
+   The page's primary object. The orbital system takes the width and height it
+   needs; supporting panels sit beneath it. */
+.kc-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.62fr) minmax(0, 1.38fr);
+  gap: 18px;
+  align-items: center;
+  min-height: clamp(460px, calc(100vh - 330px), 720px);
+  margin-bottom: 18px;
+  padding: 22px 26px;
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 60% 70% at 62% 48%, rgba(37, 99, 235, 0.09), transparent 70%),
+    radial-gradient(ellipse 40% 50% at 20% 20%, rgba(124, 58, 237, 0.06), transparent 70%),
+    linear-gradient(180deg, #ffffff, #f6f8fb);
+}
+.kc-stage__intro { position: relative; z-index: 5; max-width: 420px; }
+.kc-stage__kicker {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.kc-stage__intro h2 {
+  margin: 10px 0 12px;
+  font-size: clamp(24px, 2.4vw, 36px);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  color: var(--ink-1);
+}
+.kc-stage__intro h2 span { color: var(--blue); }
+.kc-stage__intro p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+@media (max-width: 1080px) {
+  .kc-stage { grid-template-columns: 1fr; min-height: 0; padding: 18px; }
+  .kc-stage__intro { max-width: none; }
+}

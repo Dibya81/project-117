@@ -549,6 +549,10 @@ export function MeridianRefineryCanvas({
             return (
               <g
                 key={unit.id}
+                data-node="equipment"
+                data-unit={unit.eq?.id ?? unit.id}
+                data-kind={unit.kind}
+                data-flagged={isCritical || isWarning ? "true" : undefined}
                 transform={`translate(${unit.x},${unit.y})`}
                 style={{ cursor: "pointer", pointerEvents: "all" }}
                 onClick={(e) => {

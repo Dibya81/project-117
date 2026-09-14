@@ -1116,6 +1116,8 @@ export default function PlantTwinPage() {
         onSelectLine={(id) => setPipeSel({ kind: "pipe", id })}
         selectedLineId={pipeSel?.kind === "pipe" ? pipeSel.id : null}
         busySensor={busySensor}
+        busyFault={busyScenario}
+        onInjectFault={(equipmentId, modeId) => void inject(equipmentId, modeId)}
         onSensorAction={(sensorId, action) => {
           const eq = plant.equipment.find((e) => e.sensors.some((x) => x.id === sensorId));
           const sensor = eq?.sensors.find((x) => x.id === sensorId);

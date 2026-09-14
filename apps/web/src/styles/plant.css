@@ -3517,3 +3517,12 @@
 .mr-sensorctl__btn:hover:not(:disabled) { border-color: var(--crit); color: var(--crit); }
 .mr-sensorctl__btn[data-sensor-action="restore"]:hover { border-color: var(--ok); color: var(--ok); }
 .mr-sensorctl__btn:disabled { opacity: 0.45; cursor: default; }
+
+.mr-faults { display: flex; flex-wrap: wrap; gap: 5px; }
+.mr-sensorctl .sm-scenario {
+  border: 1px solid var(--line-2); border-radius: 5px; background: #fff;
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.06em;
+  text-transform: uppercase; padding: 3px 8px; color: var(--ink-2); cursor: pointer;
+}
+.mr-sensorctl .sm-scenario:hover:not(:disabled) { border-color: var(--crit); color: var(--crit); }
+.mr-sensorctl .sm-scenario:disabled { opacity: 0.5; cursor: default; }

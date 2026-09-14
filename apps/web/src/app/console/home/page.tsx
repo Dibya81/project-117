@@ -15,6 +15,7 @@ import { IntelligenceCore } from "@/components/fx/IntelligenceCore";
 import { Counter } from "@/components/fx/Counter";
 import { PlantMap } from "@/components/console/PlantMap";
 import { IntelligenceChain } from "@/components/console/IntelligenceChain";
+import { KnowledgeCoreOrbital, type OrbitNode } from "@/components/console/KnowledgeCoreOrbital";
 import { LogicCoreScene } from "@/components/threeui/ThreeUIScenes";
 import { consoleData } from "@/lib/data/console";
 import type { Alert, SystemPosture } from "@/types/console";
@@ -96,6 +97,27 @@ export default function HomePage() {
   }, []);
 
   const openWOs = useMemo(() => workOrders?.filter((w) => w.status !== "completed") ?? [], [workOrders]);
+  /**
+   * The orbital nodes, each carrying a figure the plant actually reports. A
+   * capability with nothing behind it shows an em dash rather than a number
+   * chosen to look busy.
+   */
+  const orbitNodes = useMemo<OrbitNode[]>(() => {
+    const sensorCount = equipment?.reduce((n, e) => n + e.sensors.length, 0) ?? null;
+    return [
+      { id: "documents", label: "Documents", detail: "Procedures and manuals behind every citation", href: "/console/documents", icon: "doc", count: artifacts?.length ?? null, countLabel: "artifacts", ring: 1, phase: -1.9, tone: "intel" },
+      { id: "equipment", label: "Equipment", detail: "Assets and their instrumented points", href: "/console/equipment", icon: "equipment", count: equipment?.length ?? null, countLabel: "assets", ring: 2, phase: 0.5, tone: "intel" },
+      { id: "sensors", label: "Sensors", detail: "Live telemetry from the running plant", href: "/console/equipment", icon: "gauge", count: sensorCount, countLabel: "points", ring: 1, phase: 0.35, tone: "ok" },
+      { id: "agents", label: "AI agents", detail: "The workforce that detects, decides and acts", href: "/console/workspace", icon: "cpu", count: agents?.length ?? null, countLabel: "agents", ring: 2, phase: -1.1, tone: "ai" },
+      { id: "simulation", label: "Simulation", detail: "The digital twin, and the faults injected into it", href: "/console/simulation", icon: "graph", count: jobs?.length ?? null, countLabel: "jobs", ring: 1, phase: 1.5, tone: "intel" },
+      { id: "work-orders", label: "Work orders", detail: "Maintenance raised, and by whom", href: "/console/work-orders", icon: "workorder", count: openWOs.length, countLabel: "open", ring: 2, phase: 1.9, tone: "warn" },
+      { id: "insights", label: "Insights", detail: "What the plant's numbers are saying", href: "/console/insights", icon: "insights", count: null, countLabel: "analytics", ring: 2, phase: -2.5, tone: "intel" },
+      { id: "history", label: "History", detail: "Operational memory — what was decided and verified", href: "/console/history", icon: "history", count: null, countLabel: "memory", ring: 1, phase: 2.5, tone: "intel" },
+      { id: "approvals", label: "Approvals", detail: "Human decisions waiting on a person", href: "/console/approvals", icon: "check", count: approvals?.length ?? null, countLabel: "pending", ring: 2, phase: 3.0, tone: approvals && approvals.length ? "warn" : "ok" },
+      { id: "knowledge", label: "Knowledge graph", detail: "Equipment, documents and events as one topology", href: "/console/knowledge", icon: "graph", count: null, countLabel: "graph", ring: 1, phase: -0.7, tone: "ai" },
+    ];
+  }, [equipment, agents, artifacts, jobs, approvals, openWOs]);
+
   const liveJobs = jobs?.filter((j) => ["QUEUED", "PLANNING", "RETRIEVING", "EXECUTING", "VERIFYING"].includes(j.state)) ?? [];
   // Completion rate over real jobs. Null when there are none: a rate with no
   // denominator is not 0%, it is undefined, and showing a number would invent it.
@@ -154,6 +176,26 @@ export default function HomePage() {
       </div>
 
       {/* THE SPINE — information → action, as one living chain */}
+      {/* THE CENTRE OF GRAVITY — the knowledge core and the capabilities that
+          feed it and draw from it. This is the page's primary object; the
+          panels below it are supporting information. */}
+      <section className="kc-stage" aria-label="Knowledge core">
+        <div className="kc-stage__intro">
+          <span className="kc-stage__kicker">Welcome to Project 117</span>
+          <h2>
+            Knowledge at the Core.
+            <br />
+            <span>Everything Connected.</span>
+          </h2>
+          <p>
+            An autonomous multi-agent system for safer, smarter and more resilient
+            industrial operations. Every capability below reads from the same plant
+            and writes back into the same memory.
+          </p>
+        </div>
+        <KnowledgeCoreOrbital nodes={orbitNodes} />
+      </section>
+
       <Panel title="Intelligence chain — sensor to verification" hud style={{ marginBottom: 16 }}>
         <IntelligenceChain />
       </Panel>

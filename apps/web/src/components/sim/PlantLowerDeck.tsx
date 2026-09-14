@@ -75,6 +75,8 @@ export function PlantLowerDeck({
   selectedLineId,
   onSensorAction,
   busySensor,
+  onInjectFault,
+  busyFault = null,
 }: {
   plant: PlantDef;
   runtime: CanvasRuntime | null;
@@ -86,6 +88,9 @@ export function PlantLowerDeck({
   selectedLineId: string | null;
   onSensorAction?: (sensorId: string, action: "disable" | "restore") => void;
   busySensor?: string | null;
+  /** Inject an equipment failure mode. `modeId` comes from the asset's own list. */
+  onInjectFault?: (equipmentId: string, modeId: string) => void;
+  busyFault?: string | null;
 }) {
   const [activeTab, setActiveTab] = useState<"live" | "trends" | "maintenance" | "related">("live");
 
@@ -285,6 +290,37 @@ export function PlantLowerDeck({
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Equipment failure modes. These lived only in the left rail, so
+                when the rail was hidden to give the plant the width they became
+                unreachable — the fault could not be injected at all. They belong
+                with the asset that owns them. */}
+            {onInjectFault && displaySelected.failure_modes.length > 0 && (
+              <div className="mr-sensorctl" data-testid="selected-faults">
+                <div className="mr-sensorctl__head">
+                  <span>Inject failure</span>
+                  <span className="mr-sensorctl__count">
+                    {displaySelected.failure_modes.length} mode
+                    {displaySelected.failure_modes.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <div className="mr-faults">
+                  {displaySelected.failure_modes.map((fm) => (
+                    <button
+                      key={fm}
+                      type="button"
+                      className="sm-scenario"
+                      data-fault-mode={fm}
+                      data-equipment={displaySelected.id}
+                      disabled={busyFault !== null}
+                      onClick={() => onInjectFault(displaySelected.id, fm)}
+                    >
+                      {fm.replace(/_/g, " ")}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
