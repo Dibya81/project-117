@@ -20,10 +20,11 @@
  */
 
 import { useMemo, useRef, useState } from "react";
-import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { useRouter } from "next/navigation";
+import { Icon, type IconName } from "@/components/ui/Icon";
 import { PlantPart, Pipe, type PartKind } from "@/components/console/PlantParts3D";
 
 export interface Satellite {
@@ -38,13 +39,13 @@ export interface Satellite {
   /** Phase in radians, so the satellites spread around the ring. */
   phase: number;
   tone: string;
-  /** The miniature industrial object that represents this system. */
-  part: PartKind;
+  /** Icon shown on the tile, as the reference shows for each system. */
+  icon: IconName;
   /** The one-line descriptor shown on hover, as the reference labels it. */
   descriptor: string;
 }
 
-const RING_RADIUS = [4.5, 6.2];
+const RING_RADIUS = [4.6, 6.4];
 const RING_TILT = [0.30, 0.20];
 /** Seconds for one full revolution. Slow on purpose: this is not a spinner. */
 const RING_PERIOD = [150, 215];
@@ -114,13 +115,13 @@ function Core({ reduced, hovered }: { reduced: boolean; hovered: boolean }) {
         <meshPhysicalMaterial
           color="#60a5fa"
           transparent
-          opacity={0.34}
+          opacity={0.22}
           roughness={0.15}
           metalness={0.1}
           transmission={0.35}
           thickness={0.6}
           emissive="#1d4ed8"
-          emissiveIntensity={0.5 * glow}
+          emissiveIntensity={0.85 * glow}
         />
       </mesh>
       <mesh ref={shellB}>
@@ -128,12 +129,12 @@ function Core({ reduced, hovered }: { reduced: boolean; hovered: boolean }) {
         <meshPhysicalMaterial
           color="#93c5fd"
           transparent
-          opacity={0.42}
+          opacity={0.3}
           roughness={0.1}
           transmission={0.3}
           thickness={0.5}
           emissive="#2563eb"
-          emissiveIntensity={0.62 * glow}
+          emissiveIntensity={1.0 * glow}
         />
       </mesh>
       <mesh ref={shellC}>
@@ -141,12 +142,12 @@ function Core({ reduced, hovered }: { reduced: boolean; hovered: boolean }) {
         <meshPhysicalMaterial
           color="#bfdbfe"
           transparent
-          opacity={0.55}
+          opacity={0.42}
           roughness={0.05}
           transmission={0.25}
           thickness={0.4}
           emissive="#3b82f6"
-          emissiveIntensity={0.9 * glow}
+          emissiveIntensity={1.5 * glow}
         />
       </mesh>
 
@@ -157,14 +158,14 @@ function Core({ reduced, hovered }: { reduced: boolean; hovered: boolean }) {
           <meshStandardMaterial
             color="#dbeafe"
             emissive="#60a5fa"
-            emissiveIntensity={1.1 * glow}
+            emissiveIntensity={2.2 * glow}
             roughness={0.2}
           />
         </mesh>
         {nodes.map((p, i) => (
           <mesh key={i} position={p}>
             <sphereGeometry args={[0.045, 10, 10]} />
-            <meshBasicMaterial color="#bfdbfe" transparent opacity={0.85} />
+            <meshBasicMaterial color="#e0f2fe" transparent opacity={1} />
           </mesh>
         ))}
         {edges.map(([a, b], i) => (
@@ -173,7 +174,7 @@ function Core({ reduced, hovered }: { reduced: boolean; hovered: boolean }) {
               attach="geometry"
               onUpdate={(g) => g.setFromPoints([a, b])}
             />
-            <lineBasicMaterial color="#93c5fd" transparent opacity={0.28} />
+            <lineBasicMaterial color="#7dd3fc" transparent opacity={0.55} />
           </line>
         ))}
       </group>
@@ -298,74 +299,42 @@ function SatelliteNode({
     const near = hovered ? 1 : 0;
     const s = 0.72 + depth * 0.42 + near * 0.22;
     group.current.scale.setScalar(s);
-    const op = 0.5 + depth * 0.5;
-    group.current.traverse((o) => {
-      const m = (o as THREE.Mesh).material as THREE.Material | undefined;
-      if (m && "opacity" in m) {
-        (m as THREE.MeshBasicMaterial).opacity = active && active !== sat.id ? op * 0.35 : op;
-      }
-    });
   });
 
   const dim = active !== null && active !== sat.id;
 
   return (
     <group ref={group}>
-      <group
-        onPointerOver={(e: ThreeEvent<PointerEvent>) => {
-          e.stopPropagation();
-          setHovered(true);
-          onHover(sat.id);
-          document.body.style.cursor = "pointer";
-        }}
-        onPointerOut={() => {
-          setHovered(false);
-          onHover(null);
-          document.body.style.cursor = "default";
-        }}
-        onClick={() => router.push(sat.href)}
-      >
-        {/* Each system is the equipment it is about, not a shared disc: a tank
-            for Operations, an exchanger for Insights, and so on. This is what
-            stops the ring reading as identical chips. */}
-        <group scale={hovered ? 0.34 : 0.28}>
-          <PlantPart kind={sat.part} s={1} />
-        </group>
-        {/* A disc under the object, tinted with the system's own colour — the
-            only thing the satellites share, so the family reads as one set. */}
-        <mesh position={[0, -0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.22, 0.3, 28]} />
-          <meshBasicMaterial
-            color={sat.tone}
-            transparent
-            opacity={dim ? 0.22 : hovered ? 0.95 : 0.55}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      </group>
-      {/* The label is anchored to the object by a mast, so it reads as part of
-          the same component rather than a card that happens to float nearby. */}
-      <mesh position={[0, hovered ? -0.4 : -0.36, 0]}>
-        <cylinderGeometry args={[0.008, 0.008, 0.16, 6]} />
-        <meshBasicMaterial color={sat.tone} transparent opacity={dim ? 0.25 : 0.7} />
-      </mesh>
       <Html
         center
-        distanceFactor={12}
-        position={[0, hovered ? -0.72 : -0.68, 0]}
-        zIndexRange={[20, 0]}
+        distanceFactor={5.5}
+        position={[0, 0, 0]}
+        zIndexRange={[30, 0]}
+        style={{ pointerEvents: "auto" }}
       >
-        <div className={`k3-label${hovered ? " is-hot" : ""}${dim ? " is-dim" : ""}`}>
-          <b>{sat.label}</b>
-          <span>{sat.descriptor}</span>
-          {hovered && (
-            <em>
-              {sat.count == null
-                ? "open"
-                : `${sat.count.toLocaleString()} ${sat.countLabel}`}
-            </em>
-          )}
-        </div>
+        <button
+          type="button"
+          className={`k3-card${hovered ? " is-hot" : ""}${dim ? " is-dim" : ""}`}
+          data-satellite={sat.id}
+          onMouseEnter={() => {
+            setHovered(true);
+            onHover(sat.id);
+          }}
+          onMouseLeave={() => {
+            setHovered(false);
+            onHover(null);
+          }}
+          onClick={() => router.push(sat.href)}
+          aria-label={`${sat.label} — ${sat.descriptor}`}
+        >
+          <span className="k3-card__tile" style={{ background: sat.tone }}>
+            <Icon name={sat.icon} size={17} />
+          </span>
+          <span className="k3-card__body">
+            <b>{sat.label}</b>
+            <span>{sat.descriptor}</span>
+          </span>
+        </button>
       </Html>
     </group>
   );

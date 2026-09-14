@@ -49,14 +49,14 @@ export default function HomePage() {
   const satellites = useMemo<Satellite[]>(() => {
     const sensorCount = equipment?.reduce((n, e) => n + e.sensors.length, 0) ?? null;
     return [
-      { id: "simulation", label: "Simulation", descriptor: "Test Scenarios", detail: "The digital twin and the faults injected into it", href: "/console/simulation", count: jobs?.length ?? null, countLabel: "jobs", ring: 0, phase: -0.2, tone: "#3b82f6", part: "compressor" },
-      { id: "operations", label: "Operations", descriptor: "Live Plant Overview", detail: "The running plant, area by area", href: "/console/equipment", count: equipment?.length ?? null, countLabel: "assets", ring: 1, phase: 1.05, tone: "#0ea5e9", part: "column" },
-      { id: "documents", label: "Documents", descriptor: "Procedures & Manuals", detail: "The procedures behind every citation", href: "/console/documents", count: artifacts?.length ?? null, countLabel: "artifacts", ring: 1, phase: -2.2, tone: "#6366f1", part: "cabinet" },
-      { id: "equipment", label: "Equipment", descriptor: "Monitors & Sensors", detail: "Assets and their instrumented points", href: "/console/equipment", count: sensorCount, countLabel: "points", ring: 0, phase: 2.35, tone: "#0891b2", part: "pump" },
-      { id: "agents", label: "AI Agents", descriptor: "Detect • Decide • Act", detail: "The workforce that detects, decides and acts", href: "/console/workspace", count: agents?.length ?? null, countLabel: "agents", ring: 0, phase: 1.15, tone: "#7c3aed", part: "vessel" },
-      { id: "work-orders", label: "Work Orders", descriptor: "Execute & Track", detail: "Maintenance raised, and by whom", href: "/console/work-orders", count: openWOs.length, countLabel: "open", ring: 1, phase: 2.6, tone: "#f59e0b", part: "cabinet" },
-      { id: "insights", label: "Insights", descriptor: "Predict & Optimize", detail: "What the plant's numbers are saying", href: "/console/insights", count: null, countLabel: "analytics", ring: 0, phase: -1.25, tone: "#2563eb", part: "exchanger" },
-      { id: "history", label: "History", descriptor: "Operational Memory", detail: "Decided, acted, verified, remembered", href: "/console/history", count: null, countLabel: "memory", ring: 1, phase: -0.55, tone: "#64748b", part: "tank" },
+      { id: "simulation", label: "Simulation", descriptor: "Test Scenarios", detail: "The digital twin and the faults injected into it", href: "/console/simulation", count: jobs?.length ?? null, countLabel: "jobs", ring: 0, phase: -0.2, tone: "#3b82f6", icon: "graph" },
+      { id: "operations", label: "Operations", descriptor: "Live Plant Overview", detail: "The running plant, area by area", href: "/console/equipment", count: equipment?.length ?? null, countLabel: "assets", ring: 1, phase: 1.05, tone: "#0ea5e9", icon: "equipment" },
+      { id: "documents", label: "Documents", descriptor: "Procedures & Manuals", detail: "The procedures behind every citation", href: "/console/documents", count: artifacts?.length ?? null, countLabel: "artifacts", ring: 1, phase: -2.2, tone: "#6366f1", icon: "doc" },
+      { id: "equipment", label: "Equipment", descriptor: "Monitors & Sensors", detail: "Assets and their instrumented points", href: "/console/equipment", count: sensorCount, countLabel: "points", ring: 0, phase: 2.35, tone: "#0891b2", icon: "gauge" },
+      { id: "agents", label: "AI Agents", descriptor: "Detect • Decide • Act", detail: "The workforce that detects, decides and acts", href: "/console/workspace", count: agents?.length ?? null, countLabel: "agents", ring: 0, phase: 1.15, tone: "#7c3aed", icon: "cpu" },
+      { id: "work-orders", label: "Work Orders", descriptor: "Execute & Track", detail: "Maintenance raised, and by whom", href: "/console/work-orders", count: openWOs.length, countLabel: "open", ring: 1, phase: 2.6, tone: "#f59e0b", icon: "workorder" },
+      { id: "insights", label: "Insights", descriptor: "Predict & Optimize", detail: "What the plant's numbers are saying", href: "/console/insights", count: null, countLabel: "analytics", ring: 0, phase: -1.25, tone: "#2563eb", icon: "insights" },
+      { id: "history", label: "History", descriptor: "Operational Memory", detail: "Decided, acted, verified, remembered", href: "/console/history", count: null, countLabel: "memory", ring: 1, phase: -0.55, tone: "#64748b", icon: "history" },
     ];
   }, [equipment, agents, artifacts, jobs, openWOs]);
 
