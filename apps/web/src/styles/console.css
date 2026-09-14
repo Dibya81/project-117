@@ -2784,18 +2784,6 @@
   z-index: 5;
   pointer-events: none;
 }
-.k3-ring__path {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-.k3-ring__path ellipse {
-  fill: none;
-  stroke: rgba(96, 138, 196, 0.3);
-  stroke-width: 0.22;
-  stroke-dasharray: 1.4 1.8;
-}
 
 /* The core's name, sitting on the object rather than on a card over it.
    No background, no border: white type with a soft shadow so it reads against

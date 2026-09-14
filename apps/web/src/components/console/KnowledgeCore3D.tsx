@@ -211,46 +211,55 @@ function SatelliteRing({
   const [hot, setHot] = useState<string | null>(null);
 
   /**
-   * Eight logos at eight fixed points on one ellipse.
+   * Eight logos, evenly spaced on one ellipse, travelling around the core.
    *
-   * A moving orbit was the wrong call here: as the ring turned, the cards
-   * drifted into whatever arrangement the moment produced, which read as
-   * scattered rather than composed. The reference is a stable arrangement with
-   * each system in a known place. They are evenly spaced at 45°, so the ring is
-   * symmetric and the same every time the page opens; the core's own rotation
-   * carries the life.
+   * The spacing is what keeps it composed: a constant 45° apart, so the ring
+   * stays symmetric at every moment of the rotation. The earlier version put
+   * two rings at uneven phases, which is why it looked scattered rather than
+   * orbiting — the arrangement changed shape as it turned.
    */
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
-    const place = () => {
+    let raf = 0;
+    let t = 0;
+    let last = performance.now();
+    const place = (offset: number) => {
       const w = el.clientWidth;
       const h = el.clientHeight;
       const rx = w * 0.40;
       const ry = h * 0.335;
       satellites.forEach((sat, i) => {
-        // Start at the top and step clockwise.
-        const a = -Math.PI / 2 + (i / satellites.length) * Math.PI * 2;
+        // Constant angular step: one logo per equal slice of the revolution, so
+        // the ring turns at a steady rate like an orbit rather than speeding up
+        // and slowing down as it crosses the ellipse.
+        const a = -Math.PI / 2 + (i / satellites.length) * Math.PI * 2 + offset;
         const node = el.querySelector<HTMLElement>(`[data-satellite="${sat.id}"]`);
         if (!node) return;
         node.style.setProperty("--sx", `${(Math.cos(a) * rx).toFixed(1)}px`);
         node.style.setProperty("--sy", `${(Math.sin(a) * ry).toFixed(1)}px`);
       });
     };
-    place();
-    const ro = new ResizeObserver(place);
+    const tick = (now: number) => {
+      // A slow drift: a full circuit takes about two minutes, so it reads as a
+      // mechanism running rather than a loading spinner.
+      if (!reduced) t += (now - last) * 0.00005;
+      last = now;
+      place(t);
+      raf = requestAnimationFrame(tick);
+    };
+    place(0);
+    const ro = new ResizeObserver(() => place(t));
     ro.observe(el);
-    return () => ro.disconnect();
-  }, [satellites]);
-  void reduced;
+    if (!reduced) raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
+  }, [satellites, reduced]);
 
   return (
     <div className="k3-ring" ref={wrap}>
-      {/* The orbit the logos sit on, so the arrangement reads as a system
-          rather than eight marks dropped on a background. */}
-      <svg className="k3-ring__path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        <ellipse cx="50" cy="50" rx="40" ry="33.5" />
-      </svg>
       {satellites.map((s) => {
         const dim = hot !== null && hot !== s.id;
         return (
