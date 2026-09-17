@@ -61,6 +61,18 @@ interface Props {
   /** Live activity: relation keys currently pulsing (real-time graph updates). */
   pulses?: { edgeId: string; at: number }[];
   fontSize?: number;
+  /**
+   * Optional per-node overrides, both defaulting to the canvas's own encoding.
+   *
+   * Left undefined the renderer keeps its long-standing rule: colour by semantic
+   * type (`colorOf`), radius by type base plus a degree boost. The home asset
+   * network passes them so a real equipment node can be coloured by its real
+   * dataset `state` and sized by its real `criticality` — an encoding the
+   * Knowledge page deliberately does not use, so it is opt-in rather than a
+   * change to either page's behaviour.
+   */
+  colorOfNode?: (node: KNode) => string;
+  radiusOfNode?: (node: KNode) => number;
 }
 
 /* ---------------------------------------------------------------- palette */
@@ -116,7 +128,21 @@ const NODE_BASE: Record<string, number> = {
 const FADE_MS = 250;
 
 const GraphCanvas = forwardRef<GraphHandle, Props>(function GraphCanvas(
-  { graph, positions, selected, highlight, path, onSelect, onHover, onExpand, expandable, pulses, fontSize = 11 },
+  {
+    graph,
+    positions,
+    selected,
+    highlight,
+    path,
+    onSelect,
+    onHover,
+    onExpand,
+    expandable,
+    pulses,
+    fontSize = 11,
+    colorOfNode,
+    radiusOfNode,
+  },
   ref,
 ) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -269,10 +295,11 @@ const GraphCanvas = forwardRef<GraphHandle, Props>(function GraphCanvas(
         const isHover = n.id === hover;
         const onPath = pathSet.has(n.id);
         const dim = !active(n.id);
-        const color = colorOf(n.type);
+        const color = colorOfNode ? colorOfNode(n) : colorOf(n.type);
         const deg = degree.get(n.id) ?? 0;
-        const base = NODE_BASE[n.type] ?? 4;
-        const r = (base + Math.min(deg, 10) * 0.62) * Math.max(k, 0.6);
+        const r =
+          (radiusOfNode ? radiusOfNode(n) : (NODE_BASE[n.type] ?? 4) + Math.min(deg, 10) * 0.62) *
+          Math.max(k, 0.6);
 
         const alpha = dim ? 1 - f * 0.9 : 1;
         ctx.globalAlpha = alpha;
@@ -364,7 +391,7 @@ const GraphCanvas = forwardRef<GraphHandle, Props>(function GraphCanvas(
       ctx.globalAlpha = 1;
       hit.current = hits;
     },
-    [graph, positions, selected, highlight, path, pathSet, pathEdge, hover, degree, fontSize],
+    [graph, positions, selected, highlight, path, pathSet, pathEdge, hover, degree, fontSize, colorOfNode, radiusOfNode],
   );
 
   /* ---------------- sizing ---------------- */

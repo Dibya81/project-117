@@ -11,7 +11,12 @@ export interface PlantTemplate {
 
 function node(kind: EquipmentDef["kind"], tag: string, name: string, x: number, y: number, criticality = 2): EquipmentDef {
   const id = `e-${tag}`;
-  const sensorTag = tag.replace(/^[A-Z]+-/, "");
+  // The FULL unit tag, not its number. Two units of different kinds share a
+  // number all the time (T-101 and P-101 both end in 101), and a stripped
+  // suffix made both emit `TT-101` — one sensor id for two instruments, which
+  // the validator (rightly) reported as a duplicate identifier and the engine
+  // then read as a single point. The unit tag is unique by construction.
+  const sensorTag = tag;
   return {
     id,
     tag,
@@ -36,8 +41,11 @@ function pipes(ids: string[]): PlantDef["connections"] {
   return ids.slice(0, -1).map((source, i) => ({
     id: `pl-template-${i + 1}`,
     kind: "pipe",
+    relation: "MATERIAL_FLOW",
     source,
     target: ids[i + 1],
+    source_port: "out",
+    target_port: "in",
     medium: "process",
     capacity: 100,
     flow: 82,

@@ -2,22 +2,26 @@
 
 /**
  * AppShell — the persistent workbench frame.
- * Aurora (calm) + rail + top bar + journey bar + palette + drawers.
+ * Ice-blue mesh + glass rail + glass top bar + journey bar + palette + drawers.
  * Landing (/) never sees this; it wraps /console/* only.
  */
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { motion, useMotionTemplate, useSpring } from "framer-motion";
+import { ChevronRight } from "lucide-react";
 import { Rail } from "./Rail";
 import { TopBar } from "./TopBar";
+import { GlassBackdrop } from "./GlassBackdrop";
 import { CommandPalette } from "./CommandPalette";
 import { NotificationCenter } from "./NotificationCenter";
 import { AgentRoster } from "./AgentRoster";
 import { StatusDot } from "@/components/ui/primitives";
-import { Icon, type IconName } from "@/components/ui/Icon";
-import { Aurora } from "@/components/fx/Aurora";
+import type { IconName } from "@/components/ui/Icon";
+import { Lucide } from "@/components/ui/LucideIcon";
 import { JourneyProvider, JourneyBar } from "@/lib/journey";
 import { RoleProvider } from "@/lib/role";
 import { consoleData } from "@/lib/data/console";
+import { SPRING, SPRING_OPTIONS } from "@/lib/ui/motion";
 import type { AgentDescriptor, HealthState } from "@/types";
 import type { NotificationItem, SystemPosture } from "@/types/console";
 
@@ -59,8 +63,11 @@ function postureTone(
 /**
  * The console paints a bright workspace, but `html/body` colours come from the
  * shared token layer that the cinematic landing page also depends on. Rather
- * than change those globally and risk the landing, the light page background is
+ * than change those globally and risk the landing, the ice-blue page base is
  * applied while the shell is mounted and reverted on unmount.
+ *
+ * The gradient itself lives in `GlassBackdrop`; this only stops the body from
+ * showing through at the edges on overscroll, so the tone matches.
  */
 function useBrightPageBackground() {
   useEffect(() => {
@@ -68,7 +75,7 @@ function useBrightPageBackground() {
     const prevBodyBg = document.body.style.background;
     const prevBodyColor = document.body.style.color;
     const prevScheme = root.style.colorScheme;
-    document.body.style.background = "#f8f9fa";
+    document.body.style.background = "#F0F7FF";
     document.body.style.color = "#0f172a";
     root.style.colorScheme = "light";
     return () => {
@@ -79,12 +86,16 @@ function useBrightPageBackground() {
   }, []);
 }
 
+/** Collapsed and expanded rail widths. Exported so pages can offset for them. */
+export const RAIL_W = 64;
+export const RAIL_W_EXPANDED = 232;
+
 const MOBILE_TABS: { label: string; href: string; icon: IconName; match: RegExp }[] = [
   { label: "Home", href: "/console/home", icon: "home", match: /^\/console\/home/ },
   { label: "Ask", href: "/console/workspace", icon: "chat", match: /^\/console\/workspace/ },
   { label: "Plant", href: "/console/equipment", icon: "equipment", match: /^\/console\/equipment/ },
   { label: "Orders", href: "/console/work-orders", icon: "workorder", match: /^\/console\/work-orders/ },
-  { label: "More", href: "/console/insights", icon: "dots", match: /^\/console\/(insights|approvals|admin|documents|knowledge|history)/ },
+  { label: "More", href: "/console/insights", icon: "dots", match: /^\/console\/(insights|approvals|admin|documents|knowledge|history|sovereignty|security)/ },
 ];
 
 function MobileTabs() {
@@ -92,17 +103,22 @@ function MobileTabs() {
   const router = useRouter();
   return (
     <nav className="cs-mobiletabs" aria-label="Primary mobile">
-      {MOBILE_TABS.map((t) => (
-        <button
-          key={t.label}
-          className={t.match.test(pathname) ? "is-active" : undefined}
-          onClick={() => router.push(t.href)}
-          aria-current={t.match.test(pathname) ? "page" : undefined}
-        >
-          <Icon name={t.icon} size={17} />
-          {t.label}
-        </button>
-      ))}
+      {MOBILE_TABS.map((t) => {
+        const active = t.match.test(pathname);
+        return (
+          <motion.button
+            key={t.label}
+            className={active ? "is-active" : undefined}
+            onClick={() => router.push(t.href)}
+            aria-current={active ? "page" : undefined}
+            whileTap={{ scale: 0.94 }}
+            transition={SPRING.micro}
+          >
+            <Lucide name={t.icon} size={18} strokeWidth={active ? 2.4 : 1.9} />
+            {t.label}
+          </motion.button>
+        );
+      })}
     </nav>
   );
 }
@@ -117,12 +133,41 @@ export function AppShell({ children }: { children: ReactNode }) {
    * when the pointer enters it and collapses when it leaves. `pinned` keeps it
    * open for anyone who wants that, and the choice survives the session.
    */
-  const [pinned, setPinned] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.sessionStorage.getItem("p117.rail.pinned") === "1";
-  });
+  // Start from the server's value and apply the stored pin AFTER mount.
+  //
+  // Reading sessionStorage inside the initialiser made the first client render
+  // disagree with the server HTML whenever the rail was pinned ("▶" on the
+  // server, "◀" on the client). React treats that as a hydration mismatch and
+  // re-renders the whole shell on the client, which is both an error in the
+  // console and a visible flash.
+  const [pinned, setPinned] = useState(false);
+  useEffect(() => {
+    setPinned(window.sessionStorage.getItem("p117.rail.pinned") === "1");
+  }, []);
   const [hovered, setHovered] = useState(false);
   const expanded = pinned || hovered;
+
+  /**
+   * The rail's width is a motion value, not React state.
+   *
+   * Framer Motion writes the animated width straight to the DOM node, so the
+   * collapse never re-renders the page tree — only the grid column reflows. The
+   * spring is the one the spec names (stiffness 300, damping 30): fast enough to
+   * feel like the rail snaps open under the pointer, damped enough that the
+   * labels do not visibly wobble on the way.
+   *
+   * Because this is an inline `grid-template-columns`, a plain media query
+   * cannot override it at mobile widths. `console.css` therefore forces the
+   * single-column layout with `!important` under 860px and re-places
+   * `.cs-main`; without that, the hidden rail removed the first grid item and
+   * the whole page auto-placed into the 64px rail column.
+   */
+  const railW = useSpring(RAIL_W, SPRING_OPTIONS.panel);
+  useEffect(() => {
+    railW.set(expanded ? RAIL_W_EXPANDED : RAIL_W);
+  }, [expanded, railW]);
+  const gridTemplate = useMotionTemplate`${railW}px 1fr`;
+
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [notifsOpen, setNotifsOpen] = useState(false);
   const [rosterOpen, setRosterOpen] = useState(false);
@@ -157,16 +202,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <RoleProvider>
       <JourneyProvider>
-        <Aurora calm />
-        <div className={`cs cs-shell${expanded ? " cs-shell--expanded" : ""}`}>
+        <GlassBackdrop />
+        <motion.div
+          className={`cs cs-shell${expanded ? " cs-shell--expanded" : ""}`}
+          style={{ gridTemplateColumns: gridTemplate }}
+        >
           <aside
             className="cs-rail"
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
+            data-expanded={expanded ? "true" : "false"}
           >
             <button
               className="cs-rail__logo"
-              style={{ background: "none", border: 0, cursor: "pointer", color: "var(--ink-1)" }}
               onClick={() => setPinned((v) => {
                 const next = !v;
                 window.sessionStorage.setItem("p117.rail.pinned", next ? "1" : "0");
@@ -176,8 +224,27 @@ export function AppShell({ children }: { children: ReactNode }) {
               aria-pressed={pinned}
               aria-label={pinned ? "Unpin navigation" : "Pin navigation open"}
             >
-              PROJECT <b>117</b>
-              <span className="cs-rail__pin" aria-hidden="true">{pinned ? "◀" : "▶"}</span>
+              <motion.span
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 text-[11px] font-bold text-white shadow-sm shadow-cyan-500/30"
+                whileHover={{ scale: 1.08, rotate: -4 }}
+                transition={SPRING.micro}
+                aria-hidden="true"
+              >
+                17
+              </motion.span>
+              <span
+                className={`whitespace-nowrap transition-opacity duration-200 ${expanded ? "opacity-100" : "opacity-0"}`}
+              >
+                PROJECT <b>117</b>
+              </span>
+              <motion.span
+                className="cs-rail__pin"
+                aria-hidden="true"
+                animate={{ rotate: pinned ? 180 : 0 }}
+                transition={SPRING.panel}
+              >
+                <ChevronRight size={11} strokeWidth={2.6} />
+              </motion.span>
             </button>
             <Rail expanded={expanded} approvalsPending={approvalsPending} runningTasks={runningTasks} />
             {/* Sovereignty posture — real readings from /health, never a
@@ -240,7 +307,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onOpenRoster={() => setRosterOpen(true)} />
           {notifsOpen && <NotificationCenter items={notifications} onClose={() => setNotifsOpen(false)} />}
           {rosterOpen && <AgentRoster agents={agents} onClose={() => setRosterOpen(false)} />}
-        </div>
+        </motion.div>
       </JourneyProvider>
     </RoleProvider>
   );

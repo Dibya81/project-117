@@ -35,6 +35,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from backend.security.clearance import ClearanceDenied
+from backend.security.clearance.access import require_document_clearance
+from backend.security.rbac import Principal
 from backend.tools.base import (
     Permission,
     ResourceLimits,
@@ -104,6 +107,28 @@ def _map_retrieval_error(exc: Exception) -> Exception:
     return ToolError(f"retrieval failed: {type(exc).__name__}: {exc}")
 
 
+def _principal(context: ToolContext) -> Principal | None:
+    """The caller a tool acts as, for clearance purposes.
+
+    The tool context carries roles (and the caller's explicit badge, when they
+    have one) rather than a Principal, because the registry resolves identity at
+    the API boundary and passes a tool only what it needs. The badge is honoured
+    when present, so a caller whose badge is *lower* than their role default is
+    not silently widened by the tool path; otherwise the clearance the roles
+    confer is used, which is exactly what the RBAC gate already approved.
+    A context with neither roles, a user nor a badge yields ``None`` — the
+    clearance layer's default, never an elevated one.
+    """
+    if not context.roles and not context.user and not context.clearance:
+        return None
+    extra = {"clearance": context.clearance} if context.clearance else {}
+    return Principal(
+        user=context.user or "unknown",
+        roles=tuple(context.roles) or ("viewer",),
+        extra=extra,
+    )
+
+
 async def _search(
     context: ToolContext,
     *,
@@ -118,6 +143,11 @@ async def _search(
     try:
         # RetrievalService is synchronous (vendor code underneath), so it goes
         # to a worker thread rather than blocking the event loop.
+        #
+        # The clearance is derived from the tool context's roles, which the
+        # registry already checked for the tool's own permission. One policy:
+        # an agent's tool call is filtered by exactly the same rules as an
+        # interactive search, so a tool call is not a way around clearance.
         return await asyncio.to_thread(
             context.retrieval.search,
             query,
@@ -126,6 +156,7 @@ async def _search(
             document_ids=document_ids,
             rerank=rerank,
             user=context.user,
+            principal=_principal(context),
         )
     except Exception as exc:
         raise _map_retrieval_error(exc) from exc
@@ -259,7 +290,23 @@ class ReadDocumentTool:
 
     async def run(self, arguments: BaseModel, context: ToolContext) -> ToolResult:
         assert isinstance(arguments, ReadDocumentArguments)
-        metadata = await asyncio.to_thread(self._load, arguments.document_id, context)
+        # A clearance refusal is a refusal, not an outage: the tool reports it
+        # as such so the operator sees "you may not read this", and the audit
+        # row records a refused outcome rather than a failed call.
+        try:
+            metadata = await asyncio.to_thread(self._load, arguments.document_id, context)
+        except ClearanceDenied as exc:
+            return ToolResult(
+                tool=self._spec.name,
+                status="denied",
+                error=str(exc),
+                output={
+                    "document_id": arguments.document_id,
+                    "required_clearance": exc.required,
+                    "held_clearance": exc.held,
+                    "reason": "clearance_denied",
+                },
+            )
 
         passages: list[dict[str, Any]] = []
         if arguments.query:
@@ -305,6 +352,11 @@ class ReadDocumentTool:
                 metadata = json.loads(row.metadata_json or "{}")
             except ValueError:
                 metadata = {}
+            # A direct lookup is a claim about one named document, so an
+            # unauthorized claim is refused rather than answered with metadata.
+            # The clearance layer reads the row's own label; nothing about the
+            # document is returned before this passes.
+            require_document_clearance(_principal(context), row, resource_id=document_id)
             ingestion = metadata.get("ingestion") or {}
             return {
                 "document_id": row.id,

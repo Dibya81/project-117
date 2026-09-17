@@ -5,7 +5,7 @@
  * Events grouped by OBSERVED / DECIDED / ACTED / VERIFIED; the timeline spine
  * draws itself; Learned Rules carry origin, evidence, confidence and usage.
  */
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Progress, SkeletonRows, Tag, timeAgo } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
@@ -36,11 +36,32 @@ export default function HistoryPage() {
   /** Event id from ?event= — the Knowledge Universe deep link. */
   const [focusEvent, setFocusEvent] = useState<string | null>(null);
 
+  /**
+   * How much of the register is loaded.
+   *
+   * This used to be a flat 500 on mount — a ~205 KB audit payload for a list the
+   * operator scrolls through anyway, most of it transport noise that category
+   * filtering then hides. It opens on a screenful and extends on request, so the
+   * initial payload is a quarter of the size and the page paints while the
+   * register is still being read.
+   *
+   * A deep link (`?event=`) still loads the full window: the target row may be
+   * anywhere in it, and scrolling to a row that was never fetched would silently
+   * do nothing.
+   */
+  const [limit, setLimit] = useState(120);
   useEffect(() => {
-    consoleData.history.list().then(setEvents);
+    const focus = new URLSearchParams(window.location.search).get("event");
+    setFocusEvent(focus);
+    consoleData.history.list(focus ? 500 : 120).then(setEvents);
     consoleData.history.rules().then(setRules);
-    setFocusEvent(new URLSearchParams(window.location.search).get("event"));
   }, []);
+
+  const loadMore = useCallback(() => {
+    const next = limit + 250;
+    setLimit(next);
+    consoleData.history.list(next).then(setEvents);
+  }, [limit]);
 
   // Once the deep-linked event is rendered, bring it into view.
   useEffect(() => {
@@ -128,6 +149,20 @@ export default function HistoryPage() {
                 <p className="cs-dim" style={{ paddingBottom: 20 }}>
                   No {catFilter.toLowerCase()} memory yet — it forms as the plant and the agents operate.
                 </p>
+              )}
+              {/* The register is read a window at a time; the operator extends it
+                  rather than paying for the whole history on mount. */}
+              {(events?.length ?? 0) >= limit && (
+                <div style={{ padding: "4px 0 20px" }}>
+                  <button
+                    type="button"
+                    className="cs-btn"
+                    onClick={loadMore}
+                    style={{ width: "100%" }}
+                  >
+                    Load earlier records — showing {events?.length ?? 0}
+                  </button>
+                </div>
               )}
             </div>
           )}

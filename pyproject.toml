@@ -17,6 +17,11 @@ dependencies = [
     "docling>=2.126.0",
     "pymupdf>=1.28.2",
     "requests>=2.34.2",
+    # Equipment QR label rendering (backend/api/src/qr_codes.py). Pure-Python
+    # with no compiled or transitive dependencies, and it renders locally —
+    # a QR web API would be an outbound call, which the sovereignty posture
+    # enforced by backend/security/egress.py refuses.
+    "segno>=1.6",
     # Imported but previously undeclared — they happened to arrive as
     # transitive dependencies, which made `uv sync` reproducible only by luck:
     #   python-dotenv : .env loading behind pydantic-settings
@@ -25,6 +30,12 @@ dependencies = [
     "python-dotenv>=1.0",
     "numpy>=1.26",
     "pyarrow>=15.0",
+    # Ed25519 artifact signing (backend/security/signing.py). A real signature
+    # scheme, not a hand-rolled one: the acceptance test flips a byte and
+    # requires verification to fail. It was already resolved transitively
+    # through docling, so declaring it costs nothing and stops `uv sync` from
+    # being reproducible only by luck.
+    "cryptography>=42.0",
 ]
 
 # Opt-in only: `uv sync --extra rerank`.

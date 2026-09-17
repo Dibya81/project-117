@@ -62,12 +62,25 @@ OPERATOR_PERMISSIONS: frozenset[Permission] = ANALYST_PERMISSIONS | {
     Permission.JOBS_APPROVE,
 }
 
+#: The role a mobile bearer-token principal acts as. It is ``operator`` plus the
+#: connector-write right the ``/api/v1`` boundary gate requires (see
+#: ``middleware/permissions.py``). It is a distinct role rather than a widening
+#: of ``operator`` so the deliberate separation between advancing a record in
+#: *this* system (``WORK_ORDERS_WRITE``) and pushing into an external system of
+#: record (``CONNECTORS_WRITE``) is preserved for every console caller. The
+#: phone's own vocabulary is finer-grained still and is checked separately by
+#: the mobile handlers (see ``security/mobile_roles.py``).
+FIELD_PERMISSIONS: frozenset[Permission] = OPERATOR_PERMISSIONS | {
+    Permission.CONNECTORS_WRITE,
+}
+
 #: Role -> permissions. ``admin`` is derived from the enum so a new permission
 #: is never accidentally unreachable.
 ROLE_PERMISSIONS: dict[str, frozenset[Permission]] = {
     "viewer": VIEWER_PERMISSIONS,
     "analyst": ANALYST_PERMISSIONS,
     "operator": OPERATOR_PERMISSIONS,
+    "field": FIELD_PERMISSIONS,
     "admin": frozenset(Permission),
 }
 

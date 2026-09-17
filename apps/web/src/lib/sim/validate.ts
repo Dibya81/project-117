@@ -13,6 +13,7 @@
  *            critical unit, disconnected islands)
  */
 import type { ConnectionDef, EquipmentDef, PlantDef, SensorDef } from "./types";
+import { portOf } from "./relations";
 
 export type ValidationLevel = "error" | "warning";
 
@@ -28,6 +29,9 @@ export interface ValidationFinding {
     | "orphan_equipment"
     | "no_instrumentation"
     | "no_redundancy"
+    | "duplicate_connection"
+    | "duplicate_tag"
+    | "port_direction"
   message: string;
   /** Asset ids the finding refers to, for selection in the canvas. */
   ids: string[];
@@ -90,6 +94,55 @@ export function validatePlant(plant: PlantDef): PlantValidation {
       code: "duplicate_id",
       message: `${dupes.length} identifier(s) are used more than once: ${dupes.slice(0, 4).join(", ")}.`,
       ids: dupes,
+    });
+  }
+
+  // ---- duplicate connections and tags ------------------------------------
+  // Two pipes between the same two units is a drawing mistake, not redundancy:
+  // the engine would carry the same line twice and a route would apply twice.
+  const byPair = new Map<string, string[]>();
+  for (const c of connections) {
+    const key = `${c.source} -> ${c.target}`;
+    byPair.set(key, [...(byPair.get(key) ?? []), c.id]);
+  }
+  for (const [key, ids] of byPair) {
+    if (ids.length < 2) continue;
+    errors.push({
+      level: "error",
+      code: "duplicate_connection",
+      message: `${ids.length} connections share the same ends (${key}): ${ids.join(", ")}.`,
+      ids,
+    });
+  }
+
+  // ---- port direction ----------------------------------------------------
+  // The editor wires port-to-port, so a reversed record cannot be produced by
+  // hand — but a saved plant can come back from storage or a saved block with
+  // its ends swapped. Rather than let the engine read a line that leaves an
+  // input, the record is rejected and named.
+  const reversed = connections.filter(
+    (c) => portOf(c, "source") !== "out" || portOf(c, "target") !== "in",
+  );
+  if (reversed.length) {
+    errors.push({
+      level: "error",
+      code: "port_direction",
+      message:
+        `${reversed.length} connection(s) do not run output → input: ` +
+        `${reversed.map((c) => c.id).slice(0, 4).join(", ")}. A line must leave an output port and enter an input port.`,
+      ids: reversed.map((c) => c.id),
+    });
+  }
+
+  const byTag = new Map<string, string[]>();
+  for (const e of equipment) byTag.set(e.tag, [...(byTag.get(e.tag) ?? []), e.id]);
+  for (const [tag, ids] of byTag) {
+    if (ids.length < 2) continue;
+    warnings.push({
+      level: "warning",
+      code: "duplicate_tag",
+      message: `${ids.length} units share the tag ${tag} — an operator cannot tell them apart.`,
+      ids,
     });
   }
 

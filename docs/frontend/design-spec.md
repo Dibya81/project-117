@@ -1,5 +1,10 @@
 # Project 117 — Frontend Design Specification
 
+> Historical design brief. The implemented console is the Next.js app in
+> `apps/web/` (routes under `apps/web/src/app/`), and its live surface contract
+> is `docs/design/GLASS_SYSTEM.md`. Route names below are the original brief's,
+> not the shipped tree — see `apps/web/src/app/console/` for the real routes.
+
 ## 1. Information architecture
 
 Two experiences, one product:
@@ -99,10 +104,10 @@ to the socket directly.
 
 `lib/api.ts` is the only place with `fetch`. Namespaced typed calls matching the backend:
 `chat`, `agents`, `jobs`, `workflows`, `documents`, `search`, `artifacts`, `tools`,
-`models`, `audit`, `health`. `lib/mock.ts` implements the same surface for demo mode;
-selection is a single env flag (`NEXT_PUBLIC_DATA_MODE`) — never an in-component branch.
-Capabilities that have no backend route yet (equipment telemetry, work orders, graph,
-approvals) are mock-only and labeled as demo data in the UI footer strip.
+`models`, `audit`, `health`. `NEXT_PUBLIC_DATA_MODE` selects the transport
+(`live` by default; `mock` is an explicit opt-in for offline UI work) — never an
+in-component branch. Equipment telemetry, work orders, approvals and the
+knowledge graph all have real backend routes and read from them.
 
 ## 7. 3D architecture
 

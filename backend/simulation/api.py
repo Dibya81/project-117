@@ -166,6 +166,41 @@ def snapshot(plant_id: str, principal: Principal = Depends(get_principal)) -> di
     return snap
 
 
+@router.get("/plants/{plant_id}/frame")
+def frame(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    """The LIVE state only: equipment state, sensor values, line flow.
+
+    ``/snapshot`` returns this **plus** the whole plant definition, and the
+    definition is 114 KB of its 127 KB — static geometry, sensor models and
+    failure modes that a console page already holds from `loadPlant`. Polling the
+    snapshot at the console's 4 Hz refresh therefore re-sent ~114 KB of unchanging
+    data four times a second (measured: 507 KB/s on the live plant page, 90% of it
+    definition).
+
+    This endpoint carries only what actually changes, so a poll is ~26 KB. It is
+    additive: ``/snapshot`` is unchanged and remains the right call for a client
+    that has no definition yet.
+    """
+    svc = _svc()
+    try:
+        rt = svc.runtime(plant_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="plant not running") from exc
+    snap = rt.engine.snapshot()
+    return {
+        "t": snap["t"],
+        # `engine.snapshot()` carries state only; the run flag lives on the
+        # runtime. Reading `snap["running"]` raised KeyError and answered 500.
+        "running": rt.running,
+        "equipment": snap["equipment"],
+        "sensors": snap["sensors"],
+        "connections": snap["connections"],
+        "alarms": snap["alarms"],
+        "incidents": snap["incidents"],
+        "source": "synthetic-simulation",
+    }
+
+
 @router.get("/plants/{plant_id}/stream")
 async def stream(plant_id: str, after: int = 0, principal: Principal = Depends(get_principal)) -> StreamingResponse:
     svc = _svc()
@@ -195,10 +230,20 @@ def incidents(plant_id: str, principal: Principal = Depends(get_principal)) -> d
 
 @router.get("/plants/{plant_id}/incidents/{incident_id}/tasks")
 def incident_tasks(plant_id: str, incident_id: str, principal: Principal = Depends(get_principal)) -> dict:
+    """The incident's task DAG, or an empty one while it is still being built.
+
+    ``incident.created`` is emitted before the pipeline finishes assembling the
+    tasks, and the console polls this endpoint the moment it sees the incident.
+    Answering 404 in that window made the browser log a failed request on every
+    incident; "the run has no tasks yet" is the honest answer, and it is not the
+    same thing as an unknown incident.
+    """
     rt = _svc().runtime(plant_id)
     tasks = rt.incident_tasks.get(incident_id)
     plan = rt.incident_plans.get(incident_id)
     if tasks is None or plan is None:
+        if incident_id in rt.engine.incidents:
+            return {"tasks": [], "plan": None, "pending": True}
         raise HTTPException(status_code=404, detail="unknown incident")
     return {
         "tasks": [t.model_dump() for t in tasks],
@@ -313,12 +358,13 @@ def reset(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
 
 
 @router.post("/plants/{plant_id}/incidents/{incident_id}/decision")
-def decide(plant_id: str, incident_id: str, body: DecisionRequest, principal: Principal = Depends(get_principal)) -> dict:
+async def decide(plant_id: str, incident_id: str, body: DecisionRequest, principal: Principal = Depends(get_principal)) -> dict:
     svc = _svc()
     try:
-        return svc.decide(plant_id, incident_id, body.approved)
+        return await svc.decide_async(plant_id, incident_id, body.approved)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
 
 
 @router.get("/plants/{plant_id}/alarms")

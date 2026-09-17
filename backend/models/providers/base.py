@@ -8,7 +8,7 @@ through the model router/gateway, which resolve a *role* to a concrete
 
 from __future__ import annotations
 
-from typing import AsyncIterator, Protocol
+from typing import Any, AsyncIterator, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -21,7 +21,13 @@ class ChatMessage(BaseModel):
 class ChatResult(BaseModel):
     content: str
     model: str
-    usage: dict[str, int] = Field(default_factory=dict)
+    usage: dict[str, Any] = Field(default_factory=dict)
+    #: Why the server stopped. ``"length"`` means the reply was cut off by the
+    #: token budget (so ``content`` can legitimately be empty when the model was
+    #: still reasoning), which is a different failure from an empty answer and
+    #: must not be retried identically.
+    finish_reason: str | None = None
+
 
 
 class ModelInfo(BaseModel):
@@ -72,6 +78,7 @@ class ModelProvider(Protocol):
         messages: list[ChatMessage],
         temperature: float = 0.2,
         max_tokens: int | None = None,
+        extra_body: dict[str, Any] | None = None,
     ) -> ChatResult: ...
 
     def chat_stream(

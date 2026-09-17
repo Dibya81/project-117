@@ -95,7 +95,15 @@ export async function checkBackendHealth(): Promise<{
 export interface SimAdapter {
   transport: "live" | "embedded";
   listPlants(): Promise<PlantListItem[]>;
-  loadPlant(id: string): Promise<{ plant: PlantDef; scenarios: ScenarioDef[] }>;
+  /**
+   * Read a plant's definition (and its scenarios).
+   *
+   * `topologyOnly` skips the runtime snapshot and returns the stored definition
+   * instead. A decorative preview needs the topology and nothing else — the
+   * snapshot carries every live sensor value and line state and is an order of
+   * magnitude larger, which is real bytes for data no card renders.
+   */
+  loadPlant(id: string, options?: { topologyOnly?: boolean }): Promise<{ plant: PlantDef; scenarios: ScenarioDef[] }>;
   start(id: string): Promise<void>;
   pause(id: string): Promise<void>;
   /**
@@ -103,6 +111,11 @@ export interface SimAdapter {
    * response event is bucketed under), or null when the transport cannot say.
    */
   injectFailure(plantId: string, equipmentId: string, modeId: string): Promise<string | null>;
+  /**
+   * Take a unit out of service. This is a plant-state action, not an incident:
+   * the action policy will not auto-restore a disabled machine, so the agents
+   * are engaged by a lost measurement or an injected fault instead.
+   */
   disable(plantId: string, equipmentId: string): Promise<void>;
   remove(plantId: string, equipmentId: string): Promise<void>;
   /** Take one sensor out of service (session-scoped; reset restores it).
@@ -123,7 +136,17 @@ export interface SimAdapter {
   resetPlant(plantId: string): Promise<void>;
   decide(plantId: string, incidentId: string, approved: boolean): Promise<void>;
   snapshot(plantId: string): Promise<SimSnapshot>;
-  tasks(plantId: string, incidentId: string): Promise<{ tasks: AgentTask[]; plan: IncidentPlan }>;
+  /**
+   * The LIVE state only — equipment, sensors, line flow — without the plant
+   * definition, which the caller already has. Use this for the periodic refresh;
+   * `snapshot` is for a first load that has no definition yet.
+   */
+  frame(plantId: string): Promise<SimSnapshot>;
+  /**
+   * The incident's task DAG. `plan` is null while the backend is still building
+   * it — a run that exists but has no tasks yet, not an error.
+   */
+  tasks(plantId: string, incidentId: string): Promise<{ tasks: AgentTask[]; plan: IncidentPlan | null }>;
   /**
    * Subscribe to the plant event stream. `onStatus` reports transport health
    * so the console can distinguish a live orchestrator from one that never
@@ -358,6 +381,10 @@ class EmbeddedAdapter implements SimAdapter {
   async snapshot(plantId: string): Promise<SimSnapshot> {
     return this.engine(plantId).snapshot();
   }
+  async frame(plantId: string): Promise<SimSnapshot> {
+    // Embedded has no wire, so there is nothing to trim.
+    return this.engine(plantId).snapshot();
+  }
 
   async tasks(plantId: string, incidentId: string): Promise<{ tasks: AgentTask[]; plan: IncidentPlan }> {
     const eng = this.engine(plantId);
@@ -384,8 +411,42 @@ class EmbeddedAdapter implements SimAdapter {
 class LiveAdapter implements SimAdapter {
   transport = "live" as const;
 
+  /**
+   * Simulation-API reads, de-duplicated.
+   *
+   * This transport has its own `fetch` (it needs `BackendUnavailableError`
+   * semantics the console client does not), so it did not inherit the read cache
+   * in `lib/api.ts` and every concurrent caller fetched again. The plant
+   * definition is ~100 KB and the hub and the knowledge graph were each reading
+   * it twice per load.
+   *
+   * Only *concurrent* identical GETs are collapsed. Nothing is cached past the
+   * moment the callers are waiting on, so a snapshot polled every 250 ms is
+   * always the current one.
+   */
+  private static _inflight = new Map<string, Promise<unknown>>();
+
   private async req<T>(path: string, init?: RequestInit): Promise<T> {
     const endpoint = `${API_BASE}/api/simulation${path}`;
+    const method = (init?.method ?? "GET").toUpperCase();
+    const key = method === "GET" && !init?.body ? endpoint : null;
+    if (key) {
+      const pending = LiveAdapter._inflight.get(key) as Promise<T> | undefined;
+      if (pending) return pending;
+    }
+    const run = this.performReq<T>(endpoint, init);
+    if (key) {
+      LiveAdapter._inflight.set(key, run);
+      try {
+        return await run;
+      } finally {
+        LiveAdapter._inflight.delete(key);
+      }
+    }
+    return run;
+  }
+
+  private async performReq<T>(endpoint: string, init?: RequestInit): Promise<T> {
     let res: Response;
     try {
       res = await fetch(endpoint, {
@@ -409,7 +470,17 @@ class LiveAdapter implements SimAdapter {
     return this.req<{ plants: PlantListItem[] }>("/plants").then((r) => r.plants);
   }
 
-  async loadPlant(id: string): Promise<{ plant: PlantDef; scenarios: ScenarioDef[] }> {
+  async loadPlant(
+    id: string,
+    options?: { topologyOnly?: boolean },
+  ): Promise<{ plant: PlantDef; scenarios: ScenarioDef[] }> {
+    if (options?.topologyOnly) {
+      // The definition is the topology on its own — no live values, no line
+      // state, and no scenarios. Used by surfaces that draw a plant rather than
+      // operate one (the hub's card previews).
+      const def = await this.req<{ plant: PlantDef }>(`/plants/${id}/definition`);
+      return { plant: def.plant, scenarios: [] as ScenarioDef[] };
+    }
     // Snapshot carries the full plant definition; scenarios come from the
     // store as well, so the console needs no bundled data copy at all.
     const snap = await this.req<SimSnapshot & { plant: PlantDef }>(`/plants/${id}/snapshot`);
@@ -484,8 +555,11 @@ class LiveAdapter implements SimAdapter {
   snapshot(plantId: string) {
     return this.req<SimSnapshot>(`/plants/${plantId}/snapshot`);
   }
+  frame(plantId: string) {
+    return this.req<SimSnapshot>(`/plants/${plantId}/frame`);
+  }
   tasks(plantId: string, incidentId: string) {
-    return this.req<{ tasks: AgentTask[]; plan: IncidentPlan }>(`/plants/${plantId}/incidents/${incidentId}/tasks`);
+    return this.req<{ tasks: AgentTask[]; plan: IncidentPlan | null }>(`/plants/${plantId}/incidents/${incidentId}/tasks`);
   }
 
   /** Builder save - writes the plant graph to the backend database. */

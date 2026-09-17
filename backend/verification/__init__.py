@@ -11,6 +11,7 @@ explicitly in configuration rather than something that happens by omission.
 """
 
 from backend.verification.artifact_checker import ArtifactChecker
+from backend.verification.audit_chain_checker import AuditChainChecker
 from backend.verification.base import (
     Checker,
     CheckResult,
@@ -32,6 +33,7 @@ from backend.verification.verifier import (
 __all__ = [
     "DEFAULT_CHECK_TIMEOUT_SECONDS",
     "ArtifactChecker",
+    "AuditChainChecker",
     "CalculationChecker",
     "CheckResult",
     "CheckStatus",

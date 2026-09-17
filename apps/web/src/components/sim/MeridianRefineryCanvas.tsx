@@ -28,6 +28,16 @@ export function MeridianRefineryCanvas({
   tasks = [],
   models = {},
   recoveryDecision = null,
+  fixedCamera = false,
+  editable = false,
+  onEquipmentMove,
+  connectMode = false,
+  connectFromId = null,
+  onPortClick,
+  selectedLineId = null,
+  onSelectLine,
+  isolatedLines = [],
+  isolatedEquipment = [],
 }: {
   plant: PlantDef;
   runtime: CanvasRuntime | null;
@@ -39,8 +49,26 @@ export function MeridianRefineryCanvas({
   tasks?: AgentTask[];
   models?: Record<string, string | null>;
   recoveryDecision?: TopologyRecoveryDecision | null;
+  /** Lock the schematic camera (the live refinery). Off in the builder. */
+  fixedCamera?: boolean;
+  /** Edit mode (the builder): drag units, snap to grid, wire port-to-port. */
+  editable?: boolean;
+  onEquipmentMove?: (id: string, x: number, y: number) => void;
+  connectMode?: boolean;
+  connectFromId?: string | null;
+  onPortClick?: (equipmentId: string, port: "in" | "out") => void;
+  /** The line picked on the drawing. A line is a first-class selection. */
+  selectedLineId?: string | null;
+  onSelectLine?: (id: string | null) => void;
+  /** The fault's own isolation, drawn before any agent has spoken. */
+  isolatedLines?: string[];
+  isolatedEquipment?: string[];
 }) {
-  const selection: ProcessMapSelection | null = selected ? { kind: "equipment", id: selected.id } : null;
+  const selection: ProcessMapSelection | null = selectedLineId
+    ? { kind: "pipe", id: selectedLineId }
+    : selected
+      ? { kind: "equipment", id: selected.id }
+      : null;
   const highlight = activeIncident
     ? [activeIncident.origin_equipment, ...(activeIncident.affected ?? [])].filter(Boolean) as string[]
     : [];
@@ -75,15 +103,31 @@ export function MeridianRefineryCanvas({
         readings={readings}
         selection={selection}
         onSelect={(sel) => {
+          // A line selection is reported, not swallowed: the Builder's
+          // connection inspector edits the line the operator actually clicked.
+          if (sel?.kind === "pipe") {
+            onSelectLine?.(sel.id);
+            return;
+          }
           if (sel?.kind === "equipment") {
             const eq = plant.equipment.find((e) => e.id === sel.id);
             if (eq) onSelectEquipment(eq);
+            return;
           }
+          onSelectLine?.(null);
         }}
         highlight={highlight}
         focusId={activeIncident?.origin_equipment ?? null}
         failover={failover}
         recoveryDecision={recoveryDecision}
+        fixedCamera={fixedCamera}
+        editable={editable}
+        onEquipmentMove={onEquipmentMove}
+        connectMode={connectMode}
+        connectFromId={connectFromId}
+        onPortClick={onPortClick}
+        isolatedLines={isolatedLines}
+        isolatedEquipment={isolatedEquipment}
       />
 
       <AgentDispatchBoxes tasks={tasks} models={models} />

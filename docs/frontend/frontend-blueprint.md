@@ -3,6 +3,11 @@
 Status: PROPOSED. No implementation until approved.
 Prerequisite: cinematic landing page exists (entry point + brand). The workbench is the product behind "Enter the Workbench".
 
+> Historical proposal: the console shipped in `apps/web/` and its live surface
+> contract is `docs/design/GLASS_SYSTEM.md`. This document is kept for the
+> original page-count and interaction rationale, not as current-state
+> description.
+
 ---
 
 ## 1. Product experience overview
@@ -232,7 +237,7 @@ apps/web/src/
 │   ├── agents/     ActivityRail · RosterDrawer · AgentDetail
 │   ├── insights/   QuestionSection · TrendChart · MoversList
 │   └── admin/      PosturePanel · AuditTable · UsersTable · ModelsTable
-├── lib/    api · data · mock · websocket · uploads · auth (exist)
+├── lib/    api · data · sim · knowledge · documents · motion · ui (implemented; no mock/websocket/uploads/auth modules)
 ├── hooks/  useJobEvents · useAgentEvents · useTelemetry · useAlerts · useApprovals · useHealth
 ├── stores/ system · agents · jobs · telemetry · alerts · approvals
 ├── types/  (exists)

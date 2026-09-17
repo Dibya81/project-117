@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Project 117 — window / launcher colours.
+
+  These mirror the Compose palette in ui/theme/Color.kt. They exist only so the
+  platform window (launch background, system bars) matches the Compose surface
+  before the first frame is drawn; no XML layout uses them.
+
+  Values here MUST track Color.kt — the launch background and the first Compose
+  frame are the same screen as far as the user is concerned.
+-->
+<resources>
+    <!-- Near-white page background — same value as IndustrialDarkBackground / P117PageBackground. -->
+    <color name="p117_background">#FFF6F8FB</color>
+
+    <!-- White chrome — same value as IndustrialDarkSurface / P117ChromeSurface. -->
+    <color name="p117_surface">#FFFFFFFF</color>
+
+    <!-- Deep Project 117 blue — same value as IndustrialCyan. -->
+    <color name="p117_accent">#FF175BC4</color>
+
+    <!-- Warm brand orange used by the web console landing (orange #e8713a). -->
+    <color name="p117_brand_orange">#FFE8713A</color>
+
+    <!-- Launcher icon field — charcoal/near-black. Not part of the app surface;
+         the launcher mark is deliberately unchanged by the light redesign. -->
+    <color name="p117_icon_field">#FF0D1218</color>
+</resources>

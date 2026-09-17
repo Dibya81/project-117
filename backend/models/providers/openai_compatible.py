@@ -95,6 +95,7 @@ class OpenAICompatibleProvider:
         messages: list[ChatMessage],
         temperature: float = 0.2,
         max_tokens: int | None = None,
+        extra_body: dict[str, Any] | None = None,
     ) -> ChatResult:
         payload: dict[str, Any] = {
             "model": model,
@@ -104,11 +105,19 @@ class OpenAICompatibleProvider:
         }
         if max_tokens is not None:
             payload["max_tokens"] = max_tokens
+        # Server-specific options (Ollama's ``keep_alive``/``think``). FastAPI's
+        # OpenAI shim forwards unknown top-level fields to the native API, so
+        # these reach the model server without a second code path. They are a
+        # performance knob only — a server that ignores them still answers.
+        if extra_body:
+            payload.update(extra_body)
         data = await self._post_json("/chat/completions", payload)
+        choice = data["choices"][0]
         return ChatResult(
-            content=_message_text(data["choices"][0]["message"]),
+            content=_message_text(choice["message"]),
             model=data.get("model", model),
             usage=data.get("usage") or {},
+            finish_reason=choice.get("finish_reason"),
         )
 
     def chat_stream(

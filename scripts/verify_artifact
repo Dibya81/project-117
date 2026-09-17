@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# verify_artifact <file> — verify an Ed25519 artifact signature.
+#
+#   scripts/verify_artifact data/artifacts/report.pdf
+#   scripts/verify_artifact report.pdf --json
+#
+# Prints SIGNATURE VALID / INTEGRITY VALID / SIGNATURE INVALID / UNSIGNED.
+# Exit codes: 0 valid, 1 invalid signature, 2 unsigned or bad usage.
+#
+# The logic lives in backend/security/verify_artifact.py; this wrapper only
+# makes the command runnable by name from a checkout, using the repo's venv
+# when one exists and falling back to `python3`.
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+python="python3"
+if [[ -x "$here/.venv/bin/python" ]]; then
+  python="$here/.venv/bin/python"
+fi
+
+exec "$python" -m backend.security.verify_artifact "$@"

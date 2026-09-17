@@ -30,8 +30,21 @@ def list_audit(
     agent: str | None = None,
     tool: str | None = None,
     approval: str | None = None,
+    exclude_action_prefix: str | None = None,
     limit: int = 100,
 ) -> dict:
+    """Audit rows, newest first.
+
+    ``exclude_action_prefix`` filters at the source. The request log (``http.*``)
+    is roughly three quarters of the table, and a consumer that wants domain
+    events had to over-fetch and discard: asking for the newest 120 rows returned
+    **only** transport rows, so a filter applied afterwards left nothing at all.
+    Excluding here means ``limit`` counts rows the caller can actually use, which
+    is both smaller and correct.
+    """
+    # Over-fetch when excluding, so `limit` still means "this many useful rows"
+    # rather than "this many rows before filtering".
+    fetch = min(limit * 4, 2000) if exclude_action_prefix else min(limit, 500)
     events = get_audit(request).list(
         resource_type=resource_type,
         resource_id=resource_id,
@@ -39,9 +52,27 @@ def list_audit(
         agent=agent,
         tool=tool,
         approval=approval,
-        limit=min(limit, 500),
+        limit=fetch,
     )
+    if exclude_action_prefix:
+        events = [e for e in events if not (e.action or "").startswith(exclude_action_prefix)]
+    events = events[:limit]
     return {"total": len(events), "events": [_out(e) for e in events]}
+
+
+@router.get("/integrity")
+def audit_integrity(request: Request) -> dict:
+    """Walk the audit hash chain and report VALID, or the first broken link.
+
+    Registered before ``/{event_id}`` on purpose: FastAPI matches in
+    declaration order, and a path parameter would otherwise swallow
+    ``/integrity`` and answer 404 "audit event 'integrity' does not exist".
+
+    The response is the verifier's own output, unedited. A chain that always
+    reports valid would be worthless, so nothing here can turn a broken chain
+    into a green one.
+    """
+    return get_audit(request).verify().as_dict()
 
 
 @router.get("/{event_id}")

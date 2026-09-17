@@ -35,6 +35,7 @@ from dataclasses import replace
 from typing import Any
 
 from backend.verification.artifact_checker import ArtifactChecker
+from backend.verification.audit_chain_checker import AuditChainChecker
 from backend.verification.base import (
     Checker,
     CheckResult,
@@ -56,7 +57,13 @@ DEFAULT_CHECK_TIMEOUT_SECONDS = 120.0
 
 
 def default_checkers() -> list[Checker]:
-    """The standard set, ordered by how early they catch the worst problems."""
+    """The standard set, ordered by how early they catch the worst problems.
+
+    ``AuditChainChecker`` is in the default set because a system that signs and
+    verifies its own output while its audit log can be rewritten by hand has
+    verified the wrong thing. It is non-blocking: the chain spans every job,
+    so one tampered row elsewhere must not reject unrelated work in flight.
+    """
     return [
         EvidenceChecker(),
         CitationChecker(),
@@ -64,6 +71,7 @@ def default_checkers() -> list[Checker]:
         HallucinationChecker(),
         PolicyChecker(),
         ArtifactChecker(),
+        AuditChainChecker(),
     ]
 
 

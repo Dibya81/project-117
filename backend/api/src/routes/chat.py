@@ -14,19 +14,25 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
+from backend.api.src.deps import get_principal
 from backend.api.src.errors import BadRequest, ServiceUnavailable
 from backend.api.src.schemas.chat import ChatRequest, ChatResponse
 from backend.models.providers.base import ProviderUnreachable
 from backend.models.router import ModelUnavailableError
+from backend.security.rbac import Principal
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 
 @router.post("", response_model=ChatResponse)
-async def chat(payload: ChatRequest, request: Request) -> dict:
+async def chat(
+    payload: ChatRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> dict:
     role = payload.role or "reasoning"
     _validate_role(role)
     service = request.app.state.chat
@@ -38,6 +44,9 @@ async def chat(payload: ChatRequest, request: Request) -> dict:
             model_override=payload.model,
             use_rag=payload.use_rag,
             document_ids=payload.document_ids,
+            # Grounding is filtered by the caller's clearance before the
+            # evidence reaches the prompt.
+            principal=principal,
         )
     except ModelUnavailableError as exc:
         raise ServiceUnavailable(
@@ -54,7 +63,11 @@ async def chat(payload: ChatRequest, request: Request) -> dict:
 
 
 @router.post("/stream")
-async def chat_stream(payload: ChatRequest, request: Request) -> StreamingResponse:
+async def chat_stream(
+    payload: ChatRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> StreamingResponse:
     role = payload.role or "reasoning"
     _validate_role(role)
     service = request.app.state.chat
@@ -68,6 +81,7 @@ async def chat_stream(payload: ChatRequest, request: Request) -> StreamingRespon
                 model_override=payload.model,
                 use_rag=payload.use_rag,
                 document_ids=payload.document_ids,
+                principal=principal,
             ):
                 yield f"data: {json.dumps(event)}\n\n"
         except ModelUnavailableError as exc:

@@ -198,10 +198,11 @@ unmistakable on purpose.
 ## 5. Where each event belongs in the existing backend
 
 The backend already has the fan-out and the state machine. What it does **not**
-have is a WebSocket transport — today it streams over SSE at
-`GET /api/jobs/{id}/stream`, fed by `JobEventBus`. So integration is two pieces
-of work: forward the bus over WS, and publish the four events the frontend
-listens for.
+have is a WebSocket transport — job events are served as a JSON list at
+`GET /api/jobs/{id}/events`, fed by `JobEventBus` (the only live SSE endpoints
+are `GET /api/chat/stream` and `GET /api/simulation/plants/{id}/stream`). So
+integration is two pieces of work: forward the bus over WS, and publish the four
+events the frontend listens for.
 
 ### 5.1 The transport
 
@@ -236,7 +237,7 @@ async def simulation_ws(ws: WebSocket, bus: JobEventBus = Depends(get_job_bus)):
 ```
 
 Register it in `backend/api/src/main.py` next to the other routers
-(`app.include_router(simulation_api.router)` around line 395).
+(`app.include_router(simulation_api.router)` around line 458).
 
 **Option B — point the frontend at an SSE→WS shim** if you would rather not
 touch the backend. Not recommended: it puts a second service in the path for

@@ -132,6 +132,13 @@ class ToolContext:
     job_id: str | None = None
     user: str | None = None
     roles: list[str] = field(default_factory=list)
+    #: The caller's explicit clearance badge, when they hold one
+    #: (``Principal.extra["clearance"]``). ``None`` means "use what the roles
+    #: confer". It is carried rather than re-derived from roles because a badge
+    #: may be *lower* than the role default — a contractor with an operator role
+    #: and an INTERNAL badge is a real configuration — and a tool that derived
+    #: clearance from roles alone would silently widen that caller's access.
+    clearance: str | None = None
     document_ids: list[str] | None = None
     retrieval: Any = None
     sandbox: Any = None
@@ -139,6 +146,14 @@ class ToolContext:
     session_factory: Any = None
     audit: Any = None
     router: Any = None
+    #: The materials domain store, when the deployment has one. A tool that needs
+    #: it must handle its absence explicitly (see ``backend.tools.materials``)
+    #: rather than assume a plant it cannot read.
+    materials: Any = None
+    #: The operations store (equipment, work orders, approvals) when attached.
+    #: The knowledge-graph tool assembles its nodes from it; ``None`` means the
+    #: tool falls back to the process-wide store.
+    operations: Any = None
 
 
 class ToolResult(BaseModel):

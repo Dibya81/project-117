@@ -25,7 +25,7 @@
  * per-pipe leaking/enabled/flow. No state is held here.
  */
 
-import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { EquipmentShape } from "@/components/sim/EquipmentShape";
 import type { ConnectionDef, EquipmentDef, PlantDef, SensorDef } from "@/lib/sim/types";
 import type { CanvasRuntime, SpatialReading } from "@/components/sim/SchematicCanvas";
@@ -37,6 +37,9 @@ const EQ_W = 74;
 const EQ_H = 62;
 /** Lettering is placed below the body so it never covers the linework. */
 const LABEL_H = 30;
+/** Instrument bubble spacing and readout-plate width, in plant units. */
+const INST_SPACING = 46;
+const INST_PLATE_W = 60;
 
 /**
  * Footprint by equipment kind.
@@ -108,6 +111,68 @@ export const DEFAULT_MEDIUM_COLOR = "#8794a1";
 
 export function mediumColor(medium: string | undefined): string {
   return MEDIUM_COLOR[medium ?? ""] ?? DEFAULT_MEDIUM_COLOR;
+}
+
+/**
+ * Thermal bands, in °C.
+ *
+ * The thresholds are process-engineering ones, not styling ones: above ~150 °C a
+ * stream is hot enough to need tracing and personal protection, below ~60 °C it
+ * is at or under ambient-cooled temperature. Anything between is "warm" and keeps
+ * its medium colour, because painting every line orange would say nothing.
+ */
+export const HOT_C_MIN = 150;
+export const COLD_C_MAX = 60;
+export const HOT_STROKE = "#ea580c";
+export const COLD_STROKE = "#2563eb";
+
+/**
+ * The hottest temperature actually measured on an asset.
+ *
+ * Read from the live readings, never from the drawing: a line is orange because
+ * a thermocouple says the fluid in it is hot, not because someone chose orange.
+ * Bad-quality points are ignored — an out-of-service transmitter's last value is
+ * not evidence.
+ */
+function hottestTemperature(eq: EquipmentDef | undefined, readings: Record<string, SpatialReading>): number | null {
+  if (!eq) return null;
+  let best: number | null = null;
+  for (const s of eq.sensors) {
+    if (s.measurement !== "temperature") continue;
+    const r = readings[s.id];
+    if (!r || r.quality === "bad" || r.quality === "stale") continue;
+    if (best === null || r.value > best) best = r.value;
+  }
+  return best;
+}
+
+/**
+ * The colour a process line is drawn in.
+ *
+ * Hot and cold streams override the medium colour because temperature is what an
+ * operator reads a P&ID for — the medium is already named in the legend, but a
+ * hot line is a hazard and a cold one is a different operating regime. Signal
+ * media are never tinted: instrument wiring has no temperature.
+ */
+export function streamStroke(
+  conn: ConnectionDef,
+  source: EquipmentDef | undefined,
+  readings: Record<string, SpatialReading>,
+): string {
+  if (SIGNAL_MEDIA.has(conn.medium ?? "")) return mediumColor(conn.medium);
+  const temp = hottestTemperature(source, readings);
+  if (temp === null) return mediumColor(conn.medium);
+  if (temp >= HOT_C_MIN) return HOT_STROKE;
+  if (temp <= COLD_C_MAX) return COLD_STROKE;
+  return mediumColor(conn.medium);
+}
+
+/** How a line's temperature reads, for the legend and the inspector. */
+export function thermalClass(temp: number | null): "hot" | "cold" | "warm" | "unknown" {
+  if (temp === null) return "unknown";
+  if (temp >= HOT_C_MIN) return "hot";
+  if (temp <= COLD_C_MAX) return "cold";
+  return "warm";
 }
 
 /**
@@ -255,6 +320,83 @@ export interface ProcessMapProps {
     restore: string[];
     safety_confirmed: boolean;
   } | null;
+  /**
+   * Lock the camera to one full-plant framing — the live refinery's control-room
+   * view. Wheel, trackpad, pinch and drag do nothing; equipment and lines stay
+   * clickable. Editing surfaces (the builder) leave this off and keep pan/zoom.
+   */
+  fixedCamera?: boolean;
+  /**
+   * EDIT MODE (the builder): units can be dragged to a new position, snapped to
+   * the drawing grid, and wired port-to-port. All off by default, so the live
+   * plant is unaffected.
+   */
+  editable?: boolean;
+  onEquipmentMove?: (id: string, x: number, y: number) => void;
+  connectMode?: boolean;
+  connectFromId?: string | null;
+  /** `port` is the unit's own end: "out" feeds the next unit, "in" receives. */
+  onPortClick?: (equipmentId: string, port: "in" | "out") => void;
+  /**
+   * The fault's own isolation, before any agent has spoken.
+   *
+   * Distinct from a decision's `block`: these lines were taken out of service by
+   * the failure, so they are drawn red and dashed — a section that is cut and
+   * unsafe, not one an operator closed. Cleared when the incident ends, at which
+   * point the verified decision owns the drawing.
+   */
+  isolatedLines?: string[];
+  /** Assets inside the isolated section, drawn in the fault treatment. */
+  isolatedEquipment?: string[];
+}
+
+/** Grid the builder snaps dropped/moved units to, in plant units. */
+export const GRID = 20;
+export const snapToGrid = (v: number) => Math.round(v / GRID) * GRID;
+
+/** The whole plant, framed once. `fit()` uses the same margin. */
+const FIT_K = 0.92;
+/** The zoom an editor opens at — close enough to place and wire a unit. */
+const WORKING_K = 1.75;
+/** Camera limits. Every path that writes `view` clamps through these. */
+export const MIN_K = 0.35;
+export const MAX_K = 6;
+/** Fallback drawing extent, used before the plant has been measured. */
+const FALLBACK_EXTENT = { x: 0, y: 0, w: 800, h: 600 };
+
+/**
+ * Coerce a camera into a state the renderer can actually draw.
+ *
+ * The camera is written from four places — the initial state, `zoom`, `fit` and
+ * pan — and any of them could previously put a non-finite number into
+ * `scale()`/`translate()` and blank the whole drawing. An unmeasured container
+ * or an empty plant produces a zero-width extent, division by which is
+ * `Infinity`; SVG then drops every child silently, which reads to the operator
+ * as "the canvas went black". This is the single choke point that makes that
+ * impossible: scale is clamped into range, offsets are bounded to a sane
+ * multiple of the plant, and anything non-finite falls back to a framed view.
+ *
+ * Exported so the builder and the tests share one definition of "in bounds".
+ */
+export function clampView(
+  view: { x: number; y: number; k: number },
+  extent: { w: number; h: number },
+): { x: number; y: number; k: number } {
+  const w = Number.isFinite(extent.w) && extent.w > 0 ? extent.w : FALLBACK_EXTENT.w;
+  const h = Number.isFinite(extent.h) && extent.h > 0 ? extent.h : FALLBACK_EXTENT.h;
+  const k = Number.isFinite(view.k) ? Math.min(MAX_K, Math.max(MIN_K, view.k)) : FIT_K;
+  // Panning is bounded to the plant plus one screen of slack, so the drawing
+  // can always be brought back by dragging rather than only by "Fit plant".
+  const limitX = w * 1.5;
+  const limitY = h * 1.5;
+  const x = Number.isFinite(view.x) ? Math.min(limitX, Math.max(-limitX, view.x)) : 0;
+  const y = Number.isFinite(view.y) ? Math.min(limitY, Math.max(-limitY, view.y)) : 0;
+  return { x, y, k };
+}
+
+/** A rectangle a camera can be fitted to. Degenerate boxes are refused. */
+function isFittable(box: { w: number; h: number }): boolean {
+  return Number.isFinite(box.w) && Number.isFinite(box.h) && box.w > 1 && box.h > 1;
 }
 
 export function ProcessMap({
@@ -271,15 +413,27 @@ export function ProcessMap({
   busyLine = null,
   lineError = null,
   recoveryDecision = null,
+  fixedCamera = false,
+  editable = false,
+  onEquipmentMove,
+  connectMode = false,
+  connectFromId = null,
+  onPortClick,
+  isolatedLines = [],
+  isolatedEquipment = [],
 }: ProcessMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   /**
-   * The camera opens on the plant at a readable scale rather than fitted to the
-   * frame. Fitting a 2.7:1 plot into any window makes every vessel small; an
-   * operator opens a plot plan at a working zoom and pans. "Fit plant" is one
-   * click away for the whole picture.
+   * The camera.
+   *
+   * The LIVE refinery (fixedCamera) opens fitted to the whole plant and stays
+   * there: the operator inspects and acts, and never loses the plant to a stray
+   * scroll. An editor (the builder) opens at a working zoom and pans, because
+   * placing equipment needs that. "Fit plant" is one click away either way.
    */
-  const [view, setView] = useState({ x: 0, y: 0, k: 1.75 });
+  const [view, setView] = useState(() =>
+    clampView({ x: 0, y: 0, k: fixedCamera ? FIT_K : WORKING_K }, FALLBACK_EXTENT),
+  );
   /** Print every instrument readout, rather than only the ones that need eyes. */
   const [showAllInstruments, setShowAllInstruments] = useState(false);
 
@@ -288,27 +442,33 @@ export function ProcessMap({
    *
    * 224 instrument bubbles with 224 readouts is a wall of microscopic text at
    * overview zoom, and it buries the plant the drawing exists to show. At the
-   * default working zoom only the abnormal points and the selected asset carry
-   * a readout; bubbles appear as the camera closes in; everything appears when
-   * the operator asks for it.
+   * working zoom only the abnormal points and the selected asset carry a
+   * readout; bubbles appear as the camera closes in; everything appears when
+   * the operator asks for it. The fixed control-room framing is the overview, so
+   * the sensor bubbles stay visible there — the readouts do not.
    */
-  // At the default working zoom (1.75) an operator sees the plant and the
-  // points that need attention; the full readout set belongs to close
-  // inspection, not to the overview. Printing all 224 here produced a wall of
-  // overlapping numbers that buried the equipment.
-  const showBubbles = view.k >= 1.15 || showAllInstruments;
+  const showBubbles = fixedCamera || view.k >= 1.15 || showAllInstruments;
   const showReadouts = view.k >= 3.2 || showAllInstruments;
   const drag = useRef<{ x: number; y: number; vx: number; vy: number } | null>(null);
 
+  // The area chips filter WHICH equipment is drawn. In the locked live view they
+  // must not also reframe the camera: the frame is the whole plant, always, so
+  // the drawing extent stays the full set of areas. Editors keep the old
+  // behaviour (isolating an area frames that area).
   const areas = useMemo(
-    () => (isolateArea ? plant.areas.filter((a) => a.id === isolateArea) : plant.areas),
-    [plant.areas, isolateArea],
+    () => (isolateArea && !fixedCamera ? plant.areas.filter((a) => a.id === isolateArea) : plant.areas),
+    [plant.areas, isolateArea, fixedCamera],
   );
 
+  /** Fast lookup for the fault-isolation overlay. */
+  const isolatedSet = useMemo(() => new Set(isolatedLines), [isolatedLines]);
+  const isolatedEqSet = useMemo(() => new Set(isolatedEquipment), [isolatedEquipment]);
+
   const equipment = useMemo(() => {
+    const scope = isolateArea ? plant.equipment.filter((e) => e.area_id === isolateArea) : plant.equipment;
     const ids = new Set(areas.map((a) => a.id));
-    return plant.equipment.filter((e) => ids.has(e.area_id));
-  }, [plant.equipment, areas]);
+    return scope.filter((e) => ids.has(e.area_id));
+  }, [plant.equipment, areas, isolateArea]);
 
   const equipmentIds = useMemo(() => new Set(equipment.map((e) => e.id)), [equipment]);
 
@@ -328,6 +488,37 @@ export function ProcessMap({
   }, [equipment]);
 
   const boxes = boxes0;
+
+  /**
+   * Where each unit's instrument row sits.
+   *
+   * Bubbles are centred on their machine, but a seven-point pump fans three of
+   * them past each side — outside its own process area, which is what forced the
+   * frame wider than the plant. The row is therefore fitted to its compartment:
+   * spacing tightens only as far as it must, and the row is nudged so its
+   * outermost readout plate stays inside the area. Nothing clips at a tighter
+   * frame.
+   */
+  const instrumentLayout = useMemo(() => {
+    const m = new Map<string, { cx: number; spacing: number }>();
+    for (const eq of equipment) {
+      if (!eq.sensors.length) continue;
+      const n = eq.sensors.length;
+      const area = plant.areas.find((a) => a.id === eq.area_id);
+      let spacing = INST_SPACING;
+      let cx = eq.x;
+      if (area && n > 1) {
+        const available = area.w - 16 - INST_PLATE_W;
+        spacing = Math.max(12, Math.min(INST_SPACING, available / (n - 1)));
+        const halfRow = ((n - 1) / 2) * spacing + INST_PLATE_W / 2;
+        const minCx = area.x + 8 + halfRow;
+        const maxCx = area.x + area.w - 8 - halfRow;
+        if (minCx <= maxCx) cx = Math.min(maxCx, Math.max(minCx, cx));
+      }
+      m.set(eq.id, { cx, spacing });
+    }
+    return m;
+  }, [equipment, plant.areas]);
 
   /**
    * Geometry for every line, computed once. The visible linework is drawn under
@@ -352,23 +543,38 @@ export function ProcessMap({
       route: new Set(recoveryDecision?.available ? recoveryDecision.route : []),
       block: new Set(recoveryDecision?.available ? recoveryDecision.block : []),
       restore: new Set(recoveryDecision?.available ? recoveryDecision.restore : []),
+      // Position in the ordered route. The route is real topology order, so its
+      // index is a real sequence: the recovery reveals along it, first line
+      // first — no timer, just the decision's own order.
+      routeIndex: new Map(
+        (recoveryDecision?.available ? recoveryDecision.route : []).map((id, i) => [id, i]),
+      ),
     }),
     [recoveryDecision],
   );
 
-  const recoveringEquipmentIds = useMemo(() => {
-    if (!recoveryDecision?.available || !recoveryDecision.safety_confirmed) return new Set<string>();
-    const out = new Set<string>();
+  /**
+   * How many real hops each asset is downstream of a restored line.
+   *
+   * The recovery travels the plant's own topology: a restored line feeds its
+   * target, that target feeds the next unit, and so on, stopping at any line
+   * the decision shuts. Using the BFS depth as each node's animation delay is
+   * what makes the recovery visibly node-by-node without a scripted timeline —
+   * the sequence is the plant graph, not a clock.
+   */
+  const recoveringEquipmentDepths = useMemo(() => {
+    const out = new Map<string, number>();
+    if (!recoveryDecision?.available || !recoveryDecision.safety_confirmed) return out;
     const blocked = new Set(recoveryDecision.block);
     const restoredTargets = recoveryDecision.restore
       .map((id) => plant.connections.find((c) => c.id === id)?.target)
       .filter(Boolean) as string[];
     let frontier = restoredTargets;
-    for (let depth = 0; depth < 5; depth++) {
+    for (let depth = 0; depth < 5 && frontier.length; depth++) {
       const next: string[] = [];
       for (const eqId of frontier) {
         if (out.has(eqId)) continue;
-        out.add(eqId);
+        out.set(eqId, depth);
         for (const c of plant.connections) {
           if (blocked.has(c.id) || c.source !== eqId) continue;
           next.push(c.target);
@@ -380,19 +586,38 @@ export function ProcessMap({
   }, [plant.connections, recoveryDecision]);
 
   const extent = useMemo(() => {
-    if (!areas.length) return { x: 0, y: 0, w: 800, h: 600 };
+    if (!areas.length) return FALLBACK_EXTENT;
     const x0 = Math.min(...areas.map((a) => a.x));
-    const y0 = Math.min(...areas.map((a) => a.y));
+    let y0 = Math.min(...areas.map((a) => a.y));
     const x1 = Math.max(...areas.map((a) => a.x + a.w));
-    const y1 = Math.max(...areas.map((a) => a.y + a.h));
-    const pad = 14;
-    return { x: x0 - pad, y: y0 - pad, w: x1 - x0 + pad * 2, h: y1 - y0 + pad * 2 };
-  }, [areas]);
+    let y1 = Math.max(...areas.map((a) => a.y + a.h));
+    // Instrumentation is drawn attached below its unit; the frame extends down
+    // to include the reading plates. It does NOT extend sideways: each unit's
+    // instrument row is laid out to fit inside its own process area (see the
+    // renderer below), so the areas still bound the drawing horizontally and the
+    // frame stays as tight as the plant allows.
+    for (const eq of equipment) {
+      if (!eq.sensors.length) continue;
+      const box = boxes0.get(eq.id);
+      if (!box) continue;
+      const lead = box.y + box.h + LABEL_H + 22;
+      y0 = Math.min(y0, lead - 14);
+      y1 = Math.max(y1, lead + 40);
+    }
+    const pad = 10;
+    const box = { x: x0 - pad, y: y0 - pad, w: x1 - x0 + pad * 2, h: y1 - y0 + pad * 2 };
+    // A plant whose areas are all zero-sized (or a partially built one) must
+    // still yield a rectangle the camera maths can divide by.
+    return isFittable(box) ? box : FALLBACK_EXTENT;
+  }, [areas, equipment, boxes0]);
 
   /* -------------------------------------------------------------- interaction */
 
   const onPointerDown = useCallback(
     (ev: React.PointerEvent<SVGSVGElement>) => {
+      // A locked camera does not pan: the plant is framed once, and a drag that
+      // shifted it would move the whole overview off the operator's mental map.
+      if (fixedCamera) return;
       if (ev.button !== 0) return;
       // Only start a pan on the background. A node OR a line is a click
       // target, not a drag: capturing the pointer here swallowed the click
@@ -401,23 +626,101 @@ export function ProcessMap({
       drag.current = { x: ev.clientX, y: ev.clientY, vx: view.x, vy: view.y };
       (ev.currentTarget as SVGSVGElement).setPointerCapture(ev.pointerId);
     },
-    [view.x, view.y],
+    [view.x, view.y, fixedCamera],
   );
 
   const onPointerMove = useCallback((ev: React.PointerEvent<SVGSVGElement>) => {
     const d = drag.current;
     if (!d) return;
     const scale = extent.w / (svgRef.current?.clientWidth || extent.w);
-    setView((v) => ({ ...v, x: d.vx + (ev.clientX - d.x) * scale, y: d.vy + (ev.clientY - d.y) * scale }));
-  }, [extent.w]);
+    setView((v) =>
+      clampView({ ...v, x: d.vx + (ev.clientX - d.x) * scale, y: d.vy + (ev.clientY - d.y) * scale }, extent),
+    );
+  }, [extent]);
 
   const endDrag = useCallback(() => {
     drag.current = null;
   }, []);
 
-  const zoom = useCallback((factor: number) => {
-    setView((v) => ({ ...v, k: Math.min(6, Math.max(0.35, v.k * factor)) }));
+  /* ------------------------------------------------- builder: move + wire --- */
+
+  /** A unit being dragged in edit mode. */
+  const moveDrag = useRef<{ id: string; ox: number; oy: number; moved: boolean } | null>(null);
+  /** A drag just ended, so the click it produced must not also select. */
+  const suppressClick = useRef(false);
+
+  /** Screen point → drawing coordinates, through whatever camera is active. */
+  const toPlant = useCallback((ev: React.PointerEvent, el: Element) => {
+    const svg = svgRef.current;
+    const ctm = (el as SVGGraphicsElement).getScreenCTM?.();
+    if (!svg || !ctm) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = ev.clientX;
+    pt.y = ev.clientY;
+    const p = pt.matrixTransform(ctm.inverse());
+    return { x: p.x, y: p.y };
   }, []);
+
+  const onUnitPointerDown = useCallback(
+    (ev: React.PointerEvent<SVGGElement>, eq: EquipmentDef) => {
+      if (!editable || !onEquipmentMove) return;
+      // A press that starts ON A PORT is a wiring click, not a drag. Capturing
+      // the pointer here retargets the click to the unit, so the port's own
+      // onClick never ran and connect mode appeared to do nothing.
+      if ((ev.target as Element).closest("[data-port]")) return;
+      ev.stopPropagation();
+      const p = toPlant(ev, ev.currentTarget);
+      if (!p) return;
+      moveDrag.current = { id: eq.id, ox: eq.x - p.x, oy: eq.y - p.y, moved: false };
+      (ev.currentTarget as Element).setPointerCapture?.(ev.pointerId);
+    },
+    [editable, onEquipmentMove, toPlant],
+  );
+
+  const onUnitPointerMove = useCallback(
+    (ev: React.PointerEvent<SVGGElement>) => {
+      const m = moveDrag.current;
+      if (!m || !onEquipmentMove) return;
+      const p = toPlant(ev, ev.currentTarget);
+      if (!p) return;
+      // Snap to the drawing grid: a built plant's coordinates must land on the
+      // same grid the drawing is ruled with, or pipes read as almost-straight.
+      m.moved = true;
+      onEquipmentMove(m.id, snapToGrid(p.x + m.ox), snapToGrid(p.y + m.oy));
+    },
+    [onEquipmentMove, toPlant],
+  );
+
+  const onUnitPointerUp = useCallback(() => {
+    suppressClick.current = moveDrag.current?.moved ?? false;
+    moveDrag.current = null;
+  }, []);
+
+  /**
+   * A locked camera must also stop the BROWSER from zooming.
+   *
+   * React attaches `onWheel` passively, so `preventDefault()` there is ignored
+   * with a console warning and a trackpad pinch (ctrl-wheel) still zooms the
+   * page. Binding natively with `passive: false` makes the block authoritative:
+   * no canvas zoom, no page zoom, no scroll stealing while the pointer is over
+   * the plant. Editors (fixedCamera off) keep their wheel zoom.
+   */
+  useEffect(() => {
+    if (!fixedCamera) return;
+    const el = svgRef.current;
+    if (!el) return;
+    const blockZoom = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    el.addEventListener("wheel", blockZoom, { passive: false });
+    return () => el.removeEventListener("wheel", blockZoom);
+  }, [fixedCamera]);
+
+  const zoom = useCallback(
+    (factor: number) => setView((v) => clampView({ ...v, k: v.k * factor }, extent)),
+    [extent],
+  );
 
   /**
    * Fit the plant, or one area. `k` is applied about the viewBox centre, so the
@@ -426,12 +729,21 @@ export function ProcessMap({
   const fit = useCallback(
     (box?: Box) => {
       const t = box ?? extent;
-      const k = Math.min(6, Math.max(0.35, Math.min(extent.w / t.w, extent.h / t.h) * 0.92));
-      setView({
-        k,
-        x: t.x + t.w / 2 - extent.x - extent.w / 2,
-        y: t.y + t.h / 2 - extent.y - extent.h / 2,
-      });
+      // An unmeasured or zero-sized target would divide through to Infinity and
+      // blank the drawing, so a fit that cannot be computed leaves the camera
+      // where it is instead of destroying it.
+      if (!isFittable(t) || !isFittable(extent)) return;
+      const k = Math.min(MAX_K, Math.max(MIN_K, Math.min(extent.w / t.w, extent.h / t.h) * FIT_K));
+      setView(
+        clampView(
+          {
+            k,
+            x: t.x + t.w / 2 - extent.x - extent.w / 2,
+            y: t.y + t.h / 2 - extent.y - extent.h / 2,
+          },
+          extent,
+        ),
+      );
     },
     [extent],
   );
@@ -450,19 +762,33 @@ export function ProcessMap({
   const transform = `translate(${extent.w / 2} ${extent.h / 2}) scale(${view.k}) translate(${-extent.w / 2 + view.x} ${-extent.h / 2 + view.y})`;
 
   return (
-    <div className="pmap" data-testid="process-map" data-assets={equipment.length} data-pipes={pipes.length}>
+    <div
+      className={`pmap${fixedCamera ? " is-fixed" : ""}`}
+      data-testid="process-map"
+      data-assets={equipment.length}
+      data-pipes={pipes.length}
+      data-camera={fixedCamera ? "fixed" : "free"}
+      style={fixedCamera ? { aspectRatio: `${extent.w} / ${extent.h}` } : undefined}
+    >
       <div className="pmap__tools" role="toolbar" aria-label="Process map controls">
-        <button type="button" onClick={() => zoom(1.25)} title="Zoom in" aria-label="Zoom in">＋</button>
-        <button type="button" onClick={() => zoom(0.8)} title="Zoom out" aria-label="Zoom out">−</button>
-        <button type="button" onClick={() => fit()} title="Fit the whole plant" aria-label="Fit plant">⤢</button>
-        <button
-          type="button"
-          onClick={() => setView({ x: 0, y: 0, k: 1.75 })}
-          title="Reset to the working view"
-          aria-label="Reset view"
-        >
-          ↺
-        </button>
+        {/* Camera controls exist only where the camera may move. The live
+            refinery is a fixed control-room framing, so it gets none — no zoom
+            buttons, no fit/reset, no slider. */}
+        {!fixedCamera && (
+          <>
+            <button type="button" onClick={() => zoom(1.25)} title="Zoom in" aria-label="Zoom in">＋</button>
+            <button type="button" onClick={() => zoom(0.8)} title="Zoom out" aria-label="Zoom out">−</button>
+            <button type="button" onClick={() => fit()} title="Fit the whole plant" aria-label="Fit plant">⤢</button>
+            <button
+              type="button"
+              onClick={() => setView(clampView({ x: 0, y: 0, k: WORKING_K }, extent))}
+              title="Reset to the working view"
+              aria-label="Reset view"
+            >
+              ↺
+            </button>
+          </>
+        )}
         <button
           type="button"
           onClick={() => setShowAllInstruments((v) => !v)}
@@ -473,10 +799,10 @@ export function ProcessMap({
         >
           ◎
         </button>
-        {isolateArea && (
+        {!fixedCamera && isolateArea && (
           <button type="button" onClick={() => fit(areas[0])} title="Fit area" aria-label="Fit area">⊡</button>
         )}
-        {focusId && (
+        {!fixedCamera && focusId && (
           <button type="button" onClick={focusEquipment} title="Focus selection" aria-label="Focus selection">◎</button>
         )}
       </div>
@@ -610,6 +936,14 @@ export function ProcessMap({
         onPointerUp={endDrag}
         onPointerLeave={endDrag}
         onWheel={(e) => {
+          // A locked camera swallows every wheel gesture over the drawing —
+          // notched wheel, trackpad scroll and two-finger pinch (which arrives
+          // as a ctrl-wheel) — so nothing zooms the plant, and the page does not
+          // scroll or browser-zoom out from under the operator.
+          if (fixedCamera) {
+            e.preventDefault();
+            return;
+          }
           if (!e.ctrlKey && !e.metaKey) return;
           e.preventDefault();
           zoom(e.deltaY < 0 ? 1.12 : 0.89);
@@ -663,7 +997,13 @@ export function ProcessMap({
               if (!r) return null;
               const st = lineState(c, runtime);
               const flow = runtime?.pipes?.[c.id]?.flow ?? c.flow ?? 0;
-              const colour = mediumColor(c.medium);
+              // Temperature beats the medium colour: a hot line is a hazard and
+              // a cold one is a different regime, and both are read from the
+              // live thermocouples rather than chosen by hand.
+              const srcEq = equipment.find((e) => e.id === c.source);
+              const temp = hottestTemperature(srcEq, readings);
+              const thermal = thermalClass(temp);
+              const colour = streamStroke(c, srcEq, readings);
               const selected = selection?.kind === "pipe" && selection.id === c.id;
               const isDecisionRoute = decisionLineIds.route.has(c.id);
               const isDecisionBlock = decisionLineIds.block.has(c.id);
@@ -675,9 +1015,12 @@ export function ProcessMap({
                   data-pipe={c.id}
                   data-line-state={st}
                   data-line-medium={c.medium}
+                  data-thermal={thermal}
+                  data-line-temp={temp === null ? undefined : temp.toFixed(1)}
                   data-recovery-route={isDecisionRoute ? "true" : undefined}
                   data-recovery-block={isDecisionBlock ? "true" : undefined}
                   data-recovery-restore={isDecisionRestore ? "true" : undefined}
+                  data-isolated={isolatedSet.has(c.id) ? "true" : undefined}
                   className={`pmap__pipe${selected ? " is-selected" : ""}${isDecisionRoute ? " is-route" : ""}${isDecisionBlock ? " is-blocking" : ""}${isDecisionRestore ? " is-restoring" : ""}`}
                 >
                   <path
@@ -693,11 +1036,29 @@ export function ProcessMap({
                       style={{ stroke: colour, animationDuration: `${Math.max(0.7, 8 / Math.max(6, flow))}s` }}
                     />
                   )}
+                  {/* Direction chevrons. `markerEnd` puts one arrow at the end
+                      of the line; on a long run that is easy to miss, so the
+                      same direction is repeated along it as a marching dash.
+                      Speed follows the real flow rate. */}
+                  {st === "normal" && flow > 0.5 && (
+                    <path
+                      d={r.d}
+                      className="pmap__pipe-chevrons"
+                      data-flow-chevrons={c.id}
+                      style={{
+                        stroke: colour,
+                        animationDuration: `${Math.max(1.1, 14 / Math.max(8, flow))}s`,
+                      }}
+                    />
+                  )}
                   {isDecisionRoute && recoveryDecision?.safety_confirmed && (
                     <path
                       d={r.d}
                       className="pmap__pipe-route"
-                      style={{ stroke: isDecisionRestore ? "#16a34a" : colour }}
+                      style={{
+                        stroke: isDecisionRestore ? "#16a34a" : colour,
+                        ["--route-delay" as string]: `${(decisionLineIds.routeIndex.get(c.id) ?? 0) * 260}ms`,
+                      }}
                     />
                   )}
                   {st === "blocked" && (
@@ -760,7 +1121,12 @@ export function ProcessMap({
             const tone = stateTone(state);
             const selected = selection?.kind === "equipment" && selection.id === eq.id;
             const flagged = highlight.includes(eq.id);
-            const recovering = recoveringEquipmentIds.has(eq.id);
+            // A live warning the operator must see without reading the panel.
+            // Driven by the engine's own asset state and by the incident
+            // highlight — never by a decorative condition.
+            const alarming = state === "warning" || state === "critical" || state === "failed" || flagged;
+            const recoveringDepth = recoveringEquipmentDepths.get(eq.id);
+            const recovering = recoveringDepth !== undefined;
             const box = boxes.get(eq.id)!;
             return (
               <g
@@ -771,10 +1137,22 @@ export function ProcessMap({
                 data-state={state}
                 data-flagged={flagged ? "true" : undefined}
                 data-recovering={recovering ? "true" : undefined}
+                data-recovering-depth={recovering ? String(recoveringDepth) : undefined}
                 data-failover-target={failover?.to === eq.id ? "true" : undefined}
-                className={`pmap__eq${selected ? " is-selected" : ""}${flagged ? " is-flagged" : ""}${recovering ? " is-recovering" : ""}`}
+                data-connect-from={connectFromId === eq.id ? "true" : undefined}
+                data-isolated={isolatedEqSet.has(eq.id) ? "true" : undefined}
+                className={`pmap__eq${selected ? " is-selected" : ""}${flagged ? " is-flagged" : ""}${recovering ? " is-recovering" : ""}${editable ? " is-editable" : ""}`}
+                style={recovering ? { animationDelay: `${recoveringDepth * 220}ms` } : undefined}
+                onPointerDown={editable ? (ev) => onUnitPointerDown(ev, eq) : undefined}
+                onPointerMove={editable ? onUnitPointerMove : undefined}
+                onPointerUp={editable ? onUnitPointerUp : undefined}
                 onClick={(e) => {
                   e.stopPropagation();
+                  // A drag ends in a click; do not also select on it.
+                  if (suppressClick.current) {
+                    suppressClick.current = false;
+                    return;
+                  }
                   onSelect?.({ kind: "equipment", id: eq.id });
                 }}
               >
@@ -799,6 +1177,33 @@ export function ProcessMap({
                     ry={box.h * 0.14}
                   />
                 )}
+                {/* Pulsing alert indicator. Two concentric rings expanding from
+                    the unit's centre line, one delayed, so it reads as a live
+                    beacon rather than a static badge. `data-alerting` is the
+                    hook the gates and the CSS both key off. */}
+                {alarming && (
+                  <g
+                    className="pmap__alert"
+                    data-alerting="true"
+                    data-alert-state={state}
+                    pointerEvents="none"
+                  >
+                    <ellipse
+                      className="pmap__alert-ring"
+                      cx={eq.x}
+                      cy={box.y + box.h / 2}
+                      rx={Math.max(box.w * 0.44, 18)}
+                      ry={Math.max(box.h * 0.44, 14)}
+                    />
+                    <ellipse
+                      className="pmap__alert-ring is-delayed"
+                      cx={eq.x}
+                      cy={box.y + box.h / 2}
+                      rx={Math.max(box.w * 0.44, 18)}
+                      ry={Math.max(box.h * 0.44, 14)}
+                    />
+                  </g>
+                )}
                 <EquipmentShape
                   kind={eq.kind}
                   box={box}
@@ -814,6 +1219,41 @@ export function ProcessMap({
                   <text className="pmap__eq-name" x={eq.x} y={box.y + box.h + 26}>
                     {eq.name.length > 24 ? `${eq.name.slice(0, 23)}…` : eq.name}
                   </text>
+                )}
+                {/* Wire mode: this unit's input (left) and output (right) ports.
+                    A pipe is made output → input, so the drawing carries the
+                    process-flow direction rather than the click order. */}
+                {connectMode && (
+                  <g className="pmap__ports">
+                    <circle
+                      className="pmap__port pmap__port--in"
+                      data-port="in"
+                      data-port-unit={eq.id}
+                      cx={box.x}
+                      cy={box.y + box.h / 2}
+                      r={9}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPortClick?.(eq.id, "in");
+                      }}
+                    >
+                      <title>{`${eq.tag} input`}</title>
+                    </circle>
+                    <circle
+                      className="pmap__port pmap__port--out"
+                      data-port="out"
+                      data-port-unit={eq.id}
+                      cx={box.x + box.w}
+                      cy={box.y + box.h / 2}
+                      r={9}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPortClick?.(eq.id, "out");
+                      }}
+                    >
+                      <title>{`${eq.tag} output`}</title>
+                    </circle>
+                  </g>
                 )}
               </g>
             );
@@ -839,8 +1279,8 @@ export function ProcessMap({
                 const showReadout =
                   abnormal || unitSelected || unitFlagged || showReadouts;
                 if (!showBubbles && !showReadout) return null;
-                const spacing = 46;
-                const x = eq.x + (i - (eq.sensors.length - 1) / 2) * spacing;
+                const layout = instrumentLayout.get(eq.id) ?? { cx: eq.x, spacing: INST_SPACING };
+                const x = layout.cx + (i - (eq.sensors.length - 1) / 2) * layout.spacing;
                 const y = box.y + box.h + LABEL_H + 22;
                 return (
                   <g
@@ -852,15 +1292,15 @@ export function ProcessMap({
                     data-readout={showReadout ? "true" : "false"}
                   >
                     <line x1={x} y1={box.y + box.h} x2={x} y2={y - 8} className="pmap__inst-lead" />
-                    <circle cx={x} cy={y} r={8} className="pmap__inst-bubble" style={{ ["--tone" as string]: TONE_COLOR[tone] } as CSSProperties} />
+                    <circle cx={x} cy={y} r={fixedCamera ? 10 : 8} className="pmap__inst-bubble" style={{ ["--tone" as string]: TONE_COLOR[tone] } as CSSProperties} />
                     <text className="pmap__inst-code" x={x} y={y + 2.8}>{instrumentCode(s)}</text>
                     {showReadout && (
                       <>
                         <rect
                           className="pmap__inst-plate"
-                          x={x - 30}
+                          x={x - INST_PLATE_W / 2}
                           y={y + 12}
-                          width={60}
+                          width={INST_PLATE_W}
                           height={q === "substituted" || q === "bad" ? 26 : 17}
                           rx={2.5}
                         />

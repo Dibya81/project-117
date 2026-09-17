@@ -14,7 +14,7 @@ Open Obsidian, pick that vault, and use **Graph view** — or open
 | | |
 | --- | --- |
 | Nodes | 4159 (functions, classes, files, modules) |
-| Edges | 10380 |
+| Edges | 9114 |
 | Notes | 4385 |
 | Wikilinks | 24162 — **100% resolved, 0 broken** |
 | Communities | 226, named by a local Ollama model |

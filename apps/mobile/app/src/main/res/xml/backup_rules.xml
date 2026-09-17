@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Exclude sensitive tokens from backup -->
+    <exclude domain="sharedpref" path="project117_secure_prefs.xml" />
+    <exclude domain="database" path="project117.db" />
+</full-backup-content>

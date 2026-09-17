@@ -7,6 +7,14 @@ import { MeridianRefineryCanvas } from "@/components/sim/MeridianRefineryCanvas"
 import type { TopologyRecoveryDecision } from "@/components/sim/MeridianRefineryCanvas";
 import type { AgentTask, EquipmentDef, PlantDef } from "@/lib/sim/types";
 import type { CanvasRuntime, SpatialReading } from "@/components/sim/SchematicCanvas";
+// The shared plant renderer's stylesheet travels with the renderer.
+//
+// `ProcessMap` and the `.mr-*` wrappers are styled by plant.css, which the live
+// plant page imported for itself. The Builder mounts the same renderer without
+// that import, so every `pmap__*` rule was missing there and the SVG fell back
+// to browser defaults — black `<rect>` fills over the whole canvas. Importing it
+// here means any surface that renders the plant gets the plant's styling.
+import "@/styles/plant.css";
 
 export function MeridianRefineryView({
   plant,
@@ -21,6 +29,16 @@ export function MeridianRefineryView({
   tasks = [],
   models = {},
   recoveryDecision = null,
+  fixedCamera = false,
+  editable = false,
+  onEquipmentMove,
+  connectMode = false,
+  connectFromId = null,
+  onPortClick,
+  selectedLineId = null,
+  onSelectLine,
+  isolatedLines = [],
+  isolatedEquipment = [],
 }: {
   plant: PlantDef;
   runtime: CanvasRuntime | null;
@@ -34,6 +52,20 @@ export function MeridianRefineryView({
   tasks?: AgentTask[];
   models?: Record<string, string | null>;
   recoveryDecision?: TopologyRecoveryDecision | null;
+  /** Lock the schematic camera (the live refinery). Off in the builder. */
+  fixedCamera?: boolean;
+  /** Edit mode (the builder): drag units, snap to grid, wire port-to-port. */
+  editable?: boolean;
+  onEquipmentMove?: (id: string, x: number, y: number) => void;
+  connectMode?: boolean;
+  connectFromId?: string | null;
+  onPortClick?: (equipmentId: string, port: "in" | "out") => void;
+  /** The line picked on the drawing, and where that pick is reported. */
+  selectedLineId?: string | null;
+  onSelectLine?: (id: string | null) => void;
+  /** The fault's own isolation, drawn before any agent has spoken. */
+  isolatedLines?: string[];
+  isolatedEquipment?: string[];
 }) {
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -213,6 +245,16 @@ export function MeridianRefineryView({
             tasks={tasks}
             models={models}
             recoveryDecision={recoveryDecision}
+            fixedCamera={fixedCamera}
+            editable={editable}
+            onEquipmentMove={onEquipmentMove}
+            connectMode={connectMode}
+            connectFromId={connectFromId}
+            onPortClick={onPortClick}
+            selectedLineId={selectedLineId}
+            onSelectLine={onSelectLine}
+            isolatedLines={isolatedLines}
+            isolatedEquipment={isolatedEquipment}
           />
         )}
       </div>

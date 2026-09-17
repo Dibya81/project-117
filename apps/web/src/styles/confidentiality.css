@@ -1,0 +1,505 @@
+/* ==========================================================================
+   CONFIDENTIALITY ARCHITECTURE — /console/security/confidentiality
+   --------------------------------------------------------------------------
+   Route-scoped: imported by the page, so no other route pays for these bytes
+   (the shell's bundle budget is `/console/home`).
+
+   Visual language follows the console it lives in — frosted panels, hairline
+   borders, mono labels — with the status palette the brief fixes: green only
+   for VERIFIED, amber for IMPLEMENTED/PARTIAL, red for UNAVAILABLE, muted ink
+   for PLANNED. No gradients, no glow, no idle animation.
+   ========================================================================== */
+
+.cf {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* ---- status key ---- */
+.cf-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  align-items: center;
+}
+.cf-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ---- the boundary ---- */
+.cf-boundary {
+  position: relative;
+  border: 1.5px dashed rgba(14, 116, 144, 0.4);
+  border-radius: 18px;
+  background: rgba(240, 249, 255, 0.5);
+  padding: 30px 14px 14px;
+  min-width: 0;
+}
+.cf-boundary__label {
+  position: absolute;
+  top: -11px;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 8px;
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  color: #0e7490;
+  max-width: calc(100% - 28px);
+  flex-wrap: wrap;
+}
+.cf-boundary__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+}
+.cf-boundary__hint {
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  text-transform: none;
+}
+
+/* ---- the five zones ---- */
+.cf-zones {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+@media (max-width: 1500px) {
+  .cf-zones { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 1080px) {
+  .cf-zones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* Mobile: a vertical flow. Each zone keeps its number and heading, so the
+   hierarchy survives the collapse instead of becoming a flat list. */
+@media (max-width: 720px) {
+  .cf-zones { grid-template-columns: minmax(0, 1fr); }
+}
+
+.cf-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.62);
+  padding: 10px;
+}
+.cf-zone__head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--line);
+}
+.cf-zone__index {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  background: rgba(14, 116, 144, 0.1);
+  color: #0e7490;
+  font-size: 10px;
+  font-weight: 700;
+}
+.cf-zone__title {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-1);
+}
+.cf-zone__caption {
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+.cf-zone__nodes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cf-zone__step {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ---- nodes ---- */
+.cf-node {
+  display: flex;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 9px 10px;
+  cursor: pointer;
+  min-width: 0;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.cf-node:hover { border-color: rgba(14, 116, 144, 0.45); background: #fff; }
+.cf-node:focus-visible { outline: 2px solid var(--blue, #2563eb); outline-offset: 2px; }
+.cf-node__rail {
+  flex: 0 0 auto;
+  width: 3px;
+  border-radius: 2px;
+  align-self: stretch;
+}
+.cf-node__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.cf-node__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cf-node__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-1);
+}
+.cf-node__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+.cf-node__blurb {
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.cf-node__count {
+  font-size: 10px;
+  color: var(--ink-2);
+}
+
+/* One-shot only. The animation is added by a real measurement change and
+   removed again; nothing here loops. */
+@keyframes cf-node-pulse {
+  from { box-shadow: 0 0 0 0 rgba(14, 116, 144, 0.32); }
+  to { box-shadow: 0 0 0 11px rgba(14, 116, 144, 0); }
+}
+.cf-node.is-pulsing {
+  border-color: rgba(14, 116, 144, 0.6);
+  animation: cf-node-pulse 900ms ease-out 2;
+}
+
+/* ---- connectors ---- */
+.cf-arrow {
+  display: flex;
+  justify-content: center;
+  color: rgba(100, 116, 139, 0.5);
+  height: 18px;
+}
+.cf-arrow--live {
+  color: currentColor;
+  animation: cf-arrow-run 700ms ease-out 2;
+}
+@keyframes cf-arrow-run {
+  from { transform: translateY(-5px); opacity: 0.25; }
+  to { transform: none; opacity: 1; }
+}
+
+/* ---- external / untrusted zone ---- */
+.cf-external {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid rgba(220, 38, 38, 0.26);
+  border-radius: 14px;
+  background: rgba(254, 242, 242, 0.45);
+  padding: 12px;
+  min-width: 0;
+}
+.cf-external__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  color: #b91c1c;
+}
+.cf-external__hint {
+  font-size: 10.5px;
+  letter-spacing: 0;
+  text-transform: none;
+  flex: 1 1 260px;
+}
+.cf-chain {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: stretch;
+}
+.cf-chain__step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 190px;
+  min-width: 0;
+}
+.cf-chain__step .cf-node { flex: 1; }
+
+/* The decision edge — the one seam a real frame moves. */
+.cf-edge {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-3);
+  border-radius: 50%;
+}
+.cf-edge--allowed { color: var(--ok, #16a34a); }
+.cf-edge--blocked,
+.cf-edge--reached { color: var(--crit, #dc2626); }
+.cf-edge__stop {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+@keyframes cf-edge-flash {
+  from { box-shadow: 0 0 0 0 currentColor; }
+  to { box-shadow: 0 0 0 12px transparent; }
+}
+.cf-edge.is-fresh { animation: cf-edge-flash 900ms ease-out 2; }
+
+.cf-live {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.86);
+  font-size: 11.5px;
+}
+.cf-live__text { color: var(--ink-1); }
+.cf-live__stream {
+  margin-left: auto;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+@media (max-width: 720px) {
+  /* Vertical flow on a phone, with the arrows still pointing the way. */
+  .cf-chain { flex-direction: column; }
+  .cf-chain__step { flex: 1 1 auto; flex-direction: column; align-items: stretch; }
+  .cf-chain__step .cf-edge { transform: rotate(90deg); }
+}
+
+/* ---- node detail drawer ---- */
+.cf-drawer {
+  position: fixed;
+  /* Anchored to the header's own tokens: it starts below the top bar and can
+     never cover it, at any breakpoint. */
+  top: calc(var(--p117-topbar-offset, 14px) + var(--p117-topbar-h, 60px) + var(--p117-topbar-gap, 6px));
+  right: 14px;
+  bottom: 14px;
+  width: min(440px, 92vw);
+  /* Below the top bar's z-index (70) so the header stays on top. */
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  box-shadow: var(--shadow-lg, 0 18px 48px rgba(15, 23, 42, 0.16));
+  animation: cf-drawer-in 180ms ease both;
+}
+@keyframes cf-drawer-in {
+  from { transform: translateX(14px); opacity: 0.4; }
+  to { transform: none; opacity: 1; }
+}
+@media (max-width: 860px) {
+  .cf-drawer {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    /* Clear of the fixed mobile tab bar. */
+    bottom: 76px;
+  }
+}
+.cf-drawer__titlerow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.cf-drawer__blurb {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.cf-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.cf-kv {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+}
+.cf-kv__label {
+  flex: 0 0 150px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.cf-kv__value {
+  flex: 1 1 180px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--ink-1);
+}
+.cf-json {
+  margin: 0;
+  padding: 10px;
+  max-height: 260px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.9);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.cf-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.cf-probe {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.7);
+}
+
+/* ---- signals panel ---- */
+.cf-signals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 8px;
+}
+.cf-signal {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+}
+.cf-signal__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.cf-signal__label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-1);
+}
+.cf-signal__value {
+  margin-left: auto;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-1);
+  white-space: nowrap;
+}
+.cf-signal__source {
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  word-break: break-all;
+}
+.cf-signal__detail {
+  font-size: 10.5px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+.cf-signals__last {
+  margin: 10px 0 0;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+}
+
+/* ---- caveat list ---- */
+.cf-caveats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cf-caveats li {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.cf-caveats li .cs-dot { margin-top: 5px; }
+.cf-caveats b { color: var(--ink-1); }

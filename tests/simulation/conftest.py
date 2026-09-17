@@ -34,8 +34,13 @@ def _fake_ask(role: str, system: str, user: str) -> tuple[str, str]:
             '"measurement loss on the origin asset", "failure_mode": null}',
             "test-model",
         )
-    # operations: the route is the real connection ids in the evidence pack.
-    ids = list(dict.fromkeys(re.findall(r'pl-\d+', user)))[:1]
+    # operations: the route is a real connection id from the evidence pack.
+    # Take the LAST candidate, not the first: the evidence pack is ordered by the
+    # plant graph, and the first line touching a two-hop incident scope is
+    # `pl-001` for several different origins — which made two distinct incidents
+    # look identical. The last candidate is still guaranteed to touch the scope
+    # (the pack is filtered that way), and it differs with the incident.
+    ids = list(dict.fromkeys(re.findall(r'pl-\d+', user)))[-1:]
     return (
         json.dumps({
             "route": ids,

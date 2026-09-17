@@ -8,13 +8,53 @@
 import { useEffect, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Panel, SkeletonRows, StatusDot, Tag } from "@/components/ui/primitives";
-import { Icon } from "@/components/ui/Icon";
+import { motion } from "framer-motion";
+import { Boxes, Factory, Layers } from "lucide-react";
+import { Panel, SkeletonRows } from "@/components/ui/primitives";
 import { Tilt } from "@/components/fx/Tilt";
+import { SPRING } from "@/lib/ui/motion";
 import { simAdapter } from "@/lib/sim/adapter";
 import { SchematicCanvas, emptyRuntime } from "@/components/sim/SchematicCanvas";
 import { assemblePlant } from "@/lib/sim/custom";
 import type { PlantDef, PlantListItem } from "@/lib/sim/types";
+
+/**
+ * A plant preview drawn as a plan rather than a picture.
+ *
+ * The `SchematicCanvas` is a real render of the real topology, laid back on an
+ * isometric plane so the card reads as a site plan. It stays the same component
+ * and the same data — only the projection changes.
+ */
+function IsometricPreview({ plant }: { plant: PlantDef }) {
+  return (
+    <div className="sm-card-preview" aria-hidden="true">
+      <div className="sm-card-preview__plane">
+        <SchematicCanvas
+          plant={plant}
+          runtime={emptyRuntime(plant)}
+          selectedId={null}
+          affected={[]}
+          onSelect={() => undefined}
+          onHover={() => undefined}
+          // A thumbnail: draw the topology, attach nothing. Passing no-op
+          // handlers still mounted handlers on every node, twice per page.
+          decorative
+        />
+      </div>
+      <span className="sm-card-preview__glow" />
+    </div>
+  );
+}
+
+/** One status badge. The pulse is the live claim; the label is the measured one. */
+function StatusBadge({ tone, label }: { tone: "ok" | "ai" | "warn"; label: string }) {
+  return (
+    <span className="sm-badge" data-tone={tone}>
+      <span className="sm-badge__pulse" />
+      {label}
+    </span>
+  );
+}
 
 export default function SimulationHub() {
   const router = useRouter();
@@ -54,7 +94,10 @@ export default function SimulationHub() {
     Promise.all(
       ["refinery", "steel"].map((id) =>
         simAdapter
-          .loadPlant(id)
+          // A card preview draws the topology; it does not operate the plant, so
+          // it does not need the runtime snapshot (127 KB per plant) or the
+          // scenarios. Two cards were pulling ~475 KB to render two thumbnails.
+          .loadPlant(id, { topologyOnly: true })
           .then((r) => [id, r.plant] as const)
           .catch(() => null),
       ),
@@ -106,7 +149,14 @@ export default function SimulationHub() {
               onClick={() => router.push("/console/simulation/builder")}
               onKeyDown={hubActivate(() => router.push("/console/simulation/builder"))}
             >
-              <span className="sm-hubcard__glyph"><Icon name="plus" size={30} /></span>
+              <motion.span
+                className="sm-hubcard__glyph"
+                whileHover={{ scale: 1.08, rotate: -4 }}
+                transition={SPRING.micro}
+                aria-hidden="true"
+              >
+                <Boxes size={28} strokeWidth={1.5} />
+              </motion.span>
               <p className="cs-mono cs-text-ember" style={{ margin: "0 0 8px", fontSize: 10, letterSpacing: "0.3em", textTransform: "uppercase" }}>
                 Custom plant
               </p>
@@ -123,7 +173,12 @@ export default function SimulationHub() {
                 <span className="sm-hubcard__stat"><b>12</b>failure modes</span>
                 <span className="sm-hubcard__stat"><b>∞</b>topologies</span>
               </div>
-              <div style={{ marginTop: 18 }}><Tag tone="ember">Open builder →</Tag></div>
+              <div className="sm-hubcard__foot">
+                <span className="sm-hubcard__cta">
+                  Open builder <span aria-hidden="true">→</span>
+                </span>
+                <StatusBadge tone="warn" label="Design mode" />
+              </div>
             </div>
           </Tilt>
 
@@ -137,22 +192,22 @@ export default function SimulationHub() {
                 onClick={() => router.push("/console/simulation/plant/refinery")}
                 onKeyDown={hubActivate(() => router.push("/console/simulation/plant/refinery"))}
               >
-                <span className="sm-hubcard__glyph"><Icon name="equipment" size={30} /></span>
+                <motion.span
+                  className="sm-hubcard__glyph"
+                  whileHover={{ scale: 1.08, rotate: -4 }}
+                  transition={SPRING.micro}
+                  aria-hidden="true"
+                >
+                  <Factory size={28} strokeWidth={1.5} />
+                </motion.span>
                 <p className="cs-mono cs-text-cyan" style={{ margin: "0 0 8px", fontSize: 10, letterSpacing: "0.3em", textTransform: "uppercase" }}>
                   Synthetic demonstration plant
                 </p>
                 <h2 style={{ margin: "0 0 8px", fontSize: 21, letterSpacing: "-0.01em" }}>{refinery.name}</h2>
                 {refineryDef && (
-                  <div className="sm-card-preview" aria-hidden="true">
-                    <SchematicCanvas
-                      plant={assemblePlant(refineryDef.equipment, refineryDef.connections)}
-                      runtime={emptyRuntime(assemblePlant(refineryDef.equipment, refineryDef.connections))}
-                      selectedId={null}
-                      affected={[]}
-                      onSelect={() => undefined}
-                      onHover={() => undefined}
-                    />
-                  </div>
+                  <IsometricPreview
+                    plant={assemblePlant(refineryDef.equipment, refineryDef.connections)}
+                  />
                 )}
                 <p style={{ margin: 0, color: "var(--ink-2)", fontSize: 13, lineHeight: 1.65, maxWidth: 300 }}>
                   Crude receiving to product storage — 18 process areas, a live causal
@@ -164,9 +219,11 @@ export default function SimulationHub() {
                   <span className="sm-hubcard__stat"><b>{refinery.areas}</b>areas</span>
                   <span className="sm-hubcard__stat"><b>{refinery.scenarios}</b>scenarios</span>
                 </div>
-                <div style={{ marginTop: 18, display: "flex", gap: 8, alignItems: "center" }}>
-                  <Tag tone="ai">Launch refinery →</Tag>
-                  <span className="cs-mono cs-dim" style={{ fontSize: 9.5 }}><StatusDot state="ok" pulse /> DETERMINISTIC</span>
+                <div className="sm-hubcard__foot">
+                  <span className="sm-hubcard__cta">
+                    Launch refinery <span aria-hidden="true">→</span>
+                  </span>
+                  <StatusBadge tone="ok" label="Deterministic" />
                 </div>
               </div>
             </Tilt>
@@ -182,22 +239,22 @@ export default function SimulationHub() {
                 onClick={() => router.push("/console/simulation/plant/steel")}
                 onKeyDown={hubActivate(() => router.push("/console/simulation/plant/steel"))}
               >
-                <span className="sm-hubcard__glyph"><Icon name="layers" size={30} /></span>
+                <motion.span
+                  className="sm-hubcard__glyph"
+                  whileHover={{ scale: 1.08, rotate: -4 }}
+                  transition={SPRING.micro}
+                  aria-hidden="true"
+                >
+                  <Layers size={28} strokeWidth={1.5} />
+                </motion.span>
                 <p className="cs-mono cs-text-cyan" style={{ margin: "0 0 8px", fontSize: 10, letterSpacing: "0.3em", textTransform: "uppercase" }}>
                   Synthetic demonstration plant
                 </p>
                 <h2 style={{ margin: "0 0 8px", fontSize: 21, letterSpacing: "-0.01em" }}>{steel.name}</h2>
                 {steelDef && (
-                  <div className="sm-card-preview" aria-hidden="true">
-                    <SchematicCanvas
-                      plant={assemblePlant(steelDef.equipment, steelDef.connections)}
-                      runtime={emptyRuntime(assemblePlant(steelDef.equipment, steelDef.connections))}
-                      selectedId={null}
-                      affected={[]}
-                      onSelect={() => undefined}
-                      onHover={() => undefined}
-                    />
-                  </div>
+                  <IsometricPreview
+                    plant={assemblePlant(steelDef.equipment, steelDef.connections)}
+                  />
                 )}
                 <p style={{ margin: 0, color: "var(--ink-2)", fontSize: 13, lineHeight: 1.65, maxWidth: 300 }}>
                   Raw material to finished coil — blast furnace, BOF, casting and the
@@ -209,9 +266,11 @@ export default function SimulationHub() {
                   <span className="sm-hubcard__stat"><b>{steel.areas}</b>areas</span>
                   <span className="sm-hubcard__stat"><b>{steel.scenarios}</b>scenarios</span>
                 </div>
-                <div style={{ marginTop: 18, display: "flex", gap: 8, alignItems: "center" }}>
-                  <Tag tone="ai">Launch steel plant →</Tag>
-                  <span className="cs-mono cs-dim" style={{ fontSize: 9.5 }}><StatusDot state="ok" pulse /> DETERMINISTIC</span>
+                <div className="sm-hubcard__foot">
+                  <span className="sm-hubcard__cta">
+                    Launch steel plant <span aria-hidden="true">→</span>
+                  </span>
+                  <StatusBadge tone="ok" label="Deterministic" />
                 </div>
               </div>
             </Tilt>

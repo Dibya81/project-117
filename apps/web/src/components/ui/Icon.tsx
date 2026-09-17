@@ -9,7 +9,7 @@ export type IconName =
   | "arrow" | "download" | "upload" | "plus" | "shield" | "cpu" | "file"
   | "send" | "filter" | "layers" | "gauge" | "pulse" | "lock" | "database"
   | "workflow" | "wrench" | "alert" | "clock" | "chevron" | "refresh"
-  | "eye" | "zap" | "terminal" | "globe" | "pause" | "play" | "dots";
+  | "eye" | "zap" | "terminal" | "globe" | "pause" | "play" | "dots" | "printer";
 
 const PATHS: Record<IconName, string> = {
   home: "M3 8.5 8 4l5 4.5V13H3z M6.5 13v-3h3v3",
@@ -53,6 +53,7 @@ const PATHS: Record<IconName, string> = {
   pause: "M5.5 3.5v9 M10.5 3.5v9",
   play: "M5 3.5 12 8l-7 4.5z",
   dots: "M4 8h.01 M8 8h.01 M12 8h.01",
+  printer: "M5 6V2.5h6V6 M3 6h10v4H3z M5 9h6v5H5z M11.5 7.5h.01",
 };
 
 export function Icon({ name, size = 16, ...rest }: { name: IconName; size?: number } & SVGProps<SVGSVGElement>) {

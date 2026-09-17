@@ -105,7 +105,7 @@ The retrieval corpus (`data/corpus/refinery/`) is ingested into LanceDB with
 `./.venv/bin/python scripts/ingest_corpus.py` once the backend is running
 (see §5). It is not part of database initialisation.
 
-The simulation schema (17 tables) is created automatically on first use by
+The simulation schema (18 tables) is created automatically on first use by
 `backend/simulation/persistence.py::SimulationStore`. Plant, zone, equipment,
 sensor, actuator and connection rows are written when a plant is registered,
 which happens on the first API call that touches it.
@@ -192,15 +192,23 @@ curl -s http://127.0.0.1:8000/api/simulation/plants/refinery/history | python3 -
 
 ```bash
 ./.venv/bin/python scripts/validate_plant_data.py    # plant data quality (exit 0)
-python3 tests/simulation/test_verification_regression.py
-python3 tests/simulation/redteam_harness.py        # determinism + negative tests
-python3 tests/simulation/test_integration_pipeline.py
+./.venv/bin/python -m pytest tests/simulation -q     # engine, API, pipeline, regression
 ```
 
-The last one is the integration gate: 10 refinery + 10 steel randomised assets,
-restart survival in a separate OS process, retrieval diversity, graph context,
-failure paths and the builder save/load round trip. It needs **no network** and
-**no extra packages** — standard library only.
+`tests/simulation/conftest.py` installs a fake local-model double and the root
+conftest strips `P117_*` from the environment, so the pytest suite needs **no
+network** and **no Ollama**, and nothing beyond the dev group's `pytest`.
+
+Run the modules with `pytest`, not as standalone scripts. The standalone
+`__main__` entry points in `test_verification_regression.py` and
+`redteam_harness.py` call the **real** local model, so they need a running
+Ollama with the configured decision model; `test_integration_pipeline.py` has no
+`__main__` at all, so running it directly executes nothing.
+
+`tests/simulation/test_integration_pipeline.py` (via pytest) is the integration
+gate: 10 refinery + 10 steel randomised assets, restart survival in a separate
+OS process, retrieval diversity, graph context, failure paths and the builder
+save/load round trip.
 
 With the dev group installed you can also run `uv run pytest`.
 
@@ -247,7 +255,7 @@ No path in this table produces a fake success.
 | `P117_SIMULATION_DB` | `data/simulation.db` | simulation SQLite store |
 | `P117_SIM_RETRIEVAL` | `auto` | `lexical` forces the BM25 backend |
 | `P117_SIM_RETRIEVAL_DISABLE` | unset | `1` simulates a dead knowledge base (failure-path testing) |
-| `P117_DATABASE_URL` | `sqlite:////data/project117.db` | main application database |
-| `P117_LLM_BASE_URL` | `http://ollama:11434/v1` | local model endpoint |
+| `P117_DATABASE_URL` | `sqlite:///./data/project117.db` | main application database |
+| `P117_LLM_BASE_URL` | `http://localhost:11434/v1` | local model endpoint |
 | `NEXT_PUBLIC_DATA_MODE` | `live` | `mock` = in-browser engine, development only |
 | `NEXT_PUBLIC_API_BASE` | `http://127.0.0.1:8000` | backend origin used by the console |

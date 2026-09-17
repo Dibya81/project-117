@@ -423,11 +423,14 @@ def verify_plan(engine: SimulationEngine, incident: Incident) -> tuple[bool, lis
                 continue  # the known-bad sensor is handled by the plan
             m = s
             if m.is_detector:
-                # Detectors are latched 0/1 points: healthy == 0. Only a
-                # *tripped* detector is a finding. Applying the two-sided
-                # envelope test here made every untripped gas/leak detector
-                # in the blast radius fail verification forever.
-                if rt.value >= m.critical_max:
+                # Detectors are latched 0/1 points: healthy == 0, tripped == 1,
+                # and the engine sets that value itself (see `_propagate_flow`).
+                # So "tripped" is "any non-zero reading", NOT a comparison
+                # against `critical_max`: a plant built in the Builder gives its
+                # detectors `critical_max = nominal = 0`, and `0 >= 0` reported
+                # every healthy detector as tripped — which failed verification
+                # on every incident in that plant, forever.
+                if rt.value > 0:
                     findings.append(f"{m.tag} detector tripped ({rt.value:.1f} {m.unit})")
                     ok = False
                 continue

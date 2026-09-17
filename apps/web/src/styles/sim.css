@@ -823,6 +823,9 @@
   left: 18px;
   width: 296px;
   padding: 14px 16px 14px;
+  /* Above the selected-unit panel: the dialog's Connect button sat underneath
+     it, so the last step of making a pipe was unclickable. */
+  z-index: 9;
   animation: sm-panel-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .sm-connect__head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
@@ -1125,3 +1128,352 @@
   transition: color 150ms;
 }
 .sm-panel__save:hover { color: var(--amber); }
+
+/* ---- builder: equipment properties, wire ports, sensor editing ---------- */
+.sm-props { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 12px; }
+.sm-props__field {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.sm-props__field > span { flex: 0 0 40px; }
+.sm-props__field input,
+.sm-props__field select {
+  flex: 1; min-width: 0; padding: 5px 8px;
+  border: 1px solid var(--line-2); border-radius: 6px;
+  background: #fff; font-size: 12px; color: var(--ink-1);
+}
+.sm-props__row { display: flex; gap: 8px; }
+.sm-props__row .sm-props__field { flex: 1; }
+.sm-props__warn { margin: 0; font-size: 11px; color: var(--crit); }
+.sm-props__note { margin: 0; font-size: 10.5px; line-height: 1.5; color: var(--ink-3); }
+.sm-panel__hint { margin: 0 0 6px; font-size: 11px; line-height: 1.5; color: var(--ink-2); }
+.sm-panel__link-id { margin-left: auto; font-size: 9px; }
+
+.sm-sensor__del {
+  margin-top: 6px; padding: 4px 9px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line-2); background: #fff; color: var(--crit); font-size: 10.5px;
+}
+.sm-sensor__del:hover { border-color: var(--crit); }
+.sm-sensor__add { display: flex; gap: 6px; margin-top: 8px; }
+.sm-sensor__add select {
+  flex: 1; min-width: 0; padding: 5px 8px;
+  border: 1px solid var(--line-2); border-radius: 6px; font-size: 11.5px;
+}
+.sm-sensor__addbtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border: 1px solid var(--line-2); border-radius: 6px;
+  background: #fff; font-size: 11px; cursor: pointer; white-space: nowrap;
+}
+.sm-sensor__addbtn:hover { border-color: var(--cyan); color: var(--cyan); }
+.sm-stage__canvas.is-wiring { cursor: crosshair; }
+
+/* ---- selected line: the connection's own record ---- */
+.sm-float--line {
+  top: 216px;
+  left: 18px;
+  width: 296px;
+  padding: 14px 16px 14px;
+  /* A line and a unit are alternative selections, so this never shares the
+     screen with .sm-float--panel — but it must still clear the asset dock. */
+  z-index: 9;
+  animation: sm-panel-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.sm-line__facts {
+  margin: 10px 0 12px;
+  display: grid;
+  gap: 6px;
+}
+.sm-line__facts > div {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.sm-line__facts dt {
+  flex: 0 0 62px;
+  color: var(--ink-3);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.sm-line__facts dd { margin: 0; color: var(--ink-1); min-width: 0; overflow-wrap: anywhere; }
+.sm-line__actions { display: flex; flex-direction: column; gap: 7px; }
+.sm-line__actions .btn { justify-content: flex-start; }
+
+/* ==========================================================================
+   SIMULATION HUB — isometric plant cards
+   ========================================================================== */
+
+.sm-hubcard__glyph {
+  color: #0891b2;
+  opacity: 0.9;
+  display: inline-flex;
+  transform-origin: center;
+}
+
+/* The preview is a real render of the real topology, laid back onto an
+   isometric plane. Nothing about the drawing changes — only the projection —
+   so a card cannot advertise a plant the app does not have. */
+.sm-card-preview {
+  position: relative;
+  height: 168px;
+  margin: 14px 0 16px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 12px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 0%, rgba(255, 255, 255, 0.95), rgba(238, 244, 252, 0.85) 70%),
+    linear-gradient(165deg, #f0f7ff, #e6effc);
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.sm-card-preview__plane {
+  position: absolute;
+  inset: 0;
+  /* A gentle rake, not a steep one. At 52° a 58-unit plant collapses into a
+     diagonal streak; this keeps the topology legible as a plan while still
+     reading as three-dimensional. */
+  transform: perspective(1400px) rotateX(38deg) rotateZ(-24deg) scale(0.92) translateY(4%);
+  transform-origin: 50% 50%;
+  transition: transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sm-hubcard:hover .sm-card-preview__plane {
+  transform: perspective(1400px) rotateX(33deg) rotateZ(-24deg) scale(0.98) translateY(1%);
+}
+/* A slow sheen passing over the plan, so the card reads as a lit surface. */
+.sm-card-preview__glow {
+  position: absolute;
+  inset: -40% -60%;
+  background: linear-gradient(
+    115deg,
+    transparent 38%,
+    rgba(34, 211, 238, 0.16) 50%,
+    transparent 62%
+  );
+  transform: translateX(-30%);
+  animation: sm-card-sheen 7s ease-in-out infinite;
+}
+@keyframes sm-card-sheen {
+  0%, 100% { transform: translateX(-38%); }
+  50% { transform: translateX(38%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sm-card-preview__glow { animation: none; }
+}
+
+.sm-hubcard__foot {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sm-hubcard__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 10px;
+  border: 1px solid rgba(8, 145, 178, 0.28);
+  background: linear-gradient(160deg, #ffffff, #eff6ff);
+  color: #0e7490;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow:
+    0 1px 1px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+.sm-hubcard:hover .sm-hubcard__cta {
+  border-color: rgba(8, 145, 178, 0.55);
+  box-shadow:
+    0 8px 22px rgba(8, 145, 178, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+.sm-hubcard:hover .sm-hubcard__cta span { transform: translateX(2px); }
+.sm-hubcard__cta span { transition: transform 180ms ease; }
+
+/* ---- interactive status badges ---- */
+.sm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+.sm-badge[data-tone="ok"] {
+  color: #047857;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.24);
+}
+.sm-badge[data-tone="ai"] {
+  color: #0e7490;
+  background: rgba(34, 211, 238, 0.12);
+  border-color: rgba(34, 211, 238, 0.26);
+}
+.sm-badge[data-tone="warn"] {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.26);
+}
+.sm-badge__pulse {
+  position: relative;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+.sm-badge__pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: currentColor;
+  animation: sm-badge-pulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+@keyframes sm-badge-pulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(3); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sm-badge__pulse::after { animation: none; opacity: 0; }
+}
+
+/* ==========================================================================
+   BUILDER CANVAS — dot grid + accordion asset drawer
+   ========================================================================== */
+
+/* An infinite dot grid under the plant. Purely a backdrop: it establishes the
+   design surface and a sense of scale ("one dot = one grid step") without
+   claiming to be a coordinate readout. `background-repeat` makes it infinite by
+   definition — there is no extent to run out of — and it sits under the SVG, so
+   every canvas interaction (drag, pan, port click) still reaches the plant. */
+.sm-stage__canvas::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(15, 23, 42, 0.10) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: 0 0;
+  mask-image: radial-gradient(ellipse 85% 80% at 50% 45%, #000 45%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 85% 80% at 50% 45%, #000 45%, transparent 100%);
+}
+/* A second, coarser grid every 100px (five steps) so scale is readable at a
+   glance rather than by counting dots. */
+.sm-stage__canvas::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(8, 145, 178, 0.20) 1.5px, transparent 1.5px);
+  background-size: 100px 100px;
+  mask-image: radial-gradient(ellipse 85% 80% at 50% 45%, #000 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 85% 80% at 50% 45%, #000 40%, transparent 100%);
+}
+/* `.is-armed` already uses ::after for its drop halo, so the coarse grid yields
+   to it rather than drawing two overlays at once. */
+.sm-stage__canvas.is-armed::after {
+  background-image: none;
+  box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.35), inset 0 0 80px rgba(37, 99, 235, 0.06);
+}
+/* The plant draws above the grid. */
+.sm-stage__canvas > * { position: relative; z-index: 1; }
+
+/* ---- accordion categories ---- */
+.sm-dock__group { margin-bottom: 4px; }
+.sm-dock__grouphead {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #475569;
+  cursor: pointer;
+  text-align: left;
+  transition: background 140ms ease, color 140ms ease;
+}
+.sm-dock__grouphead:hover { background: rgba(241, 245, 249, 0.9); color: #0e7490; }
+.sm-dock__groupcount {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+  color: #64748b;
+  font-weight: 600;
+}
+.sm-dock__chev { display: inline-flex; color: #94a3b8; }
+.sm-dock__groupbody { padding-top: 2px; }
+.sm-palette-item {
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease, color 140ms ease;
+}
+.sm-palette-item:hover { transform: translateX(2px); }
+.sm-palette-item.is-armed {
+  transform: translateX(2px);
+  border-color: rgba(34, 211, 238, 0.6);
+  background: rgba(236, 254, 255, 0.9);
+}
+
+/* ---- drag ghost ---- */
+.sm-dragghost {
+  position: fixed;
+  top: -1000px;
+  left: -1000px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(34, 211, 238, 0.6);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  box-shadow:
+    0 18px 44px rgba(8, 145, 178, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0e7490;
+  pointer-events: none;
+  transform: rotate(-2deg);
+}
+
+/* ---- glassmorphic asset nodes + glowing ports on the builder canvas ---- */
+.pmap.is-editable .pmap__eq {
+  filter: drop-shadow(0 6px 14px rgba(15, 23, 42, 0.12));
+}
+.pmap__port {
+  transition: r 140ms ease, fill 140ms ease, filter 140ms ease;
+}
+.pmap__port--in,
+.pmap__port--out {
+  filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.75));
+}
+.pmap__port--out { filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.8)); }
+.pmap__eq:hover .pmap__port { r: 7; }
+.pmap__port--in { fill: #10b981; }
+.pmap__port--out { fill: #2563eb; }

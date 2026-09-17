@@ -135,11 +135,13 @@ All emitted on the per-plant log (durable, replayable, then live via SSE
 
 ## 8. Frontend transport (`lib/sim/adapter.ts`)
 
-`NEXT_PUBLIC_DATA_MODE=mock` (default) constructs the **embedded demo engine**
-— a line-for-line TS port of the backend engine with the same seed math, run
-in-browser so the demo works with zero infrastructure. `live` swaps to REST +
-SSE against the real backend. The UI never branches on transport; it renders
-events from a single adapter surface.
+`NEXT_PUBLIC_DATA_MODE=live` (default) uses REST + SSE against the real
+backend; if the backend is unreachable the console shows a hard "Backend
+unavailable" error and never substitutes data. `mock` is an explicit opt-in
+that constructs the **embedded demo engine** — a line-for-line TS port of the
+backend engine with the same seed math, run in-browser for offline development.
+Nothing falls back from live into mock. The UI never branches on transport; it
+renders events from a single adapter surface.
 
 ## 9. Extending
 

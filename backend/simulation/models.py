@@ -179,6 +179,17 @@ class Connection(BaseModel):
     kind: ConnectionKind
     source: str  # equipment id
     target: str  # equipment id
+    #: The port the line leaves / enters. Wiring is port-to-port, so an in→in
+    #: or out→out link has no representation to be built in. The defaults
+    #: describe the direction the record already asserts, so dataset rows need
+    #: no migration.
+    source_port: str = "out"
+    target_port: str = "in"
+    #: What the link MEANS (MATERIAL_FLOW, REDUNDANCY, SENSOR_OF, …). Distinct
+    #: from `kind`, which is only the physical carrier: REDUNDANCY and
+    #: MATERIAL_FLOW are both pipes. Carried through storage so a plant built
+    #: in the Builder keeps the semantics it was wired with.
+    relation: str | None = None
     medium: str = "process"  # crude|water|steam|gas|ore|air…
     capacity: float = 100.0  # m3/h nominal
     flow: float = 0.0        # engine state (m3/h equivalent)

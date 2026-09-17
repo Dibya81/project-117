@@ -12,6 +12,8 @@ import { TrendChart } from "@/components/ui/TrendChart";
 import { Icon } from "@/components/ui/Icon";
 import { consoleData } from "@/lib/data/console";
 import { EquipmentRenderer, normalizeEquipmentAsset, preferredAssetSize } from "@/components/equipment";
+import { AssetQrLabel } from "@/components/equipment/AssetQrLabel";
+import { EquipmentSparesPanel } from "@/components/materials/EquipmentSparesPanel";
 import { useJourney } from "@/lib/journey";
 import type { EquipmentDetailData } from "@/types/console";
 
@@ -163,6 +165,19 @@ export default function EquipmentDetailPage() {
         ))}
       </div>
 
+      {/* The physical label for this machine. The symbol is the backend's SVG
+          (namespaced `P117:EQUIP:<tag>` payload, resolved only by the Project
+          117 app) and the tag is printed beneath it, so a scuffed code is still
+          readable. "Print label" opens the printable sheet for this asset. */}
+      <Panel title="Asset QR label" style={{ marginBottom: 18 }}>
+        <AssetQrLabel
+          id={data.id}
+          tag={data.tag ?? data.registerTag ?? data.id}
+          name={data.name}
+          zone={data.zone}
+        />
+      </Panel>
+
       <Panel pad={false}>
         <div style={{ padding: "12px 16px 0" }}>
           <Tabs
@@ -291,6 +306,15 @@ export default function EquipmentDetailPage() {
                 );
               })}
             </div>
+          )}
+
+          {tab === "maintenance" && (
+            /* Required spares for this asset — the top of the materials chain,
+               surfaced where an engineer planning the job already is:
+               EQUIPMENT → REQUIREMENT → SPARE → INVENTORY → COVERAGE.
+               The component existed but was never mounted on any page, so the
+               chain stopped one hop short of the user. */
+            <EquipmentSparesPanel equipmentId={id} />
           )}
 
           {tab === "maintenance" && (

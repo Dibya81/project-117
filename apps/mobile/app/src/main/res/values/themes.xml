@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Project 117 — platform theme.
+
+  The shell is light-only and edge-to-edge; MainActivity calls enableEdgeToEdge()
+  with light system-bar styles and all content colour comes from the Compose
+  theme in ui/theme/. This style exists so the window background matches the
+  Compose page (#F6F8FB) — no dark flash between launch and the first Compose
+  frame — and so the system bar icons are drawn dark on the light surface.
+
+  `android:windowLightStatusBar` = true is what turns the status bar icons from
+  white to dark. Without it the clock and battery glyphs stay white and vanish
+  against a near-white page.
+
+  The style name is referenced by AndroidManifest.xml and must not change.
+-->
+<resources>
+    <style name="Theme.Project117" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/p117_background</item>
+        <item name="android:colorBackground">@color/p117_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
+</resources>

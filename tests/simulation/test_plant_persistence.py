@@ -79,6 +79,69 @@ def test_second_init_does_not_duplicate_or_clobber(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# Builder connection records
+#
+# A connection is not just "A feeds B": the Builder records which PORTS the
+# wire was made on and what the link MEANS. Both were dropped on save (the
+# model had no such fields), so a plant reloaded from the database lost the
+# distinction between a REDUNDANCY wire and a MATERIAL_FLOW pipe — the exact
+# distinction the failover reasoning reads.
+# ---------------------------------------------------------------------------
+
+
+def test_builder_connection_keeps_ports_and_relation(tmp_path):
+    from backend.simulation.models import (
+        Connection,
+        ConnectionKind,
+        Equipment,
+        PlantArea,
+    )
+
+    path = tmp_path / "simulation.db"
+    st = SimulationStore(path)
+    try:
+        plant = Plant(
+            id="builder-ports", name="Ports", industry="custom",
+            areas=[PlantArea(id="a", name="A", x=0, y=0, w=400, h=300)],
+            equipment=[
+                Equipment(id="e-A", tag="A-1", name="A", kind="pump", area_id="a", x=0, y=0),
+                Equipment(id="e-B", tag="B-1", name="B", kind="tank", area_id="a", x=100, y=0),
+            ],
+            connections=[
+                Connection(
+                    id="pl-c1", kind=ConnectionKind.PIPE, relation="REDUNDANCY",
+                    source="e-A", target="e-B",
+                    source_port="out", target_port="in", medium="process",
+                ),
+            ],
+            failure_modes=[],
+        )
+        st.save_plant(plant, origin="builder")
+    finally:
+        st.close()
+
+    reloaded = SimulationStore(path)
+    try:
+        back = reloaded.load_plant_definition("builder-ports")
+        assert back is not None
+        c = back.connections[0]
+        assert (c.source, c.target) == ("e-A", "e-B")
+        assert (c.source_port, c.target_port) == ("out", "in")
+        assert c.relation == "REDUNDANCY"
+        assert c.medium == "process"
+    finally:
+        reloaded.close()
+
+
+def test_dataset_connections_default_to_out_and_in(store: SimulationStore):
+    """Legacy rows carry no ports; the defaults are the direction they mean."""
+    plant = datasets.load_plant("refinery", store=store)
+    assert plant.connections
+    for c in plant.connections:
+        assert (c.source_port, c.target_port) == ("out", "in")
+
+
+# ---------------------------------------------------------------------------
 # Telemetry retention
 #
 # Nothing reads the telemetry table yet, but the engine writes to it every

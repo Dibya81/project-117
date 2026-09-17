@@ -183,6 +183,11 @@ export interface EquipmentDetailData {
   kind: string;
   zone: string;
   status: HealthState;
+  /**
+   * The real plant tag (`P-1001`) the QR label encodes, when the dataset record
+   * carries one. Distinct from `id` (`e-P-1001`).
+   */
+  tag?: string;
   kpis: { label: string; value: string; state?: HealthState }[];
   insight?: string;
   /**

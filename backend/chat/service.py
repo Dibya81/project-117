@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 
 from pydantic import BaseModel, Field
 
@@ -27,6 +27,7 @@ from backend.models.router import ModelRouter
 from backend.rag.errors import RetrievalError
 from backend.rag.service import Evidence, RetrievalService
 from backend.security.audit import AuditService
+from backend.security.rbac import Principal
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,12 @@ class ChatTurnResult(BaseModel):
     provider: str
     latency_ms: float
     session_id: str | None = None
-    usage: dict[str, int] = Field(default_factory=dict)
+    # ``usage`` is opaque provider metadata, not a fixed integer schema: the
+    # OpenAI-compatible wire format includes nested objects such as
+    # ``prompt_tokens_details``, and typing this as ``dict[str, int]`` made
+    # every Ollama reply fail validation - inside this model, so the whole turn
+    # surfaced as a 400. It mirrors ``ChatResult.usage`` (providers/base.py).
+    usage: dict[str, Any] = Field(default_factory=dict)
     evidence: list[dict] = Field(default_factory=list)  # populated when grounded
 
 
@@ -114,9 +120,14 @@ class ChatService:
         user: str | None = None,
         use_rag: bool | None = None,
         document_ids: list[str] | None = None,
+        principal: Principal | None = None,
     ) -> ChatTurnResult:
         evidence = self._gather_evidence(
-            message, use_rag=use_rag, document_ids=document_ids, user=user
+            message,
+            use_rag=use_rag,
+            document_ids=document_ids,
+            user=user,
+            principal=principal,
         )
         system_prompt = system_prompt or self._grounded_prompt(evidence)
         resolved = await self._router.resolve(role, model_override=model_override)
@@ -163,10 +174,15 @@ class ChatService:
         user: str | None = None,
         use_rag: bool | None = None,
         document_ids: list[str] | None = None,
+        principal: Principal | None = None,
     ) -> AsyncIterator[dict]:
         """Yields typed events: {"type": "start"|"evidence"|"delta"|"complete"|"error"}."""
         evidence = self._gather_evidence(
-            message, use_rag=use_rag, document_ids=document_ids, user=user
+            message,
+            use_rag=use_rag,
+            document_ids=document_ids,
+            user=user,
+            principal=principal,
         )
         system_prompt = system_prompt or self._grounded_prompt(evidence)
         resolved = await self._router.resolve(role, model_override=model_override)
@@ -229,6 +245,7 @@ class ChatService:
         use_rag: bool | None,
         document_ids: list[str] | None,
         user: str | None,
+        principal: Principal | None = None,
     ) -> list[Evidence]:
         """Retrieve grounding evidence when requested.
 
@@ -243,7 +260,15 @@ class ChatService:
             return []
         try:
             return self._retrieval.evidence_for_chat(
-                message, top_k=self._evidence_top_k, document_ids=document_ids, user=user
+                message,
+                top_k=self._evidence_top_k,
+                document_ids=document_ids,
+                user=user,
+                # Grounding is where retrieval meets the model, so the caller's
+                # clearance travels with the query: unauthorized chunks are
+                # filtered before the evidence list - and therefore before the
+                # prompt - is built.
+                principal=principal,
             )
         except RetrievalError as exc:
             logger.warning("chat grounding skipped: %s", exc)

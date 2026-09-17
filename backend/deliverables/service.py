@@ -54,6 +54,14 @@ STATUS_WARNING = "verified_with_warnings"
 STATUS_FAILED = "rejected"
 STATUS_UNVERIFIED = "unverified"
 
+#: Signature statuses stored on the artifact row (Phase 2, gap 2).
+#: 'unsigned' is a real, reportable state: an artifact generated before signing
+#: was wired, or on a deployment with no key, is *not* signed and must never be
+#: displayed as though it were.
+SIGNED = "signed"
+UNSIGNED = "unsigned"
+SIGNATURE_FAILED = "signature_failed"
+
 _SAFE_NAME = re.compile(r"[^A-Za-z0-9._-]+")
 
 
@@ -77,6 +85,18 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _parse_signed_at(raw: Any) -> datetime | None:
+    """ISO string (or datetime) → aware datetime for the artifact row."""
+    if raw is None:
+        return None
+    if isinstance(raw, datetime):
+        return raw
+    try:
+        return datetime.fromisoformat(str(raw))
+    except ValueError:  # pragma: no cover - defensive
+        return None
+
+
 def safe_filename(title: str, artifact_type: str) -> str:
     """Derive a filename from the spec title.
 
@@ -98,12 +118,17 @@ class ArtifactService:
         session_factory: Any = None,
         audit: Any = None,
         verifier: Any = None,
+        signing_key: Any = None,
     ) -> None:
         self._sandbox = sandbox
         self._dir = Path(storage_dir)
         self._sessions = session_factory
         self._audit = audit
         self._verifier = verifier
+        #: Ed25519 key used to sign every artifact, or None to leave artifacts
+        #: unsigned. None is not a silent no-op: the row is marked 'unsigned'
+        #: and the API reports it as such.
+        self._signing_key = signing_key
 
     @property
     def storage_dir(self) -> Path:
@@ -183,6 +208,10 @@ class ArtifactService:
                 "was discarded"
             )
 
+        # Sign the bytes that are now on disk, and only those. Signing before
+        # the digest check would have signed a file we were about to discard.
+        signature = await asyncio.to_thread(self._sign_path, path)
+
         record = {
             "artifact_id": artifact_id,
             "job_id": job_id,
@@ -193,6 +222,11 @@ class ArtifactService:
             "sha256": sandbox_digest,
             "sandbox_execution_id": execution.get("execution_id"),
             "verification_status": STATUS_PENDING,
+            "signature_status": signature["signature_status"],
+            "signature_path": signature["signature_path"],
+            "signature_key_id": signature["signature_key_id"],
+            "signed_at": signature["signed_at"],
+            "signature_error": signature["signature_error"],
             "created_by": user,
             "created_at": _utcnow().isoformat(),
             "spec": {
@@ -215,6 +249,10 @@ class ArtifactService:
                 "size_bytes": len(data),
                 "sha256": sandbox_digest[:16],
                 "content_units": validated.content_units(),
+                # Recorded so the audit row says whether the artifact was
+                # signed at generation time, not merely that one was produced.
+                "signature_status": signature["signature_status"],
+                "signature_key_id": signature["signature_key_id"],
             },
         )
 
@@ -251,6 +289,7 @@ class ArtifactService:
             evidence=[],
             artifacts=[record],
             sandbox=self._sandbox,
+            audit=self._audit,
             job_id=record.get("job_id"),
             user=record.get("created_by"),
         )
@@ -346,6 +385,126 @@ class ArtifactService:
         except OSError:  # pragma: no cover - best effort cleanup
             logger.warning("could not remove rejected artifact at %s", path)
 
+    def _sign_path(self, path: Path) -> dict[str, Any]:
+        """Sign a stored artifact, reporting the outcome rather than assuming it.
+
+        Three outcomes, all recorded:
+
+        * ``signed``           — a signature was written beside the file;
+        * ``unsigned``         — no key is configured for this deployment;
+        * ``signature_failed`` — a key exists but signing raised.
+
+        A failure here never discards the artifact: the file is still an
+        artifact, and the record says exactly which of the three happened so
+        the console can report it honestly instead of showing a green tick.
+        """
+        if self._signing_key is None:
+            return {
+                "signature_status": UNSIGNED,
+                "signature_path": None,
+                "signature_key_id": None,
+                "signed_at": None,
+                "signature_error": None,
+            }
+        try:
+            from backend.security.signing import sign_file
+
+            signed = sign_file(path, key=self._signing_key)
+            return {
+                "signature_status": SIGNED,
+                "signature_path": str(signed.signature_path),
+                "signature_key_id": signed.key_id,
+                "signed_at": _utcnow(),
+                "signature_error": None,
+            }
+        except Exception as exc:  # noqa: BLE001 - recorded, not swallowed
+            logger.exception("failed to sign artifact %s", path)
+            return {
+                "signature_status": SIGNATURE_FAILED,
+                "signature_path": None,
+                "signature_key_id": None,
+                "signed_at": None,
+                "signature_error": f"{type(exc).__name__}: {exc}"[:300],
+            }
+
+    def verify_signature(self, artifact_id: str) -> dict[str, Any]:
+        """Re-verify a stored artifact's signature against the bytes on disk.
+
+        A different question from "did signing succeed at generation time":
+        this asks whether the file is *still* the file that was signed.
+        """
+        record = self.get(artifact_id)
+        path = Path(record["storage_path"])
+        if not path.is_file():
+            return {
+                "artifact_id": artifact_id,
+                "status": "SIGNATURE INVALID",
+                "detail": "the stored file is missing, so nothing could be verified",
+                "signature_present": bool(record.get("signature_path")),
+            }
+        from backend.security.signing import verify_file
+
+        payload = verify_file(path).as_dict()
+        payload["artifact_id"] = artifact_id
+        payload["filename"] = record.get("filename")
+        return payload
+
+    def signed_artifacts(self, *, limit: int = 25) -> dict[str, Any]:
+        """Recent artifacts with their signature status — the real record.
+
+        The Sovereignty Center reads this. It returns what actually exists, so
+        a deployment with no signed artifacts gets a zero count and an empty
+        list rather than a green tick with nothing behind it.
+        """
+        if self._sessions is None:
+            return {
+                "available": False,
+                "algorithm": "Ed25519",
+                "key_id": None,
+                "flagged": True,
+                "totals": {"signed": 0, "unsigned": 0, "signature_failed": 0},
+                "artifacts": [],
+                "scope": "no artifact store is wired",
+            }
+        from backend.database.execution import Artifact
+
+        with self._sessions() as session:
+            rows = (
+                session.query(Artifact)
+                .order_by(Artifact.created_at.desc())
+                .limit(max(1, min(limit, 200)))
+                .all()
+            )
+            totals = {"signed": 0, "unsigned": 0, "signature_failed": 0}
+            items = []
+            for row in rows:
+                status = row.signature_status or UNSIGNED
+                totals[status] = totals.get(status, 0) + 1
+                items.append(
+                    {
+                        "artifact_id": row.id,
+                        "filename": row.filename,
+                        "type": row.type,
+                        "sha256": row.sha256,
+                        "signature_status": status,
+                        "signature_key_id": row.signature_key_id,
+                        "signed_at": row.signed_at.isoformat() if row.signed_at else None,
+                        "created_at": row.created_at.isoformat() if row.created_at else None,
+                        "verification_status": row.verification_status,
+                    }
+                )
+        return {
+            "available": True,
+            "algorithm": "Ed25519",
+            "key_id": self._signing_key.key_id if self._signing_key else None,
+            # flagged: no key is configured, so *nothing here can ever be
+            # signed. The UI shows this as a configuration gap, not as a pass.
+            "flagged": self._signing_key is None,
+            "totals": totals,
+            "artifacts": items,
+            "scope": "generated artifacts recorded in this database",
+        }
+
     @staticmethod
     def _digest(path: Path) -> str:
         digest = hashlib.sha256()
@@ -372,6 +531,13 @@ class ArtifactService:
                         sha256=record["sha256"],
                         sandbox_execution_id=record.get("sandbox_execution_id"),
                         verification_status=STATUS_PENDING,
+                        # Signature columns are written with the row so the
+                        # record of *how* the artifact was signed lands in the
+                        # same commit as the artifact itself.
+                        signature_status=record.get("signature_status") or UNSIGNED,
+                        signature_path=record.get("signature_path"),
+                        signature_key_id=record.get("signature_key_id"),
+                        signed_at=_parse_signed_at(record.get("signed_at")),
                         spec_json=json.dumps(spec_payload)[:200_000],
                         created_by=record.get("created_by"),
                     )
@@ -428,6 +594,10 @@ class ArtifactService:
             "sandbox_execution_id": row.sandbox_execution_id,
             "verification_status": row.verification_status,
             "verification": verification,
+            "signature_status": row.signature_status or UNSIGNED,
+            "signature_path": row.signature_path,
+            "signature_key_id": row.signature_key_id,
+            "signed_at": row.signed_at.isoformat() if row.signed_at else None,
             "created_by": row.created_by,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         }

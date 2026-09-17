@@ -59,6 +59,12 @@ data/*.db-shm
 data/*.db-journal
 data/lancedb/
 data/artifacts/
+# Ed25519 artifact-signing private keys (backend/security/signing.py). The key
+# is generated on first use at data/keys/artifact_signing_ed25519.pem with mode
+# 0600. It must never be committed: anyone holding it can forge a valid
+# signature over any artifact, which is precisely what the signature exists to
+# make impossible.
+data/keys/
 # Anchored, not a bare `logs/`: unanchored, that pattern also matched
 # backend/observability/logs/ — a real Python package whose __init__.py was
 # silently dropped from the repository, so a fresh clone could not import it.

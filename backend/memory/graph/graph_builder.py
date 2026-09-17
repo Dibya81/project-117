@@ -143,11 +143,17 @@ class GraphBuilder:
             doc_id = row.get("id") or row.get("documentId")
             if not doc_id:
                 continue
+            # The document's clearance travels with its node. A graph that knows
+            # a document exists but not how sensitive it is can only be filtered
+            # by hiding every document, which is not filtering — and a node
+            # reached by traversal must obey the same rule as a direct lookup,
+            # or walking to a document becomes the way around clearance.
             self.graph.add_entity(
                 ent.document(
                     str(doc_id),
                     name=row.get("title") or row.get("name"),
                     kind=row.get("type"),
+                    clearance=row.get("clearance"),
                 )
             )
             for tag in row.get("equipment") or ():

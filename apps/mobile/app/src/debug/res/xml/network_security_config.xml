@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Debug-only override. It replaces the main network_security_config.xml for the
+    debug variant (same resource name), so a sideloaded debug build can reach a
+    developer's LAN backend at an arbitrary private address that the strict main
+    config cannot enumerate.
+
+    Release builds never see this file: they keep the main policy, whose base
+    config denies cleartext everywhere except the emulator/loopback hosts. This
+    override exists so LOCAL mode is usable in a debug build without weakening
+    the released APK.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

@@ -465,6 +465,17 @@ class SimulationStore:
         rows = self.query("SELECT definition FROM plants WHERE id=?", (plant_id,))
         return json.loads(rows[0]["definition"]) if rows else None
 
+    def plant_origin(self, plant_id: str) -> str | None:
+        """Where this plant came from: 'dataset' or 'builder'.
+
+        The origin decides whether a re-registration may overwrite the stored
+        definition (dataset plants are protected from runtime write-back), so it
+        must survive a reset — otherwise a Builder plant becomes a "dataset"
+        plant and its next save is silently discarded.
+        """
+        rows = self.query("SELECT origin FROM plants WHERE id=?", (plant_id,))
+        return rows[0]["origin"] if rows else None
+
     def list_saved_plants(self, origin: str | None = None) -> list[dict]:
         if origin:
             return self.query(

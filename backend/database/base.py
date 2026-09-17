@@ -49,6 +49,78 @@ def create_session_factory(engine: Engine) -> sessionmaker[Session]:
 def init_db(engine: Engine) -> None:
     """Create tables. Alembic migrations replace this in Phase 17."""
     Base.metadata.create_all(engine)
+    apply_additive_migrations(engine)
+
+
+#: Columns added to existing tables after those tables shipped. ``create_all``
+#: creates missing *tables* but never ALTERs one that already exists, so a
+#: running install (``data/project117.db`` is written, not thrown away) needs
+#: these applied explicitly.
+#:
+#: Each entry is additive and nullable, which is the only kind of change SQLite
+#: performs without a table rewrite — so this is safe to run on every startup
+#: against a live file, and safe to run twice.
+_ADDITIVE_COLUMNS: dict[str, dict[str, str]] = {
+    # Tamper-evident audit chain (Phase 2, gap 1). The chain module backfills
+    # the values; this only makes room for them.
+    "audit_events": {
+        "chain_seq": "INTEGER",
+        "previous_hash": "TEXT",
+        "current_hash": "TEXT",
+    },
+    # Ed25519 artifact signatures (Phase 2, gap 2). Existing rows default to
+    # 'unsigned', which is the honest value: they were never signed.
+    "artifacts": {
+        "signature_status": "VARCHAR(32) DEFAULT 'unsigned'",
+        "signature_path": "VARCHAR(1024)",
+        "signature_key_id": "VARCHAR(64)",
+        "signed_at": "DATETIME",
+    },
+}
+
+
+def apply_additive_migrations(engine: Engine) -> list[str]:
+    """Add any missing columns to existing SQLite tables. Returns what it added.
+
+    A no-op on a fresh database (``create_all`` already made the columns) and on
+    every non-SQLite backend, where Alembic will own schema evolution. Logged
+    loudly when it does something, because a schema change at startup is worth
+    seeing in the log.
+    """
+    if engine.dialect.name != "sqlite":
+        return []
+
+    from sqlalchemy import inspect, text
+
+    added: list[str] = []
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    with engine.begin() as connection:
+        for table, columns in _ADDITIVE_COLUMNS.items():
+            if table not in existing_tables:
+                continue
+            present = {column["name"] for column in inspector.get_columns(table)}
+            for name, declaration in columns.items():
+                if name in present:
+                    continue
+                connection.execute(
+                    text(f"ALTER TABLE {table} ADD COLUMN {name} {declaration}")
+                )
+                added.append(f"{table}.{name}")
+        if "audit_events" in existing_tables:
+            connection.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_audit_events_chain_seq "
+                    "ON audit_events (chain_seq)"
+                )
+            )
+    if added:
+        import logging
+
+        logging.getLogger(__name__).info(
+            "schema: applied additive column migration(s): %s", ", ".join(added)
+        )
+    return added
 
 
 def session_scope(session_factory: sessionmaker[Session]) -> Iterator[Session]:

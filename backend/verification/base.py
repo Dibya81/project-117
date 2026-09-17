@@ -76,6 +76,9 @@ class VerificationInput:
     #: Sandbox service, when available, so calculation checks can recompute
     #: arithmetic in isolation instead of trusting the model's mental maths.
     sandbox: Any = None
+    #: Durable audit sink, when available. The audit-chain checker walks its
+    #: hash chain; without it that check is SKIPPED, never passed.
+    audit: Any = None
     job_id: str | None = None
     user: str | None = None
     #: Extra per-check context (expected slide count, tolerance, policy).

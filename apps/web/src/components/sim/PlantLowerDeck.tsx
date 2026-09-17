@@ -94,30 +94,19 @@ export function PlantLowerDeck({
 }) {
   const [activeTab, setActiveTab] = useState<"live" | "trends" | "maintenance" | "related">("live");
 
-  // If no unit is explicitly selected, default to FCC Unit C-201
-  const displaySelected = selected || {
-    id: "e-C-201",
-    tag: "C-201",
-    name: "FCC Unit (C-201)",
-    kind: "column" as EquipmentDef["kind"],
-    area_id: "Conversion",
-    x: 440,
-    y: 340,
-    criticality: 3,
-    capacity: 18000,
-    state: "normal",
-    sensors: [],
-    failure_modes: ["overpressure", "catalyst_fouling"],
-    manufacturer: "Meridian Heavy Industries",
-    model: "MHI-FCC-2024",
-    installed: "2024-03-15",
-    last_inspection: "2026-08-20",
-  };
+  // The selected asset is exactly the asset the operator selected. There is no
+  // default: inventing one (the old code substituted a hardcoded "FCC Unit
+  // C-201" with made-up sensors and failure modes) both showed a plant asset
+  // that does not exist and let the console POST a fault at equipment the
+  // backend has never heard of, which is a 404 with no agent response.
+  const displaySelected = selected;
 
-  const isFCC =
-    displaySelected.tag.includes("C-201") ||
-    displaySelected.id.includes("C-201") ||
-    displaySelected.name.toLowerCase().includes("fcc");
+  const isFCC = Boolean(
+    displaySelected &&
+      (displaySelected.tag.includes("C-201") ||
+        displaySelected.id.includes("C-201") ||
+        displaySelected.name.toLowerCase().includes("fcc")),
+  );
 
   return (
     <div className="mr-lowerdeck" data-testid="lower-deck">
@@ -127,6 +116,16 @@ export function PlantLowerDeck({
           <span className="mr-card-title">Selected Equipment</span>
         </header>
 
+        {!displaySelected ? (
+          <div className="mr-sel-empty" data-testid="no-asset-selected">
+            <Icon name="equipment" size={22} />
+            <b>No asset selected</b>
+            <p>
+              Pick a unit on the drawing to inspect its live instruments, take one out
+              of service, or inject a failure.
+            </p>
+          </div>
+        ) : (
         <div className="mr-sel-layout">
           {/* Left Column: 3D Visual & Core Details */}
           <div className="mr-sel-profile">
@@ -383,6 +382,7 @@ export function PlantLowerDeck({
             </div>
           </div>
         </div>
+        )}
       </section>
 
       {/* 2. PROCESS STREAMS CARD */}

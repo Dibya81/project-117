@@ -62,3 +62,48 @@ def test_implemented_endpoint_is_no_longer_501(client, method, path, payload, ex
         f"{method.upper()} {path} regressed to 501 — it is implemented, so either "
         "the route broke or this file's IMPLEMENTED list is wrong"
     )
+
+
+# --- the Security Console's status endpoint ---------------------------------
+#
+# These live here because the whole point of the endpoint is the difference
+# between "implemented" and "verified". A row that is green because code exists
+# is the failure this console exists to prevent, so the assertions are about the
+# resolution logic, not about the shape of the payload.
+
+
+def test_sovereignty_status_reports_sandbox_and_os_egress_as_unavailable(client):
+    payload = client.get("/api/security/sovereignty").json()
+    by_key = {entry["key"]: entry for entry in payload["status"]}
+    # Both are genuinely unreachable on this host, and neither may be reported
+    # as enforced on the strength of a configuration flag.
+    assert by_key["sandbox"]["state"] == "NOT AVAILABLE"
+    assert "OpenSandbox is not running" in by_key["sandbox"]["detail"]
+
+
+def test_sovereignty_status_never_greens_a_control_without_evidence(client):
+    payload = client.get("/api/security/sovereignty").json()
+    for entry in payload["status"] + payload["capabilities"]:
+        assert entry["state"] in {"VERIFIED", "IMPLEMENTED", "PARTIAL", "NOT AVAILABLE"}
+        # Every row must name what was measured, or say nothing was.
+        assert entry["detail"], entry["key"]
+        if entry["state"] == "NOT AVAILABLE":
+            assert entry["detail"] != "ok"
+
+
+def test_security_evaluation_exercises_real_refusals(client):
+    payload = client.post("/api/security/evaluation").json()
+    by_id = {row["id"]: row for row in payload["results"]}
+    # The three controls this build has are exercised and pass.
+    assert by_id["unauthorized_privileged_action"]["status"] == "PASS"
+    assert by_id["unauthorized_retrieval"]["status"] == "PASS"
+    assert by_id["external_egress"]["status"] == "PASS"
+    # The two it does not have are reported as absent, not as passing.
+    assert by_id["prompt_injection_in_document"]["status"] == "NOT IMPLEMENTED"
+    assert by_id["insufficient_evidence"]["status"] == "NOT IMPLEMENTED"
+
+
+def test_security_events_endpoint_excludes_transport_rows(client):
+    payload = client.get("/api/security/events").json()
+    assert payload["available"] is True
+    assert all(not event["action"].startswith("http.") for event in payload["events"])

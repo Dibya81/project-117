@@ -147,6 +147,17 @@ class Artifact(Base):
     # Neither may be presented to a user as a verified artifact.
     verification_status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
     verification_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # --- Ed25519 signature (Phase 2) --------------------------------------
+    # The SHA-256 above proves the file did not change; the signature proves
+    # *nobody substituted it*, which needs a key the database owner does not
+    # have. 'signed' | 'unsigned' | 'signature_failed' - 'unsigned' is a real
+    # state and is reported as one, never dressed up as verified.
+    signature_status: Mapped[str] = mapped_column(
+        String(32), default="unsigned", index=True
+    )
+    signature_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    signature_key_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     spec_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(

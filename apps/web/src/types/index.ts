@@ -121,6 +121,12 @@ export interface Equipment {
   sensors: SensorReading[];
   last_inspection?: ISODate;
   insight?: string;
+  /**
+   * The real plant tag (`P-1001`) — the identifier printed on the asset and
+   * encoded in its QR label. Distinct from `id` (`e-P-1001`); the equipment
+   * index resolves either. Absent only when the dataset record carries no tag.
+   */
+  tag?: string;
 }
 
 export interface SensorReading {
@@ -250,6 +256,27 @@ export interface HealthResponse {
     };
     blocked_hosts?: string[];
     allowed_hosts?: string[];
+    /**
+     * The most recent decisions, newest first, exactly as the monitor recorded
+     * them. `agent`/`task_id` are null outside a task context and are shown as
+     * such rather than inferred.
+     */
+    recent?: {
+      host?: string | null;
+      scheme?: string | null;
+      decision?: string;
+      at?: number;
+      reason?: string | null;
+      local?: boolean;
+      port?: number | null;
+      agent?: string | null;
+      task_id?: string | null;
+    }[];
+    /**
+     * Live subscribers to the sentinel SSE stream. Deliberately streamed only
+     * while a security page is mounted, so this is 0 when none is open.
+     */
+    sentinel_subscribers?: number;
   };
 }
 

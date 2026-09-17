@@ -96,13 +96,23 @@
 
 .cs-shell {
   display: grid;
-  grid-template-columns: 64px 1fr;
+  /* `minmax(0, 1fr)` rather than `1fr`: a grid track's automatic minimum is
+     `auto`, so a wide table or an unbreakable mono string in the content
+     column could push the track past the viewport and give the whole page a
+     horizontal scrollbar. The explicit `0` minimum lets the column shrink. */
+  grid-template-columns: 64px minmax(0, 1fr);
   min-height: 100vh;
   transition: grid-template-columns 180ms ease;
 }
-.cs-shell--expanded { grid-template-columns: 232px 1fr; }
+.cs-shell--expanded { grid-template-columns: 232px minmax(0, 1fr); }
 
-.cs-main { display: flex; flex-direction: column; min-width: 0; }
+/* `.cs-main` is *placed* in the content column instead of relying on
+   auto-placement. With the rail hidden at mobile widths the rail's grid item
+   disappears, and auto-placement then dropped the whole page into the 64px
+   first column — the top bar and every page rendered 64px wide. Explicit
+   placement plus the mobile override below keeps the content in the content
+   column no matter which items are present. */
+.cs-main { grid-column: 2; display: flex; flex-direction: column; min-width: 0; }
 
 .cs-content {
   flex: 1;
@@ -2140,6 +2150,18 @@
 
 .cs { color-scheme: light; }
 
+/* ---- header geometry tokens ----
+   One place for the shell's sticky geometry, so the top bar, the rail and
+   every in-page sticky surface below the bar agree on where the bar ends.
+   `.home-command` used to hardcode `top: 74px` ("10px + 60px" when the real
+   values were 14px + 60px) and was flush against the bar at every width. */
+.cs {
+  --p117-topbar-offset: 14px;
+  --p117-topbar-h: 60px;
+  /* Air between the top bar and any in-page sticky surface beneath it. */
+  --p117-topbar-gap: 6px;
+}
+
 /* ---- shell: air around everything ---- */
 .cs-shell {
   padding: 14px;
@@ -2150,8 +2172,8 @@
 /* ---- the dock ---- */
 .cs-rail {
   position: sticky;
-  top: 14px;
-  height: calc(100vh - 28px);
+  top: var(--p117-topbar-offset, 14px);
+  height: calc(100vh - 2 * var(--p117-topbar-offset, 14px));
   border-right: 0;
   border: 1px solid var(--line);
   border-radius: 20px;
@@ -2213,8 +2235,15 @@
 /* ---- topbar: a floating glass bar, not a heavy strip ---- */
 .cs-topbar {
   position: sticky;
-  top: 14px;
-  height: 60px;
+  /* Same token the rail uses, so the two sticky surfaces stay aligned. */
+  top: var(--p117-topbar-offset, 14px);
+  height: var(--p117-topbar-h, 60px);
+  /* The bar is in normal flow above `.cs-content`, so it can never cover the
+     content at rest; when the page scrolls it sticks and the content passes
+     beneath its own glass. `nowrap` + `min-width: 0` keep it exactly one row
+     tall at every width instead of growing into the page. */
+  flex-wrap: nowrap;
+  min-width: 0;
   margin-bottom: 4px;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -2226,6 +2255,13 @@
   padding: 8px 16px;
   overflow: hidden;
 }
+/* Anchor targets (deep links, command-palette jumps) must not land under the
+   sticky bar. */
+.cs-content :is([id]) {
+  scroll-margin-top: calc(var(--p117-topbar-offset, 14px) + var(--p117-topbar-h, 60px) + 12px);
+}
+.cs-topbar__brand,
+.cs-topbar__plant { flex: 0 0 auto; }
 .cs-threeui-dock {
   border-radius: 16px;
   opacity: 0.5;
@@ -2304,7 +2340,18 @@
 
 /* ---- mobile dock ---- */
 @media (max-width: 860px) {
+  .cs {
+    --p117-topbar-offset: 10px;
+    --p117-topbar-h: 54px;
+  }
   .cs-shell { padding: 10px; gap: 10px; }
+  /* The rail's width is animated by Framer Motion and written to the element
+     as an inline `grid-template-columns`, which a plain media-query rule
+     cannot override. `!important` is what makes the single-column mobile
+     layout win, and `.cs-main` is re-placed in the one remaining column. */
+  .cs-shell,
+  .cs-shell--expanded { grid-template-columns: minmax(0, 1fr) !important; }
+  .cs-main { grid-column: 1; }
   .cs-rail {
     position: fixed;
     inset: auto 10px 10px 10px;
@@ -2312,7 +2359,33 @@
     border-radius: 18px;
     border: 1px solid var(--line);
   }
-  .cs-topbar { top: 10px; height: 54px; }
+  .cs-topbar { top: var(--p117-topbar-offset); height: var(--p117-topbar-h); gap: 8px; }
+  /* The top bar is one fixed-height row. Below 860px the wordmark and the
+     search field's label are what make the row too wide for the viewport, so
+     those come off first — the wordmark is repeated by the page content, and
+     the palette trigger keeps its control (and its aria-label) as an icon.
+     Every interactive control survives; only decoration is dropped. */
+  .cs-topbar__brand { display: none; }
+  .cs-search-trigger { flex: 0 0 auto; padding: 0 9px; }
+  .cs-search-trigger > span,
+  .cs-search-trigger kbd { display: none; }
+  .cs-userchip__name { display: none; }
+  /* Wide data tables must scroll inside their own panel instead of widening
+     the document. Panels that already wrap their table in a scroll container
+     are unaffected; the ones that do not are fixed here, once. */
+  .cs-panel__body > .cs-table,
+  .cs-stack > .cs-table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+  /* Two more shapes that widened the document once the shell stopped
+     squeezing content into a 64px column: a flex row whose two halves cannot
+     both fit, and a chip holding an unbreakable mono string (a hash algorithm,
+     a digest). Both wrap on a phone instead of pushing the page sideways. */
+  .cs-row { flex-wrap: wrap; }
+  .cs-tag { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
   .cs-mobiletabs {
     position: fixed;
     left: 10px; right: 10px; bottom: 10px;
@@ -2818,13 +2891,10 @@
    The reference composition: one dominant 3D object with its satellites, two
    operational panels to the right, and four compact sections underneath.
    Nothing else belongs on this page. */
-.home-lede {
-  max-width: 720px;
-  margin: -6px 0 16px;
-  font-size: 14px;
-  line-height: 1.65;
-  color: var(--ink-2);
-}
+/* `.home-lede` was deleted with the marketing copy it styled (redesign item 4:
+   the lede duplicated the landing page). `.home-main` / `.home-side` below are
+   no longer rendered either — the page is a 12-column `.home-dash` grid now —
+   but they are left in place because the redesign only appends rules. */
 .home-main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 312px;
@@ -2837,7 +2907,11 @@
   min-height: clamp(460px, calc(100vh - 340px), 780px);
   border: 1px solid var(--line-2);
   border-radius: 14px;
-  overflow: hidden;
+  /* NOT `overflow: hidden`: an orbiting card near the frame edge reveals its
+     name by growing, and clipping the stage cut that label in half. The two
+     layers that genuinely need clipping — the drifting mesh and the WebGL
+     canvas — are clipped individually below. */
+  overflow: visible;
   background: radial-gradient(ellipse 70% 60% at 50% 40%, #ffffff, #eef3f9 70%, #e6edf6);
 }
 .k3 canvas { display: block; }
@@ -2848,14 +2922,24 @@
   pointer-events: none;
 }
 
-/* The core's name, sitting on the object rather than on a card over it.
-   No background, no border: white type with a soft shadow so it reads against
-   the blue surface it is printed on. */
+/* The core's nameplate, centred on the plinth.
+   It was bare white type relying on a shadow, which is thin on a light plinth
+   and read as a stray caption. A dark glass chip gives it a defined edge and
+   keeps the white line crisp wherever the orb's highlight falls. */
 .k3-plate {
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
+  padding: 5px 15px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 209, 255, 0.3);
+  background: linear-gradient(180deg, rgba(13, 32, 61, 0.74), rgba(9, 21, 42, 0.66));
+  backdrop-filter: blur(9px) saturate(1.4);
+  -webkit-backdrop-filter: blur(9px) saturate(1.4);
+  box-shadow:
+    0 6px 18px rgba(9, 22, 44, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
   pointer-events: none;
   white-space: nowrap;
   text-align: center;
@@ -2863,18 +2947,22 @@
 .k3-plate b {
   font-size: 11px;
   font-weight: 700;
+  line-height: 1.1;
   letter-spacing: 0.3em;
+  /* The chip is already centred; the tracking adds a trailing space that would
+     push the line optically left, so it is compensated here. */
+  text-indent: 0.3em;
   text-transform: uppercase;
   color: #ffffff;
-  text-shadow: 0 1px 7px rgba(18, 48, 105, 0.7);
 }
 .k3-plate span {
   font-family: var(--mono);
   font-size: 7.5px;
-  letter-spacing: 0.16em;
+  line-height: 1.1;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.86);
-  text-shadow: 0 1px 6px rgba(18, 48, 105, 0.65);
+  color: rgba(206, 231, 255, 0.84);
+  text-indent: 0.14em;
 }
 
 .k3-card {
@@ -2913,29 +3001,2631 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.42),
     0 3px 8px rgba(15, 23, 42, 0.16);
 }
-/* Collapsed by default: the label costs no space until the pointer is on it. */
+/* Collapsed by default: the label costs no space until the pointer is on it.
+   The reveal is a `max-width` slide rather than a width animation, so the body
+   always ends up exactly as wide as its own content — the cap is a ceiling, not
+   a size, which is what makes the name impossible to truncate. */
 .k3-card__body {
   display: flex;
   flex-direction: column;
   gap: 1px;
   text-align: left;
+  /* The card is a flex row, and a default flex item shrinks below its content —
+     which squeezed the last few pixels off "Operational Memory" even at the
+     full reveal width. `flex: 0 0 auto` makes the body exactly as wide as the
+     text, so the label is never clipped however long it is. */
+  flex: 0 0 auto;
   max-width: 0;
   overflow: hidden;
   opacity: 0;
-  transition: max-width 200ms ease, opacity 160ms ease, margin-left 200ms ease;
+  /* Every line stays on one line and is never ellipsised: the card grows to the
+     name, never the name down to the card. */
+  white-space: nowrap;
+  transition:
+    max-width 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 180ms ease,
+    margin-left 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .k3-card.is-hot,
 .k3-card:focus-visible {
   border-color: #38bdf8;
   box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
 }
+/* 22rem is far wider than the longest label + descriptor + figure together
+   (~101px measured), so the cap can never cut a name — it only stops the
+   transition from being open-ended. */
 .k3-card.is-hot .k3-card__body,
 .k3-card:focus-visible .k3-card__body {
-  max-width: 190px;
+  max-width: 22rem;
   opacity: 1;
-  margin-left: 9px;
+  margin-left: 10px;
 }
-.k3-card__body b { font-size: 12px; color: #0f172a; }
-.k3-card__body span { font-size: 10px; color: #64748b; }
+.k3-card__body b {
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  color: #0f172a;
+  white-space: nowrap;
+}
+.k3-card__body span { font-size: 10.5px; color: #64748b; }
+.k3-card__sub { white-space: nowrap; }
 .k3-card.is-hot { transform-origin: center; }
-.k3-card.is-dim { opacity: 0.34; }
+/* `.is-dim` keeps its role as the "another card is hovered" hook — the opacity
+   itself is computed in KnowledgeCore3D so it cannot multiply with the depth
+   term and leave the un-hovered cards invisible. */
+.k3-card.is-dim { --k3-dimmed: 1; }
+
+/* ==========================================================================
+   GLASS SHELL — elevation pass
+   --------------------------------------------------------------------------
+   The shell was already a light floating panel, but the surfaces were nearly
+   opaque and the active nav item was painted twice (a CSS background plus the
+   ::before bar). This layer makes the glass read as glass and hands the active
+   marker entirely to Framer Motion's shared `layoutId` element, so there is
+   exactly one highlight and it glides between items.
+   ========================================================================== */
+
+/* The rail's width is animated frame-by-frame by a spring on the grid column.
+   A CSS transition on the same property fights it — the browser would smooth
+   an already-smooth value and the collapse would lag the pointer. */
+.cs-shell { transition: none; }
+
+.cs-rail {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 12px 32px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.cs-rail__logo {
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+  color: #0f172a;
+  cursor: pointer;
+  background: none;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+.cs-rail__logo b { color: #0891b2; }
+.cs-rail__pin { margin-left: auto; color: #94a3b8; display: flex; }
+
+.cs-topbar {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* ---- nav items: one highlight, owned by motion ---- */
+.cs-rail__item {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: none;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* The active background and bar are now the two motion spans. Leaving the CSS
+   versions on would stack a second, unmoving highlight under the gliding one. */
+.cs-rail__item[aria-current="page"] { background: none; }
+.cs-rail__item[aria-current="page"]::before { display: none; }
+.cs-rail__item:not([aria-current="page"]):hover { background: rgba(15, 23, 42, 0.035); }
+.cs-rail__label { font-size: 12.5px; }
+
+/* ---- command palette trigger: frosted, with the shortcut it owns ---- */
+.cs-search-trigger {
+  height: 38px;
+  max-width: 460px;
+  flex: 1 1 320px;
+  min-width: 0;
+  padding: 0 6px 0 13px;
+  gap: 9px;
+  border-radius: 11px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  color: #64748b;
+  font-size: 12.5px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+.cs-search-trigger:hover {
+  border-color: rgba(34, 211, 238, 0.55);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 0 0 3px rgba(34, 211, 238, 0.14);
+}
+.cs-search-trigger kbd {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: #475569;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 6px;
+  padding: 2px 6px;
+  background: rgba(248, 250, 252, 0.9);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
+/* ---- user chip + posture card get the same glass ---- */
+.cs-userchip {
+  border-radius: 11px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.cs-userchip__avatar {
+  background: linear-gradient(140deg, #22d3ee, #2563eb);
+  color: #ffffff;
+}
+.cs-rail__posture {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(226, 232, 240, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* ==========================================================================
+   HOME — command centre
+   --------------------------------------------------------------------------
+   These classes had no rules at all: the plant-status figures rendered as
+   unspaced running text ("58Equipment 224Sensors") because nothing laid them
+   out. They are defined here for the first time, as frosted glass over the
+   ice-blue field the shell paints.
+   ========================================================================== */
+
+.home-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.home-card {
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 8px 24px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.home-glass { background: rgba(255, 255, 255, 0.62); }
+.home-card--row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.home-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.home-card__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #475569;
+}
+.home-card__label {
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+.home-card__big {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+.home-card__sub { font-size: 11px; color: #64748b; text-align: right; }
+
+/* ---- telemetry counters ---- */
+.home-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+.home-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 9px 11px;
+  border-radius: 11px;
+  border: 1px solid rgba(226, 232, 240, 0.65);
+  background: rgba(248, 250, 252, 0.7);
+}
+.home-stat b {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+.home-stat b.is-crit { color: #dc2626; }
+.home-stat span {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+/* ---- live pulsing status badges ---- */
+.home-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.home-badge--ok { background: rgba(16, 185, 129, 0.13); color: #047857; }
+.home-badge--crit { background: rgba(239, 68, 68, 0.13); color: #b91c1c; }
+.home-badge__pulse {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+/* An expanding ring, not a fading dot: the emerald/amber state stays readable
+   while the pulse says "this is live right now". */
+.home-badge__pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: currentColor;
+  animation: home-pulse 1.9s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+@keyframes home-pulse {
+  0% { transform: scale(1); opacity: 0.65; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-badge__pulse::after { animation: none; opacity: 0; }
+}
+
+/* ---- activity feed ---- */
+.home-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.home-feed li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 6px;
+  border-radius: 8px;
+  transition: background 140ms ease;
+}
+.home-feed li:hover { background: rgba(241, 245, 249, 0.85); }
+.home-feed__dot { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; }
+.home-feed__dot.is-ok { background: #10b981; }
+.home-feed__dot.is-crit { background: #ef4444; }
+.home-feed__dot.is-ai { background: #0891b2; }
+.home-feed__text {
+  font-size: 11.5px;
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.home-feed__at {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: #94a3b8;
+}
+.home-empty { margin: 0; font-size: 11.5px; line-height: 1.6; color: #64748b; }
+
+/* ---- quick actions: metallic cards with an animated lift ---- */
+.home-quick { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.home-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: linear-gradient(160deg, #ffffff 0%, #f1f5f9 100%);
+  font-size: 11px;
+  font-weight: 550;
+  color: #334155;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow:
+    0 1px 1px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition: border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+.home-action:hover {
+  border-color: rgba(34, 211, 238, 0.55);
+  color: #0e7490;
+  box-shadow:
+    0 6px 18px rgba(34, 211, 238, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+.home-action__go { opacity: 0; transform: translateX(-3px); transition: opacity 150ms ease, transform 150ms ease; }
+.home-action:hover .home-action__go { opacity: 1; transform: none; }
+
+/* ==========================================================================
+   KNOWLEDGE CORE — refraction stage
+   ========================================================================== */
+
+.k3 { background: linear-gradient(165deg, #f0f7ff 0%, #e9f2fd 55%, #e6effc 100%); }
+.k3-mesh { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.k3-mesh span {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(58px);
+  will-change: transform;
+}
+.k3-mesh__a {
+  width: 62%; aspect-ratio: 1 / 1; left: -10%; top: -16%;
+  background: radial-gradient(circle at 45% 45%, rgba(34, 211, 238, 0.30), rgba(34, 211, 238, 0) 62%);
+  animation: k3-drift-a 24s ease-in-out infinite;
+}
+.k3-mesh__b {
+  width: 58%; aspect-ratio: 1 / 1; right: -8%; bottom: -18%;
+  background: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.26), rgba(59, 130, 246, 0) 64%);
+  animation: k3-drift-b 31s ease-in-out infinite;
+}
+.k3-mesh__c {
+  width: 46%; aspect-ratio: 1 / 1; left: 30%; top: 20%;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 60%);
+  animation: k3-drift-c 38s ease-in-out infinite;
+}
+@keyframes k3-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(5%, 4%, 0) scale(1.1); }
+}
+@keyframes k3-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.06); }
+  50% { transform: translate3d(-6%, -4%, 0) scale(1); }
+}
+@keyframes k3-drift-c {
+  0%, 100% { transform: translate3d(-3%, 2%, 0) scale(1); opacity: 0.72; }
+  50% { transform: translate3d(4%, -3%, 0) scale(1.14); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .k3-mesh span { animation: none; }
+}
+.k3 canvas { position: relative; z-index: 2; }
+
+/* The cards are `Html`-projected now: drei owns their position, so the old
+   absolute/translate centring must go. Framer Motion writes the tilt inline. */
+.k3-card {
+  position: static;
+  left: auto;
+  top: auto;
+  gap: 0;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  box-shadow:
+    0 10px 30px rgba(15, 23, 42, 0.13),
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  will-change: transform, opacity;
+}
+.k3-card.is-hot {
+  border-color: rgba(34, 211, 238, 0.75);
+  box-shadow:
+    0 16px 40px rgba(8, 145, 178, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+.k3-card__count {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  color: #0891b2;
+  margin-top: 2px;
+}
+
+/* ==================================================================
+   AI WORKSPACE — glass command surface (/console/workspace redesign)
+   Appended by the workspace workstream. Everything below is scoped to
+   new class names (`cs-composer--glass`, `cs-seg*`, `cs-sess*`); no
+   existing cs-* rule above is rewritten.
+   ================================================================== */
+
+/* ---- composer: floating frosted field ----
+   `.cs-composer` still supplies the flex row; this restyles the surface
+   to the shell recipe: border-slate-200/80 + bg-white/80 + blur-xl. */
+.cs-composer--glass {
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  padding: 10px 10px 10px 16px;
+  align-items: flex-end;
+}
+.cs-composer--glass textarea {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  resize: none;
+  color: var(--ink-1);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.6;
+  padding: 8px 6px 6px 0;
+}
+.cs-composer--glass textarea::placeholder { color: var(--ink-3); }
+.cs-composer--glass textarea:focus-visible { outline: none; }
+
+.cs-composer__send--glass {
+  position: relative;
+  z-index: 1;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(8, 145, 178, 0.32);
+  border-radius: 12px;
+  background: linear-gradient(150deg, rgba(236, 254, 255, 0.96), rgba(207, 250, 254, 0.78));
+  color: #0891b2;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  transition: box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+.cs-composer__send--glass:hover:not(:disabled) {
+  border-color: rgba(6, 182, 212, 0.6);
+  background: linear-gradient(150deg, #ecfeff, #cffafe);
+  box-shadow: 0 6px 18px rgba(8, 145, 178, 0.2);
+}
+
+/* ---- inspection: segmented sliding glass control ---- */
+.cs-seg {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px) saturate(1.25);
+  -webkit-backdrop-filter: blur(16px) saturate(1.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.cs-seg__tab {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 7px 6px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+.cs-seg__tab:hover { color: var(--ink-1); }
+.cs-seg__tab.is-active { color: #0e7490; font-weight: 600; }
+.cs-seg__glider {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 10px;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.98), rgba(236, 254, 255, 0.92));
+  border: 1px solid rgba(6, 182, 212, 0.32);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 6px 16px rgba(8, 145, 178, 0.16);
+}
+.cs-seg__inner {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.cs-seg__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: rgba(8, 145, 178, 0.12);
+  color: #0e7490;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+}
+
+/* ---- sessions: day groups on a vertical timeline ---- */
+.cs-sessions { display: flex; flex-direction: column; padding: 6px 8px 0; }
+.cs-sessgroup + .cs-sessgroup { margin-top: 2px; }
+.cs-sessgroup__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: left;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+.cs-sessgroup__head:hover { background: rgba(15, 23, 42, 0.045); color: var(--ink-2); }
+.cs-sessgroup__chev { display: flex; flex: none; }
+.cs-sessgroup__count {
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.05);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+.cs-sesslist { position: relative; display: flex; flex-direction: column; padding: 2px 0 6px; overflow: hidden; }
+
+.cs-sess {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px 8px 24px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 140ms ease, box-shadow 140ms ease;
+}
+/* timeline node */
+.cs-sess::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 15px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1.5px solid rgba(148, 163, 184, 0.75);
+  transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+}
+/* timeline connector */
+.cs-sess::after {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 24px;
+  bottom: -4px;
+  width: 1px;
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.55), rgba(148, 163, 184, 0.06));
+}
+.cs-sess:last-child::after { display: none; }
+.cs-sess:hover { background: rgba(15, 23, 42, 0.045); }
+.cs-sess.is-active { background: rgba(8, 145, 178, 0.08); box-shadow: inset 2px 0 0 #0891b2; }
+.cs-sess.is-active::before { border-color: #0891b2; background: #0891b2; box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.16); }
+.cs-sess__icon { display: flex; flex: none; color: var(--ink-3); transition: color 140ms ease; }
+.cs-sess.is-active .cs-sess__icon { color: #0891b2; }
+.cs-sess__text { min-width: 0; flex: 1; }
+.cs-sess__title { display: block; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-sess__sub { display: block; margin-top: 1px; font-size: 11px; }
+.cs-sess__open {
+  display: flex;
+  flex: none;
+  color: #0891b2;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+.cs-sess:hover .cs-sess__open,
+.cs-sess:focus-visible .cs-sess__open { opacity: 1; transform: translateX(0); }
+
+/* ==================================================================
+   APPENDED — equipment 3D tilt cards + work-order Kanban board.
+   Additive only: every rule below is new, keyed to a class that did not
+   exist before, so nothing above this line changes meaning.
+   ================================================================== */
+
+/* ---- equipment: pointer-tracked tilt card ---- */
+.cs-eqtilt { height: 100%; }
+.cs-eqcard--motion {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  /* The base .cs-eqcard transitions `transform` for its own :hover lift; a CSS
+     transition on transform would lag every frame framer-motion writes, so the
+     motion card keeps only the paint transitions. */
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.cs-eqcard__glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 420ms ease;
+}
+.cs-eqcard--motion:hover .cs-eqcard__glare,
+.cs-eqcard--motion:focus-visible .cs-eqcard__glare { opacity: 1; }
+.cs-eqcard--motion:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.cs-eqcard__foot {
+  margin-top: auto;
+  padding-top: 13px;
+  font-size: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ---- equipment: per-instrument trend strip ---- */
+.cs-eqtrends {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.cs-eqtrend {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(248, 250, 252, 0.66));
+  padding: 7px 9px 8px;
+  min-width: 0;
+}
+.cs-eqtrend__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cs-eqtrend__label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cs-eqtrend__value { font-size: 11.5px; font-weight: 700; color: var(--ink-1); white-space: nowrap; }
+.cs-eqtrend--warn .cs-eqtrend__value { color: var(--amber); }
+.cs-eqtrend--crit .cs-eqtrend__value { color: var(--red); }
+/* The absent-series affordance: a hatched dashed frame, deliberately NOT a
+   line — a flat line would read as a real, healthy trend. */
+.cs-eqtrend__nodata {
+  margin-top: 6px;
+  height: 24px;
+  border: 1px dashed rgba(100, 116, 139, 0.55);
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(100, 116, 139, 0.1) 0 5px,
+    rgba(255, 255, 255, 0) 5px 10px
+  );
+}
+.cs-eqtrend__nodata span {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.cs-eqtrend__limit { margin-top: 5px; font-size: 9px; color: var(--ink-3); }
+
+/* ---- equipment: search field in the page head ---- */
+.cs-eqsearch {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.cs-eqsearch:focus-within { border-color: var(--line-glow); }
+.cs-eqsearch__glyph { color: var(--ink-3); flex: none; }
+.cs-eqsearch__input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink-1);
+  width: 190px;
+  min-width: 0;
+}
+.cs-eqsearch__input::placeholder { color: var(--ink-3); }
+.cs-eqsearch__clear {
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  flex: none;
+}
+.cs-eqsearch__clear:hover { color: var(--ink-1); }
+
+/* Session sidebar: honest empty state (the adapter returns [] until a session
+   source exists, so the rail must not pretend it is loading). */
+.cs-sessions-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 26px 18px 14px;
+  text-align: center;
+  color: var(--ink-3);
+}
+.cs-sessions-empty__title { font-size: 12.5px; font-weight: 550; color: var(--ink-1); }
+.cs-sessions-empty__sub { font-size: 11px; line-height: 1.55; max-width: 200px; }
+
+/* Evidence rows in the inspection panel: the inline style they carried was a
+   near-black box (rgba(6,10,16,0.5)) from the old dark register, which read as
+   a hole punched in the light glass panel. Same content, inner-card surface.
+   Named `cs-evrow`, not `cs-evidence`: that name is already taken above by the
+   legacy inline evidence block, whose `flex-direction: column` leaked in. */
+.cs-evrow {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font: inherit;
+  text-align: left;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+.cs-evrow:hover {
+  border-color: rgba(6, 182, 212, 0.4);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 4px 14px rgba(8, 145, 178, 0.1);
+}
+.cs-evrow__icon { flex: none; margin-top: 1px; color: #0891b2; }
+
+/* The stage no longer clips (an orbiting card must be able to reveal its label
+   past the frame), so the two layers that DO need a hard edge get it here. */
+.k3-mesh { border-radius: 14px; overflow: hidden; }
+.k3 canvas { border-radius: 14px; }
+
+/* ==================================================================
+   INDUSTRIAL MATERIALS — overview, register and per-material detail.
+
+   Appended for the materials workstream; nothing above is modified. These
+   classes carry only geometry and surface. Colour still means something: the
+   accent on a KPI card, the left rule on an insight and every chip tone are
+   bound to the semantic palette (cyan = intelligence, emerald = healthy,
+   amber = human decision, red = anomaly). The material *class* chip is
+   deliberately neutral slate, because "intermediate" is a taxonomy, not a
+   health state, and colouring it would claim a meaning it does not have.
+
+   Figures never carry units, arithmetic or formatting of their own — the
+   components in MaterialsKit render what the API returned.
+   ================================================================== */
+
+/* ---- KPI strip: the command counters ------------------------------- */
+
+.mat-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.mat-kpi {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 16px 13px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 20px rgba(15, 23, 42, 0.03);
+}
+.mat-kpi::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--mat-accent, rgba(15, 23, 42, 0.08));
+}
+.mat-kpi--ai { --mat-accent: rgba(8, 145, 178, 0.55); }
+.mat-kpi--violet { --mat-accent: rgba(124, 58, 237, 0.45); }
+.mat-kpi--crit { --mat-accent: rgba(220, 38, 38, 0.5); }
+.mat-kpi--warn { --mat-accent: rgba(245, 158, 11, 0.55); }
+
+.mat-kpi__label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.mat-kpi__value {
+  margin-top: 9px;
+  font-family: var(--mono);
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--ink-1);
+}
+.mat-kpi__meta {
+  margin-top: 7px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.mat-kpi__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* ---- neutral chips: class taxonomy, references, keys --------------- */
+
+.mat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.8);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+.mat-chip b {
+  font-weight: 650;
+  color: var(--ink-1);
+}
+
+/* ---- dense data table (register + critical positions) -------------- */
+
+.mat-tablewrap { overflow-x: auto; }
+.mat-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.mat-table th {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+.mat-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.55);
+  font-size: 12.5px;
+  vertical-align: middle;
+  color: var(--ink-2);
+}
+.mat-table tbody tr { cursor: pointer; transition: background 120ms ease; }
+.mat-table tbody tr:hover { background: rgba(248, 250, 252, 0.9); }
+.mat-table tbody tr:last-child td { border-bottom: 0; }
+.mat-table .mat-num { text-align: right; }
+.mat-table__id {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #0e7490;
+}
+.mat-table__id:hover { text-decoration: underline; }
+.mat-table__name {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ink-1);
+}
+.mat-empty { color: #94a3b8; }
+.mat-link {
+  color: #0e7490;
+  font-weight: 550;
+}
+.mat-link:hover { text-decoration: underline; }
+
+/* ---- glass row lists (cover, movements, insights, memory) ---------- */
+
+.mat-list { display: flex; flex-direction: column; gap: 7px; }
+.mat-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.55);
+  transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+.mat-row:hover {
+  border-color: rgba(6, 182, 212, 0.35);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 14px rgba(8, 145, 178, 0.08);
+}
+.mat-row__main { flex: 1 1 auto; min-width: 0; }
+.mat-row__title { font-size: 13px; font-weight: 600; color: var(--ink-1); }
+.mat-row__sub { margin-top: 2px; font-size: 11px; color: var(--ink-3); }
+
+/* ---- figure blocks: a label above an API-supplied value ----------- */
+
+.mat-figs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 10px;
+}
+.mat-fig {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 12px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+}
+.mat-fig__k {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.mat-fig__v { font-size: 14px; color: var(--ink-1); }
+.mat-fig--plain {
+  border: 0;
+  background: none;
+  padding: 0;
+}
+.mat-fig--right { align-items: flex-end; text-align: right; }
+
+/* ---- raw-material cover rows -------------------------------------- */
+
+.mat-cover { display: flex; flex-direction: column; gap: 7px; }
+.mat-cover__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.55);
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.mat-cover__row:hover { border-color: rgba(6, 182, 212, 0.3); background: rgba(255, 255, 255, 0.9); }
+.mat-cover__lim { grid-column: 1 / -1; }
+
+/* ---- AI insights: severity rule, evidence disclosure --------------- */
+
+.mat-sevgroup + .mat-sevgroup { margin-top: 12px; }
+.mat-sevgroup__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.mat-sevgroup__head::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(15, 23, 42, 0.07);
+}
+.mat-insight {
+  padding: 11px 13px;
+  border: 1px solid rgba(226, 232, 240, 0.65);
+  border-left: 3px solid var(--mat-sev, rgba(148, 163, 184, 0.5));
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.62);
+}
+.mat-insight + .mat-insight { margin-top: 7px; }
+.mat-insight--CRITICAL { --mat-sev: #dc2626; }
+.mat-insight--WARNING { --mat-sev: #f59e0b; }
+.mat-insight--INFO { --mat-sev: #0891b2; }
+.mat-insight__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 7px;
+}
+.mat-insight__msg {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-1);
+}
+.mat-ev { margin-top: 9px; }
+.mat-ev > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #0e7490;
+}
+.mat-ev > summary::-webkit-details-marker { display: none; }
+.mat-ev > summary::before {
+  content: "▸";
+  font-size: 9px;
+  transition: transform 140ms ease;
+}
+.mat-ev[open] > summary::before { transform: rotate(90deg); }
+.mat-ev__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 6px 16px;
+  margin-top: 9px;
+  padding: 10px 12px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.7);
+}
+.mat-ev__k {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.mat-ev__v { font-size: 12px; color: var(--ink-1); }
+
+/* ---- movement rows ------------------------------------------------- */
+
+.mat-move {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 12px;
+  padding: 9px 12px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.55);
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.mat-move:hover { border-color: rgba(6, 182, 212, 0.3); background: rgba(255, 255, 255, 0.9); }
+.mat-move__path {
+  margin-top: 3px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+}
+
+/* ---- layout helpers ------------------------------------------------ */
+
+.mat-stack { display: flex; flex-direction: column; gap: 14px; }
+.mat-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 14px 0; }
+@media (min-width: 1180px) {
+  .mat-cols { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+  .mat-cols--even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+.mat-section { margin-top: 14px; }
+.mat-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+
+/* ---- register: segmented class filter, search, pager ---------------- */
+
+.mat-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.mat-seg .cs-seg__tab { flex: 0 0 auto; padding: 7px 12px; }
+.mat-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 0 12px;
+  height: 36px;
+  min-width: 240px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+.mat-search:focus-within {
+  border-color: rgba(6, 182, 212, 0.5);
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
+}
+.mat-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  outline: none;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--ink-1);
+}
+.mat-search input::placeholder { color: var(--ink-3); }
+.mat-search__clear {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.mat-search__clear:hover { color: var(--ink-1); }
+.mat-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(226, 232, 240, 0.7);
+}
+.mat-pager__meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.mat-pager__spacer { flex: 1; }
+
+/* ---- detail: identity header, sparkline, memory list ---------------- */
+
+.mat-hero__id {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #0e7490;
+}
+.mat-hero__name {
+  margin: 4px 0 0;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink-1);
+}
+.mat-hero__desc {
+  margin: 6px 0 0;
+  max-width: 62ch;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.mat-hero__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.mat-spark {
+  display: block;
+  width: 100%;
+  height: 56px;
+  margin-top: 10px;
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.7);
+}
+.mat-memory__group + .mat-memory__group { margin-top: 12px; }
+.mat-memory__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.mat-memory__label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(15, 23, 42, 0.07);
+}
+.mat-callout {
+  padding: 10px 12px;
+  border: 1px dashed rgba(148, 163, 184, 0.55);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.6);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+@media (max-width: 720px) {
+  .mat-cover__row { grid-template-columns: minmax(0, 1fr) auto; }
+  .mat-move { grid-template-columns: auto minmax(0, 1fr); }
+  .mat-search { margin-left: 0; width: 100%; }
+}
+
+/* ==========================================================================
+   INDUSTRIAL MATERIALS — component styles
+   --------------------------------------------------------------------------
+   The materials surfaces are dense operational registers. The rules below are
+   shared by all seven pages plus the detail view, so a coverage verdict, a
+   quantity cell and a limitation note look the same everywhere the operator
+   meets them.
+
+   Two conventions run through this block:
+
+   * Numeric columns are `tabular-nums` monospace, so a changing figure never
+     reflows the cells beside it and columns align down the page.
+   * Row layouts are CSS grids with an explicit template rather than tables, so
+     the header and the body cannot drift out of alignment when a value wraps.
+
+   Every class here is prefixed `mat-`; nothing in this block touches the
+   existing console surfaces.
+   ========================================================================== */
+
+/* ---- segmented filters (class / period / window selectors) ---- */
+.mat-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 11px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(248, 250, 252, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.mat-seg__chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 550;
+  color: #475569;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mat-seg__chip:hover { color: #0e7490; }
+.mat-seg__chip[aria-pressed="true"],
+.mat-seg__chip.is-active { color: #0e7490; }
+.mat-seg__glide {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(8, 145, 178, 0.12);
+  z-index: 0;
+}
+.mat-seg__label, .mat-seg__glyph, .mat-seg__count { position: relative; z-index: 1; }
+.mat-seg__count {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  color: #64748b;
+}
+.mat-seg__glyph { display: inline-flex; color: inherit; }
+
+/* ---- toolbar ---- */
+.mat-toolbar--workbench {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.mat-toolbar__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 260px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: rgba(255, 255, 255, 0.85);
+}
+.mat-toolbar__search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  color: #0f172a;
+  outline: none;
+}
+.mat-toolbar__note { font-size: 11.5px; color: #64748b; }
+
+/* ---- inventory register: 11 columns, explicit so head and body agree ---- */
+.mat-inv { display: flex; flex-direction: column; min-width: 0; }
+.mat-inv__scroll { overflow-x: auto; }
+.mat-inv__head,
+.mat-inv__row {
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 1.7fr) minmax(120px, 0.9fr) minmax(110px, 0.8fr)
+    minmax(84px, 0.6fr) minmax(84px, 0.6fr) minmax(96px, 0.7fr)
+    minmax(76px, 0.55fr) minmax(80px, 0.6fr) minmax(52px, 0.4fr)
+    minmax(96px, 0.7fr) minmax(104px, 0.75fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 1080px;
+}
+.mat-inv__head {
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.mat-inv__row {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(241, 245, 249, 0.9);
+  transition: background 130ms ease;
+}
+.mat-inv__row:hover { background: rgba(248, 250, 252, 0.85); }
+.mat-inv__cell { min-width: 0; font-size: 12px; color: #334155; }
+.mat-inv__cell--num,
+.mat-inv__cell--avail,
+.mat-inv__cell--cover,
+.mat-inv__cell--status { display: flex; justify-content: flex-end; }
+.mat-inv__cell--avail { font-weight: 650; color: #0f172a; }
+.mat-inv__cell--material { display: flex; flex-direction: column; gap: 1px; }
+.mat-inv__name { font-size: 12.5px; font-weight: 600; color: #0f172a; }
+.mat-inv__id { font-family: var(--font-mono); font-size: 9.5px; color: #94a3b8; }
+.mat-inv__loc, .mat-inv__unit { font-family: var(--font-mono); font-size: 10.5px; color: #64748b; }
+.mat-inv__cell--class { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; color: #64748b; }
+.mat-inv__availpill { font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; color: #0f172a; }
+.mat-inv__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
+.mat-inv__empty { padding: 28px 12px; text-align: center; font-size: 12.5px; color: #64748b; }
+.mat-inv__skeleton { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.mat-inv__skeletonrow {
+  height: 34px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(241,245,249,0.9), rgba(226,232,240,0.6), rgba(241,245,249,0.9));
+  background-size: 200% 100%;
+  animation: mat-skeleton 1.4s ease-in-out infinite;
+}
+@keyframes mat-skeleton { to { background-position: -200% 0; } }
+
+/* ---- spare shelf ---- */
+.mat-shelf { display: flex; flex-direction: column; gap: 14px; }
+.mat-shelf__group { display: flex; flex-direction: column; gap: 8px; }
+.mat-shelf__rows { display: flex; flex-direction: column; gap: 8px; }
+.mat-shelf__head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.mat-shelf__mark { width: 4px; height: 16px; border-radius: 2px; background: #94a3b8; flex: 0 0 auto; }
+.mat-shelf__mark--stoppers { background: #dc2626; }
+.mat-shelf__mark--critical { background: #f59e0b; }
+.mat-shelf__mark--watch { background: #0891b2; }
+.mat-shelf__mark--healthy { background: #10b981; }
+.mat-shelf__title { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: #475569; }
+.mat-shelf__count {
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 650;
+  padding: 1px 7px; border-radius: 999px; background: rgba(148,163,184,0.18); color: #475569;
+}
+.mat-shelf__detail { font-size: 11px; color: #94a3b8; }
+
+.mat-spare {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.6fr) repeat(4, minmax(90px, 0.7fr)) minmax(150px, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.75);
+  background: rgba(255, 255, 255, 0.7);
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+.mat-spare:hover { border-color: rgba(203, 213, 225, 1); background: #fff; box-shadow: 0 6px 18px rgba(15,23,42,0.05); }
+.mat-spare__main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.mat-spare__ident { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mat-spare__name { font-size: 12.5px; font-weight: 650; color: #0f172a; }
+.mat-spare__id { font-family: var(--font-mono); font-size: 10px; color: #94a3b8; }
+.mat-spare__status { display: inline-flex; }
+.mat-spare__meta { display: flex; flex-direction: column; gap: 2px; }
+.mat-spare__metalabel { font-size: 9px; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; }
+.mat-spare__fig { font-family: var(--font-mono); font-size: 12.5px; font-weight: 650; color: #0f172a; font-variant-numeric: tabular-nums; }
+.mat-spare__fig--loc { font-size: 10.5px; font-weight: 500; color: #64748b; }
+.mat-spare__figlabel { font-size: 9px; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; }
+.mat-spare__pill {
+  display: inline-flex; align-items: baseline; gap: 4px;
+  padding: 5px 10px; border-radius: 9px;
+  border: 1px solid rgba(226,232,240,0.9); background: rgba(248,250,252,0.9);
+  font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: #0f172a;
+}
+.mat-spare__pillunit { font-size: 9.5px; font-weight: 600; color: #94a3b8; }
+.mat-spare__reqby { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.mat-spare__reqchips { display: flex; flex-wrap: wrap; gap: 4px; }
+.mat-spare__forecast { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mat-spare__forecastline { font-size: 11px; color: #475569; }
+.mat-spare__forecastsep { color: #cbd5e1; margin: 0 5px; }
+.mat-spare__forecastbasis { font-size: 9.5px; line-height: 1.4; color: #94a3b8; }
+
+.mat-reqchip {
+  display: inline-flex; align-items: baseline; gap: 5px;
+  padding: 3px 8px; border-radius: 7px;
+  border: 1px solid rgba(226,232,240,0.9); background: rgba(248,250,252,0.9);
+  font-size: 10.5px;
+}
+.mat-reqchip__id { font-family: var(--font-mono); font-weight: 600; color: #0e7490; }
+.mat-reqchip__qty { font-family: var(--font-mono); color: #334155; }
+.mat-reqchip__mode { font-size: 9.5px; color: #94a3b8; }
+.mat-reqchip.is-match { border-color: rgba(34,211,238,0.5); background: rgba(236,254,255,0.9); }
+
+/* ---- summary strip ---- */
+.mat-sumstrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+.mat-sum {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 11px 13px; border-radius: 12px;
+  border: 1px solid rgba(226,232,240,0.7); background: rgba(255,255,255,0.7);
+}
+.mat-sum__label { font-size: 9px; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; }
+.mat-sum__value { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; }
+.mat-sum__detail { font-size: 10.5px; color: #64748b; }
+
+/* ---- workbench ---- */
+.mat-workbench__verdict { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mat-workbench__mult { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #475569; }
+.mat-workbench__mult input {
+  width: 64px; height: 30px; padding: 0 8px; border-radius: 8px;
+  border: 1px solid rgba(226,232,240,0.95); font-family: var(--font-mono); font-size: 12px;
+}
+.mat-workbench__hint { margin: 0; font-size: 11px; line-height: 1.6; color: #64748b; }
+.mat-workbench__loading { padding: 18px; text-align: center; font-size: 12px; color: #64748b; }
+.mat-workbench__error {
+  padding: 12px 14px; border-radius: 10px;
+  border: 1px solid rgba(239,68,68,0.3); background: rgba(254,242,242,0.9);
+  font-size: 12px; color: #b91c1c;
+}
+.mat-assetselect {
+  height: 34px; min-width: 220px; padding: 0 10px; border-radius: 10px;
+  border: 1px solid rgba(226,232,240,0.95); background: #fff;
+  font: inherit; font-size: 12px; color: #0f172a;
+}
+.mat-prepare {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 14px; border-radius: 10px; cursor: pointer;
+  border: 1px solid rgba(8,145,178,0.4);
+  background: linear-gradient(160deg, #ffffff, #eff6ff);
+  font-size: 12px; font-weight: 650; color: #0e7490;
+  box-shadow: 0 1px 1px rgba(15,23,42,0.04), inset 0 1px 0 #fff;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.mat-prepare:hover:not(:disabled) { border-color: rgba(8,145,178,0.7); box-shadow: 0 8px 20px rgba(8,145,178,0.16), inset 0 1px 0 #fff; }
+.mat-prepare:disabled { opacity: 0.5; cursor: not-allowed; }
+.mat-panelnote { margin: 0; font-size: 11px; line-height: 1.6; color: #64748b; }
+.mat-provenance { font-size: 10px; color: #94a3b8; }
+
+/* ---- recommendation lines: 9 columns ---- */
+.mat-rec__summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.mat-rec__stat { display: flex; flex-direction: column; gap: 2px; }
+.mat-rec__statlabel { font-size: 9px; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; }
+.mat-rec__statvalue { font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; }
+.mat-rec__basis { font-family: var(--font-mono); font-size: 9.5px; font-weight: 500; color: #94a3b8; }
+.mat-rec__costbasis { font-size: 10.5px; line-height: 1.5; color: #94a3b8; }
+.mat-rec__sentence { margin: 0; font-size: 12.5px; line-height: 1.65; color: #334155; }
+.mat-rec__scroll { overflow-x: auto; }
+.mat-rec__table { display: flex; flex-direction: column; min-width: 1020px; }
+.mat-rec__row,
+.mat-rec__row--head {
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 1.7fr) minmax(80px, 0.7fr) minmax(86px, 0.7fr)
+    minmax(74px, 0.6fr) minmax(84px, 0.7fr) minmax(104px, 0.8fr)
+    minmax(104px, 0.8fr) minmax(104px, 0.8fr) minmax(88px, 0.7fr);
+  align-items: center;
+  gap: 10px;
+}
+.mat-rec__row--head {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(226,232,240,0.9);
+  font-size: 9.5px; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8;
+}
+.mat-rec__row { padding: 11px 0; border-bottom: 1px solid rgba(241,245,249,0.9); }
+.mat-rec__item { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.mat-rec__itemname { font-size: 12.5px; font-weight: 600; color: #0f172a; }
+.mat-rec__itemid { font-family: var(--font-mono); font-size: 9.5px; color: #94a3b8; }
+.mat-rec__itemmeta { font-size: 10px; color: #94a3b8; }
+.mat-rec__num { display: flex; justify-content: flex-end; font-variant-numeric: tabular-nums; }
+.mat-rec__surplus { display: flex; align-items: center; gap: 8px; justify-content: flex-end; font-weight: 650; }
+.mat-rec__short {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  background: rgba(254, 242, 242, 0.9);
+  color: #b91c1c;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.mat-rec__price, .mat-rec__cost { font-family: var(--font-mono); font-size: 12px; }
+.mat-rec__pricemove { font-size: 10px; }
+.mat-rec__unitbasis { font-size: 9.5px; color: #94a3b8; }
+.mat-rec__short { color: #b91c1c; font-weight: 650; }
+.mat-rec__calcstatus { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; color: #b45309; text-transform: uppercase; }
+.mat-rec__empty { padding: 20px; text-align: center; font-size: 12px; color: #64748b; }
+.mat-rec__foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* ---- requirements table: 8 columns ---- */
+.mat-req__scroll { overflow-x: auto; }
+.mat-req__table { display: flex; flex-direction: column; min-width: 900px; }
+.mat-req__row,
+.mat-req__row--head {
+  display: grid;
+  grid-template-columns:
+    minmax(200px, 1.7fr) minmax(76px, 0.65fr) minmax(84px, 0.7fr)
+    minmax(80px, 0.65fr) minmax(104px, 0.8fr) minmax(100px, 0.8fr)
+    minmax(100px, 0.8fr) minmax(96px, 0.75fr);
+  align-items: center;
+  gap: 10px;
+}
+.mat-req__row--head {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(226,232,240,0.9);
+  font-size: 9.5px; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8;
+}
+.mat-req__row { padding: 10px 0; border-bottom: 1px solid rgba(241,245,249,0.9); }
+.mat-req__item { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.mat-req__itemname { font-size: 12.5px; font-weight: 600; color: #0f172a; }
+.mat-req__itemid { font-family: var(--font-mono); font-size: 9.5px; color: #94a3b8; }
+.mat-req__itemmeta { font-size: 10px; color: #94a3b8; }
+.mat-req__mode { font-size: 9.5px; color: #0e7490; }
+.mat-req__num {
+  display: flex;
+  align-items: center;
+  /* A cell can hold two values — the surplus AND the shortfall that follows it —
+     and with no gap they collided into "-3 EAshort 3 EA". The separator is a
+     real element, not a space, so it survives any font. */
+  gap: 8px;
+  justify-content: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+.mat-req__short {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  background: rgba(254, 242, 242, 0.9);
+  color: #b91c1c;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.mat-req__short::before {
+  content: "short by";
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 8.5px;
+  color: #dc2626;
+  opacity: 0.75;
+}
+.mat-req__price, .mat-req__cost { font-family: var(--font-mono); font-size: 12px; }
+.mat-req__pending {
+  font-size: 10px;
+  color: #94a3b8;
+  font-style: italic;
+  white-space: nowrap;
+  text-align: right;
+}
+.mat-req__foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* ---- approval boundary ---- */
+.mat-approval {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 14px 16px; border-radius: 12px;
+  border: 1px solid rgba(245,158,11,0.35);
+  background: linear-gradient(160deg, rgba(255,251,235,0.95), rgba(254,243,199,0.75));
+}
+.mat-approval__icon { flex: 0 0 auto; color: #b45309; }
+.mat-approval__body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.mat-approval__title {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #92400e;
+}
+.mat-approval__reason { margin: 0; font-size: 12px; line-height: 1.6; color: #78350f; }
+.mat-approval__note { margin: 0; font-size: 11px; line-height: 1.6; color: #a16207; }
+.mat-approval__cta {
+  display: inline-flex; align-items: center; gap: 7px; align-self: flex-start;
+  margin-top: 3px; padding: 7px 13px; border-radius: 9px; cursor: pointer;
+  border: 1px solid rgba(180,83,9,0.4); background: #fff;
+  font-size: 11.5px; font-weight: 650; color: #92400e;
+}
+.mat-approval__cta:hover { border-color: rgba(180,83,9,0.75); box-shadow: 0 6px 16px rgba(180,83,9,0.14); }
+
+/* ---- limitation inline ---- */
+.mat-lim { display: inline-flex; align-items: center; gap: 5px; color: #94a3b8; font-size: 10.5px; }
+.mat-lim__code { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; }
+.mat-lim__more { font-size: 9.5px; color: #64748b; }
+
+/* ---- metric + chart ---- */
+.mat-metric { display: flex; flex-direction: column; gap: 3px; }
+.mat-metric__label { font-size: 9px; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; }
+.mat-metric__value { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; }
+.mat-metric__unit { font-size: 11px; color: #94a3b8; }
+.mat-chart-empty {
+  display: grid; place-items: center; min-height: 180px; border-radius: 12px;
+  border: 1px dashed rgba(203,213,225,0.9); background: rgba(248,250,252,0.6);
+  font-size: 12px; color: #64748b; text-align: center; padding: 20px;
+}
+
+/* The placeholder that holds the Knowledge Core's box while its chunk loads.
+   Same minimum height as `.k3`, so the page does not shift when the scene
+   arrives. Deliberately plain: a spinner would draw attention to the wait. */
+.k3--pending {
+  background: linear-gradient(165deg, #f0f7ff 0%, #e9f2fd 55%, #e6effc 100%);
+}
+
+/* Reserved box for a chart chunk that is still loading. Sized so the page does
+   not shift when the plot arrives; deliberately blank rather than a spinner. */
+.mat-chart-pending { min-height: 260px; border-radius: 12px; background: rgba(248, 250, 252, 0.6); }
+
+/* ── Equipment QR labels ─────────────────────────────────────────────────────
+   The symbol is the backend's SVG, inlined by `AssetQrLabel`/`QrSymbol`. The
+   SVG carries a nominal 84px box; the sizes here are what the detail panel and
+   the sheet actually use, so one rendered symbol serves both. */
+.cs-qr { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.cs-qr__svg {
+  flex: 0 0 auto;
+  padding: 8px;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+.cs-qr__svg svg { width: 100%; height: 100%; display: block; }
+/* The placeholder holds the symbol's box while the backend render is in
+   flight, so the panel does not jump when it arrives. */
+.cs-qr__svg--pending { background: var(--raised); border-style: dashed; }
+.cs-qr__missing {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  color: var(--ink-3);
+  font-size: 10px;
+  text-align: center;
+}
+.cs-qr__meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cs-qr__tag { font-size: 18px; font-weight: 700; letter-spacing: 0.12em; color: var(--ink-1); }
+.cs-qr__id { font-size: 10.5px; }
+.cs-qr__name { font-size: 13px; color: var(--ink-2); }
+.cs-qr__zone { font-size: 11.5px; }
+.cs-qr__print { margin-top: 8px; align-self: flex-start; text-decoration: none; }
+
+/* Label sheet — a grid of stickers, QR + tag + name + area per component. */
+.cs-labels {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+.cs-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.cs-label__qr { padding: 5px; }
+.cs-label__meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cs-label__tag { font-size: 16px; font-weight: 700; letter-spacing: 0.12em; color: var(--ink-1); }
+.cs-label__name {
+  font-size: 12px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cs-label__zone { font-size: 10.5px; }
+.cs-label__id { font-size: 9.5px; }
+
+/* Print: the label sheet is the document. Scoped to `body.cs-labels-page` (set
+   by the labels route), so printing any other console page is unchanged. */
+@media print {
+  body.cs-labels-page .cs-rail,
+  body.cs-labels-page .cs-topbar,
+  body.cs-labels-page .cs-journey,
+  body.cs-labels-page .cs-mobiletabs,
+  body.cs-labels-page .cs-labels__noprint { display: none !important; }
+  body.cs-labels-page .cs-shell,
+  body.cs-labels-page .cs-shell--expanded { display: block !important; }
+  body.cs-labels-page .cs-main { display: block !important; }
+  body.cs-labels-page .cs-content { padding: 0 !important; max-width: none !important; }
+  body.cs-labels-page,
+  body.cs-labels-page .cs,
+  body.cs-labels-page .cs-shell,
+  body.cs-labels-page .cs-main,
+  body.cs-labels-page .cs-content { background: #fff !important; }
+
+  body.cs-labels-page .cs-labels { grid-template-columns: repeat(3, 1fr); gap: 6mm; }
+  body.cs-labels-page .cs-label {
+    border: 1px solid #000 !important;
+    border-radius: 0;
+    background: #fff !important;
+    box-shadow: none !important;
+    color: #000 !important;
+    /* One physical sticker: never split it across two pages. */
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  body.cs-labels-page .cs-label * { color: #000 !important; }
+  body.cs-labels-page .cs-label__qr { border-color: #000 !important; }
+}
+
+/* ==========================================================================
+   HOME REDESIGN — the 12-column operational dashboard
+   --------------------------------------------------------------------------
+   Appended as one block by the redesign of /console/home (spec items 1–5 & 9).
+   Nothing above this line is rewritten: the page now renders `.home-dash`
+   instead of the old `.home-main` hero + `.home-strip`, so the previous rules
+   simply stop applying.
+
+   Layout:  command bar · vitals (5) · topology 8 cols · action queue 4 cols.
+   The Knowledge Core keeps its scene untouched and only gets a smaller box.
+   ========================================================================== */
+
+.home-dash {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+  max-width: 1600px;
+  margin-inline: auto;
+}
+
+/* One heading, kept for the document outline, off the visual surface. */
+.home-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- TIER 1 · the live posture bar ------------------------------------- */
+.home-command {
+  grid-column: 1 / -1;
+  position: sticky;
+  /* Derived from the header's own tokens so it tracks the bar's real height
+     and offset at every breakpoint, with a gap instead of the former
+     hand-computed `74px` that sat flush against the bar. */
+  top: calc(var(--p117-topbar-offset, 14px) + var(--p117-topbar-h, 60px) + var(--p117-topbar-gap, 6px));
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px) saturate(1.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.home-command__actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+.home-posture {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+/* The state word rides with the dot, so colour is never the only signal. */
+.home-posture__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+.home-posture__dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
+.home-posture__state[data-state="ok"] { color: #15803d; }
+.home-posture__state[data-state="warn"] { color: #b45309; }
+.home-posture__state[data-state="crit"] { color: #b91c1c; }
+.home-posture__state[data-state="unknown"] { color: #64748b; }
+.home-posture__plant { font-size: 14px; font-weight: 650; letter-spacing: -0.005em; color: var(--ink-1); white-space: nowrap; }
+.home-posture__alarms,
+.home-posture__egress { font-size: 11.5px; color: var(--ink-2); white-space: nowrap; }
+.home-posture__clock {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--blue);
+  white-space: nowrap;
+}
+.home-posture__sep { width: 1px; height: 14px; background: var(--line-2); flex: 0 0 auto; }
+
+/* ---- TIER 2 · the vitals ----------------------------------------------- */
+.home-tier {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.home-vitals { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.home-vitals__grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+/* Each vital is its own glass card with a 2px state edge. */
+.home-vitals__grid .home-stat {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  border-left-width: 2px;
+  border-left-color: rgba(226, 232, 240, 0.95);
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(12px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 8px 24px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+/* Red accent when non-zero — the only card that demands attention. */
+.home-stat[data-accent="crit"] {
+  border-left-color: #dc2626;
+  background: linear-gradient(90deg, rgba(254, 226, 226, 0.5), rgba(255, 255, 255, 0.62) 42%);
+}
+.home-vitals__grid .home-stat b { font-size: 28px; font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; }
+.home-vitals__grid .home-stat b.is-crit { color: #b91c1c; }
+.home-vitals__grid .home-stat span { display: inline-flex; align-items: center; gap: 4px; }
+
+/* ---- TIER 3a · topology at 8 of 12 columns ------------------------------ */
+.home-topology { grid-column: span 8; min-width: 0; }
+/* Only the container's size changes; the scene, geometry, material and render
+   loop in KnowledgeCore3D are untouched. */
+.home-topology .k3 { height: 420px; min-height: 420px; }
+
+/* ---- TIER 3b · the action queue ---------------------------------------- */
+.home-queue { grid-column: span 4; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+
+.home-queue__rows { display: flex; flex-direction: column; }
+.home-queue__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(226, 232, 240, 0.55);
+}
+.home-queue__row:first-child { border-top: 0; }
+.home-queue__row > span { font-size: 11.5px; color: var(--ink-2); }
+.home-queue__value {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+}
+
+.home-queue__list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.home-queue__list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 9px;
+  border-radius: 9px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  background: rgba(248, 250, 252, 0.75);
+}
+.home-queue__id {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+  flex: 0 0 auto;
+}
+.home-queue__asset {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+  flex: 0 0 auto;
+}
+.home-queue__actor {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.home-queue__list li .cs-tag { margin-left: auto; flex: 0 0 auto; }
+
+/* Quick actions now sit under the queue, left-aligned in a narrow column. */
+.home-queue .home-quick {
+  justify-content: flex-start;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(226, 232, 240, 0.55);
+}
+.home-badge--warn { background: rgba(245, 158, 11, 0.14); color: #b45309; }
+
+/* ---- the activity feed, as an audit trail ------------------------------ */
+/* Full width: the row anatomy (action · actor · two clocks · category) is a
+   register, and four columns cannot hold it without wrapping every row. */
+.home-feedcard { grid-column: 1 / -1; min-width: 0; }
+.home-feedcard .home-card__head { flex-wrap: wrap; }
+.home-feed__count {
+  margin-left: 2px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+.home-feed__scroll { max-height: 340px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+.home-feed__group { display: flex; flex-direction: column; }
+.home-feed__day {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 4px 2px 5px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+  background: rgba(255, 255, 255, 0.92);
+}
+/* The old one-line row becomes a two-line record: identity above, clocks below. */
+.home-dash .home-feed li { align-items: flex-start; gap: 8px; padding: 7px 6px; }
+.home-dash .home-feed__dot { margin-top: 5px; }
+.home-feed li[data-tone="crit"] .home-feed__dot { background: #dc2626; }
+.home-feed li[data-tone="warn"] .home-feed__dot { background: #b45309; }
+.home-feed li[data-tone="ok"] .home-feed__dot { background: #15803d; }
+.home-feed li[data-tone="ai"] .home-feed__dot { background: #7c3aed; }
+.home-feed li[data-tone="neutral"] .home-feed__dot { background: #94a3b8; }
+.home-feed__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.home-feed__line { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.home-feed__action {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.home-feed__actor {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex: 0 0 auto;
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+/* An agent actor is marked by a glyph in the DOM and violet type — never by
+   colour alone, because the actor's own name is right there. */
+.home-feed__actor[data-kind="agent"] { color: var(--violet); }
+.home-feed__line--meta { gap: 5px; }
+.home-feed__time,
+.home-feed__target {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.home-feed__target { color: var(--blue); overflow: hidden; text-overflow: ellipsis; }
+.home-feed__sep { color: #cbd5e1; font-size: 10px; }
+.home-feed li .cs-tag {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- item 9 · the mono register for machine data ----------------------- */
+/* Every tag, ID, reading and timestamp on this page is monospaced and tabular,
+   so digits cannot jitter as values tick. */
+.home-dash :is(
+    .home-stat b,
+    .home-queue__value,
+    .home-queue__id,
+    .home-queue__asset,
+    .home-feed__action,
+    .home-feed__actor,
+    .home-feed__time,
+    .home-feed__target,
+    .home-feed__count,
+    .home-posture__clock,
+    .home-posture__state,
+    .cs-tag
+  ) {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- responsive: the grid folds in the order the spec asks for --------- */
+@media (max-width: 1439px) {
+  .home-vitals__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .home-topology,
+  .home-queue { grid-column: 1 / -1; }
+  /* The queue card is full-width here; keep its rows at a readable measure. */
+  .home-queue .home-queue__rows,
+  .home-queue .home-queue__list { max-width: 720px; }
+}
+@media (max-width: 1023px) {
+  .home-vitals__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* A sticky bar under a sticky top bar is noise on a short viewport. */
+  .home-command { position: static; }
+}
+@media (max-width: 639px) {
+  .home-vitals__grid { grid-template-columns: 1fr; }
+  .home-posture__sep { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-command { position: static; }
+  .home-feed__scroll { scroll-behavior: auto; }
+}
+
+/* ==========================================================================
+   HOME — ASSET NETWORK & OPERATIONS (iteration 2)
+   --------------------------------------------------------------------------
+   Appended as one block. The HOME REDESIGN block above is not rewritten; this
+   block only adds the panels that replaced the 3D Knowledge Core on
+   /console/home and the rules the six-card vitals row needs. Light theme:
+   #F8FAFC ground, #FFFFFF cards, #E2E8F0 borders, emerald/amber/crimson state.
+   ========================================================================== */
+
+/* ---- TIER 2 · six vitals, each with a worded status badge --------------- */
+.home-vitals__grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.home-vitals__grid .home-stat { justify-content: flex-start; }
+.home-stat__label { align-self: flex-start; }
+.home-stat__badge {
+  align-self: flex-start;
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+}
+.home-stat__badge[data-tone="ok"] { background: rgba(16, 185, 129, 0.13); color: #047857; }
+.home-stat__badge[data-tone="warn"] { background: rgba(245, 158, 11, 0.15); color: #b45309; }
+.home-stat__badge[data-tone="crit"] { background: rgba(239, 68, 68, 0.13); color: #b91c1c; }
+.home-stat__badge[data-tone="neutral"] { background: rgba(100, 116, 139, 0.12); color: #475569; }
+
+/* ---- TIER 3a · the asset network card ---------------------------------- */
+/* A definite height is what lets the sidebar's entity list scroll instead of
+   stretching the card: the canvas and the queue are then bounded to the same
+   460px band, and the vitals below never move. */
+.home-topology { align-self: stretch; height: 460px; min-height: 460px; }
+.home-nettop { display: flex; flex-direction: column; height: 100%; min-height: 0; padding-bottom: 12px; }
+.home-nettop .home-card__head { margin-bottom: 10px; }
+
+.home-net {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: 400px;
+  min-width: 0;
+}
+/* The lazy placeholder occupies the same box the canvas will, so the vitals
+   and the queue below never jump when the chunk lands. */
+.home-net--pending {
+  border: 1px dashed rgba(226, 232, 240, 0.95);
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    rgba(241, 245, 249, 0.95),
+    rgba(248, 250, 252, 0.45) 40%,
+    rgba(241, 245, 249, 0.95)
+  );
+  background-size: 200% 100%;
+  animation: home-net-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes home-net-shimmer {
+  0% { background-position: 0% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.home-net__side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  padding: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.72);
+}
+.home-net__label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+.home-net__count { font-family: var(--mono); font-style: normal; font-size: 10px; color: #0f172a; }
+.home-net__toggles { display: flex; flex-direction: column; gap: 3px; }
+.home-net__toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: none;
+  cursor: pointer;
+  font-size: 11px;
+  color: #475569;
+  text-align: left;
+}
+.home-net__toggle:hover { background: rgba(255, 255, 255, 0.95); }
+.home-net__toggle[aria-pressed="true"] {
+  background: #ffffff;
+  border-color: rgba(37, 99, 235, 0.28);
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+.home-net__check {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  font-size: 9px;
+  line-height: 1;
+  color: #ffffff;
+}
+.home-net__toggle[aria-pressed="true"] .home-net__check { background: #2563eb; border-color: #2563eb; }
+.home-net__tname { flex: 1 1 auto; }
+.home-net__tcount { font-family: var(--mono); font-style: normal; font-size: 10px; color: #64748b; }
+
+.home-net__search { position: relative; display: flex; }
+.home-net__search input {
+  width: 100%;
+  padding: 5px 22px 5px 8px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 11px;
+  color: #0f172a;
+}
+.home-net__search input::placeholder { color: #94a3b8; }
+.home-net__search button {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* The keyboard path to every node the canvas can draw. A `<canvas>` cannot be
+   focused, so the same selection is offered as real buttons. */
+.home-net__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.home-net__entity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #334155;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-net__entity:hover { background: rgba(255, 255, 255, 0.95); }
+.home-net__entity[aria-pressed="true"] { background: rgba(37, 99, 235, 0.1); color: #1d4ed8; }
+.home-net__swatch { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; }
+.home-net__none { padding: 4px 6px; font-size: 10.5px; color: #64748b; }
+
+.home-net__stage {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  border-radius: 12px;
+  background: #ffffff;
+}
+.home-net__state {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 18px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #64748b;
+}
+.home-net__legend {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 9px;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.93);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-size: 9.5px;
+  color: #475569;
+}
+.home-net__legenditem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.home-net__legenditem i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.home-net__legenditem--note { font-weight: 500; letter-spacing: 0; text-transform: none; color: #94a3b8; }
+
+/* ---- TIER 3b · the critical action queue ------------------------------- */
+.home-queue { align-self: stretch; max-height: 460px; }
+.home-queuecard { display: flex; flex-direction: column; height: 100%; max-height: 460px; min-height: 0; }
+.home-queue__filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px 0 8px;
+  padding: 5px 8px;
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  border-radius: 9px;
+  background: rgba(37, 99, 235, 0.08);
+  font-size: 11px;
+  color: #1e3a8a;
+}
+.home-queue__filter b { font-size: 11px; }
+.home-queue__filter button {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  color: #1e3a8a;
+}
+.home-queue__scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+/* A queue row is now identity above, destinations below — the id, the asset
+   and the priority badge must not be split across two lines. */
+.home-dash .home-queue__list li { flex-direction: column; align-items: stretch; gap: 4px; }
+.home-queue__top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.home-queue__top .cs-tag { margin-left: auto; }
+.home-queue__title {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: #475569;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-queue__links { display: flex; flex-wrap: wrap; gap: 4px; }
+.home-queue__links a {
+  padding: 2px 7px;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #1d4ed8;
+  text-decoration: none;
+}
+.home-queue__links a:hover { background: rgba(37, 99, 235, 0.1); }
+.home-queue__list--jobs { margin-top: 10px; }
+
+/* ---- TIER 4 · health · predictive maintenance · model telemetry -------- */
+.home-health,
+.home-insights,
+.home-models { grid-column: span 4; min-width: 0; }
+.home-health__cap,
+.home-models__cap { margin: 10px 0 0; font-size: 10px; line-height: 1.5; color: #94a3b8; }
+.home-health__cap code,
+.home-models__cap code { font-family: var(--mono); font-size: 9.5px; }
+
+.home-insight__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.home-insight__list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-left-width: 3px;
+  border-radius: 9px;
+  background: rgba(248, 250, 252, 0.75);
+}
+.home-insight__list li[data-band="crit"] { border-left-color: #dc2626; }
+.home-insight__list li[data-band="warn"] { border-left-color: #f59e0b; }
+.home-insight__list li[data-band="ok"] { border-left-color: #10b981; }
+.home-insight__glyph { flex: 0 0 auto; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; }
+.home-insight__glyph[data-band="crit"] { color: #b91c1c; background: rgba(220, 38, 38, 0.1); }
+.home-insight__glyph[data-band="warn"] { color: #b45309; background: rgba(245, 158, 11, 0.14); }
+.home-insight__glyph[data-band="ok"] { color: #047857; background: rgba(16, 185, 129, 0.12); }
+.home-insight__body { flex: 1 1 auto; min-width: 0; }
+.home-insight__line { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.home-insight__line b { font-size: 11.5px; color: #0f172a; }
+.home-insight__name { font-size: 10.5px; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-insight__risk { margin-left: auto; white-space: nowrap; font-size: 10px; color: #475569; }
+.home-insight__meta { font-size: 10px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-insight__go {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #1d4ed8;
+  text-decoration: none;
+}
+.home-insight__go:hover { background: rgba(37, 99, 235, 0.1); }
+.home-insight__caveat { margin: 8px 0 0; font-size: 10px; line-height: 1.5; color: #b45309; }
+.home-insight__src { margin: 8px 0 0; font-family: var(--mono); font-size: 9.5px; color: #94a3b8; }
+
+.home-models__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.home-model {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 0;
+  border-top: 1px solid rgba(226, 232, 240, 0.55);
+}
+.home-model:first-child { border-top: 0; }
+.home-model__role { flex: 0 0 74px; font-size: 10px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b; }
+.home-model__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: #0f172a; }
+
+/* ---- activity register · the actor's initial -------------------------- */
+.home-feed__avatar {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #ffffff;
+  background: #2563eb;
+}
+.home-feed__avatar[data-kind="agent"] { background: #7c3aed; }
+
+/* ---- keyboard focus is always visible --------------------------------- */
+.home-net__toggle:focus-visible,
+.home-net__entity:focus-visible,
+.home-net__search input:focus-visible,
+.home-net__search button:focus-visible,
+.home-queue__links a:focus-visible,
+.home-queue__id:focus-visible,
+.home-queue__asset:focus-visible,
+.home-insight__go:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.55);
+  outline-offset: 1px;
+}
+.home-queue__id,
+.home-queue__asset { text-decoration: none; }
+.home-queue__id:hover,
+.home-queue__asset:hover { text-decoration: underline; }
+
+/* ---- responsive: the same fold order the redesign uses ----------------- */
+@media (max-width: 1439px) {
+  .home-vitals__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .home-health,
+  .home-insights,
+  .home-models { grid-column: 1 / -1; }
+  .home-topology { align-self: auto; height: auto; min-height: 0; }
+  .home-queue { align-self: auto; max-height: none; }
+  .home-queuecard { height: auto; max-height: none; }
+  .home-nettop { height: 460px; }
+  .home-net { min-height: 0; }
+}
+@media (max-width: 1023px) {
+  .home-vitals__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 639px) {
+  .home-vitals__grid { grid-template-columns: 1fr; }
+  .home-net { grid-template-columns: 1fr; min-height: 340px; }
+  .home-net__side { max-height: 220px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-net--pending { animation: none; }
+}

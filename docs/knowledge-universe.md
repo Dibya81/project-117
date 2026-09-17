@@ -4,7 +4,7 @@
 
 | Namespace | Source | Size |
 | --- | --- | --- |
-| **Plant Knowledge** | `public/simulation/refinery/*.json` + the console's own records | 376 nodes, 634 relationships, 18 areas |
+| **Plant Knowledge** | `GET /api/simulation/plants/refinery/definition` + `/scenarios` (SQLite store seeded from `project-117-simulation/database/seed_plants.sql`) + the console's own records | 376 nodes, 634 relationships, 18 areas |
 | **System Knowledge** | `graphify-out/graph.json` via `scripts/build_knowledge_graph.py` | 4,159 nodes, 9,114 edges, 226 communities |
 
 Both share one renderer (`src/components/knowledge/GraphCanvas.tsx`), one layout
@@ -53,9 +53,11 @@ between them.
 Community names are graphify's own, read straight from the artifact. None are
 renamed or invented.
 
-Rebuild after the graph changes:
+Rebuild after the graph changes (`graphify-out/graph.json` is a git-ignored
+local artifact; run `./scripts/graphify-obsidian.sh` first if it is absent):
 
 ```bash
+./scripts/graphify-obsidian.sh
 python3 scripts/build_knowledge_graph.py
 ```
 

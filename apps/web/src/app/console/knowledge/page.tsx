@@ -13,12 +13,20 @@
  *
  * Obsidian reads the same concepts through scripts/graphify-obsidian.sh; the
  * ids used here (`equipment:C-3`, `document:d-1`) are the stable join keys.
+ *
+ * This file owns the chrome only: the data wiring, the graph assembly and the
+ * layout maths are untouched. The sidebar filters are glass segmented controls
+ * with a shared-element glider, the search box is a live autocomplete whose
+ * active row drives the graph's existing selection highlight, and the drawer is
+ * the EntityInspector (metadata cards + relationship tree + deep-link actions).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Icon } from "@/components/ui/Icon";
-import { Tag } from "@/components/ui/primitives";
+import { Lucide } from "@/components/ui/LucideIcon";
 import GraphCanvas, { type GraphHandle } from "@/components/knowledge/GraphCanvas";
+import SegmentedControl, { type SegmentOption } from "@/components/knowledge/SegmentedControl";
+import SearchAutocomplete from "@/components/knowledge/SearchAutocomplete";
+import EntityInspector from "@/components/knowledge/EntityInspector";
 import { buildPlantGraph } from "@/lib/knowledge/plant";
 import {
   expandCommunity,
@@ -34,7 +42,6 @@ import {
   colorOf,
   indexGraph,
   neighborhood,
-  PROVENANCE_TONE,
   shortestPath,
   summarize,
   type KEdge,
@@ -49,7 +56,7 @@ type Lens =
   | "all" | "investigations" | "equipment" | "document"
   | "anomaly" | "work_order" | "rule" | "sensor";
 
-const LENSES: { id: Lens; label: string; types: string[]; icon: Parameters<typeof Icon>[0]["name"] }[] = [
+const LENSES: { id: Lens; label: string; types: string[]; icon: Parameters<typeof Lucide>[0]["name"] }[] = [
   { id: "all", label: "All knowledge", types: [], icon: "graph" },
   { id: "investigations", label: "Recent investigations", types: ["anomaly", "event", "rule"], icon: "insights" },
   { id: "equipment", label: "Equipment", types: ["equipment", "plant", "area"], icon: "equipment" },
@@ -58,6 +65,17 @@ const LENSES: { id: Lens; label: string; types: string[]; icon: Parameters<typeo
   { id: "anomaly", label: "Anomalies", types: ["anomaly"], icon: "alert" },
   { id: "work_order", label: "Work orders", types: ["work_order"], icon: "workorder" },
   { id: "rule", label: "Learned rules", types: ["rule"], icon: "check" },
+];
+
+/**
+ * The lenses grouped into the filter families the sidebar shows. The order
+ * inside each group preserves the flat list's original order, so nothing moves
+ * hidden behind a visual separator.
+ */
+const LENS_GROUPS: { id: string; label: string; lenses: Lens[] }[] = [
+  { id: "scope", label: "Scope", lenses: ["all", "investigations"] },
+  { id: "assets", label: "Assets", lenses: ["equipment", "sensor"] },
+  { id: "records", label: "Records", lenses: ["document", "anomaly", "work_order", "rule"] },
 ];
 
 /**
@@ -281,6 +299,33 @@ export default function KnowledgeUniverse() {
     setSelected(found[0].id);
   }, [query, ensureFull]);
 
+  /**
+   * The autocomplete's active row drives the graph highlight through the
+   * existing selection state: `GraphCanvas` already fades everything outside the
+   * selection's neighbourhood and frames it, so no new highlight prop is needed
+   * (and none was available). The camera follows the active row so the
+   * highlighted node is actually on screen.
+   */
+  const previewHit = useCallback(
+    (node: KNode) => {
+      setSelected(node.id);
+      setSelectedEdge(null);
+      graphRef.current?.focusNode(node.id);
+    },
+    [],
+  );
+
+  const pickHit = useCallback(
+    (node: KNode) => {
+      if (ns === "system" && node.type === "community") void expand(node.id);
+      setSelected(node.id);
+      setSelectedEdge(null);
+      graphRef.current?.focusNode(node.id);
+      setQuery("");
+    },
+    [ns, expand],
+  );
+
   /** The anchor the guided trace walks from, or null when the graph is empty. */
   const traceAnchor = useMemo(() => (plant ? chooseTraceAnchor(plant) : null), [plant]);
 
@@ -345,6 +390,29 @@ export default function KnowledgeUniverse() {
 
   const stats = graph?.stats;
 
+  /** Real per-lens counts (plant namespace only, where every type is loaded). */
+  const lensSegments = useCallback(
+    (ids: Lens[]): SegmentOption[] =>
+      ids.flatMap((lid) => {
+        const l = LENSES.find((x) => x.id === lid);
+        if (!l) return [];
+        return [
+          {
+            id: l.id,
+            label: l.label,
+            icon: l.icon,
+            tone: l.types[0] ? colorOf(l.types[0]) : undefined,
+            count:
+              ns === "plant" && stats && l.types.length > 0
+                ? (full?.nodes.filter((n) => l.types.includes(n.type)).length ?? 0)
+                : undefined,
+            disabled: ns === "system" && l.id !== "all",
+          },
+        ];
+      }),
+    [ns, stats, full],
+  );
+
   return (
     <div className="ku">
       <header className="ku-head">
@@ -364,38 +432,24 @@ export default function KnowledgeUniverse() {
           )}
         </div>
 
-        <div className="ku-ns" role="tablist" aria-label="Graph namespace">
-          {(["plant", "system"] as Namespace[]).map((n) => (
-            <button
-              key={n}
-              role="tab"
-              aria-selected={ns === n}
-              className={ns === n ? "is-active" : undefined}
-              onClick={() => { setNs(n); setLens("all"); setSelected(null); setPathFrom(null); setPathTo(null); }}
-            >
-              {n === "plant" ? "Plant Knowledge" : "System Knowledge"}
-            </button>
-          ))}
-        </div>
-
-        <div className="ku-search">
-          <Icon name="search" size={13} />
-          <input
-            id="ku-search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && ns === "system") void runSystemSearch(); }}
-            placeholder={ns === "plant" ? "Search equipment, documents, events, agents…" : "Search symbols, files, communities…"}
-            aria-label="Search the knowledge graph"
-          />
-          {query && <button className="ku-search__x" onClick={() => setQuery("")} aria-label="Clear search">×</button>}
-          {ns === "system" && (
-            <button className="ku-search__go" onClick={() => void runSystemSearch()} disabled={loadingFull}>
-              {loadingFull ? "…" : "Search all"}
-            </button>
-          )}
-          <kbd>⌘K</kbd>
-        </div>
+        <SegmentedControl
+          className="ku-ns"
+          layoutId="ku-namespace"
+          ariaLabel="Graph namespace"
+          variant="tabs"
+          value={ns}
+          onChange={(id) => {
+            setNs(id as Namespace);
+            setLens("all");
+            setSelected(null);
+            setPathFrom(null);
+            setPathTo(null);
+          }}
+          options={[
+            { id: "plant", label: "Plant Knowledge" },
+            { id: "system", label: "System Knowledge" },
+          ]}
+        />
       </header>
 
       {error && (
@@ -407,47 +461,64 @@ export default function KnowledgeUniverse() {
       <div className="ku-body">
         {/* ---------------- left navigation ---------------- */}
         <nav className="ku-nav" aria-label="Graph navigation">
-          <p className="ku-nav__label">Views</p>
-          {LENSES.map((l) => (
-            <button
-              key={l.id}
-              className={`ku-nav__item${lens === l.id ? " is-active" : ""}`}
-              onClick={() => { setLens(l.id); setSelected(null); }}
-              disabled={ns === "system" && l.id !== "all"}
-            >
-              <span className="ku-nav__dot" style={{ background: l.types[0] ? colorOf(l.types[0]) : "var(--ink-3)" }} />
-              {l.label}
-              {stats && l.types.length > 0 && ns === "plant" && (
-                <em>{full?.nodes.filter((n) => l.types.includes(n.type)).length ?? 0}</em>
-              )}
+          <SearchAutocomplete
+            query={query}
+            onQueryChange={setQuery}
+            hits={hits}
+            selectedId={selected}
+            onActive={previewHit}
+            onPick={pickHit}
+            onSubmit={() => { if (ns === "system") void runSystemSearch(); }}
+            placeholder={ns === "plant" ? "Search equipment, docs…" : "Search symbols, files…"}
+            busy={loadingFull}
+            showSearchAll={ns === "system"}
+          />
+
+          <div className="ku-nav__scroll">
+            <p className="ku-nav__label">Views</p>
+            {LENS_GROUPS.map((g) => (
+              <div className="ku-filter" key={g.id}>
+                <p className="ku-filter__label">{g.label}</p>
+                <SegmentedControl
+                  className="ku-nav__seg"
+                  chipClassName="ku-nav__item"
+                  layoutId={`ku-lens-${g.id}`}
+                  ariaLabel={`${g.label} filters`}
+                  orientation="vertical"
+                  variant="radio"
+                  value={lens}
+                  onChange={(id) => { setLens(id as Lens); setSelected(null); }}
+                  options={lensSegments(g.lenses)}
+                />
+              </div>
+            ))}
+
+            <p className="ku-nav__label" style={{ marginTop: 16 }}>
+              {ns === "system" ? `Communities (${sysIndex?.communityCount ?? "…"})` : "Areas"}
+            </p>
+            <div className="ku-nav__list">
+              {ns === "system"
+                ? sysIndex?.communities.slice(0, 40).map((c) => (
+                    <button key={c.id} className="ku-nav__comm" onClick={() => void loadCommunity(c.id)}>
+                      <span>{c.name}</span>
+                      <em>{c.size}</em>
+                    </button>
+                  ))
+                : plant?.communities.map((c) => (
+                    <button key={c.id} className="ku-nav__comm" onClick={() => { setLens("all"); }}>
+                      <span>{c.name}</span>
+                      <em>{c.size}</em>
+                    </button>
+                  ))}
+            </div>
+
+            <button className="ku-trace" onClick={traceStory}>
+              <Lucide name="play" size={12} />{' '}
+              {traceAnchor
+                ? `Trace ${traceAnchor.replace(/^equipment:/, "")}`
+                : "Trace (no plant data)"}
             </button>
-          ))}
-
-          <p className="ku-nav__label" style={{ marginTop: 16 }}>
-            {ns === "system" ? `Communities (${sysIndex?.communityCount ?? "…"})` : "Areas"}
-          </p>
-          <div className="ku-nav__list">
-            {ns === "system"
-              ? sysIndex?.communities.slice(0, 40).map((c) => (
-                  <button key={c.id} className="ku-nav__comm" onClick={() => void loadCommunity(c.id)}>
-                    <span>{c.name}</span>
-                    <em>{c.size}</em>
-                  </button>
-                ))
-              : plant?.communities.map((c) => (
-                  <button key={c.id} className="ku-nav__comm" onClick={() => { setLens("all"); }}>
-                    <span>{c.name}</span>
-                    <em>{c.size}</em>
-                  </button>
-                ))}
           </div>
-
-          <button className="ku-trace" onClick={traceStory}>
-            <Icon name="play" size={12} />{' '}
-            {traceAnchor
-              ? `Trace ${traceAnchor.replace(/^equipment:/, "")}`
-              : "Trace (no plant data)"}
-          </button>
         </nav>
 
         {/* ---------------- graph ---------------- */}
@@ -521,230 +592,39 @@ export default function KnowledgeUniverse() {
               </span>
             </div>
           )}
-
-          {hits.length > 0 && (
-            <div className="ku-hits" role="listbox" aria-label="Search results">
-              {hits.map((n) => (
-                <button
-                  key={n.id}
-                  role="option"
-                  aria-selected={n.id === selected}
-                  onClick={() => {
-                    if (ns === "system" && n.type === "community") void expand(n.id);
-                    select(n.id);
-                    graphRef.current?.focusNode(n.id);
-                    setQuery("");
-                  }}
-                >
-                  <span className="ku-hits__dot" style={{ background: colorOf(n.type) }} />
-                  <span className="ku-hits__label">{n.label}</span>
-                  <span className="ku-hits__type">{n.type}</span>
-                </button>
-              ))}
-            </div>
-          )}
         </section>
 
         {/* ---------------- detail (contextual overlay) ---------------- */}
         <aside className={`ku-detail${selectedNode ? " is-open" : ""}`} aria-label="Entity detail" aria-hidden={!selectedNode}>
           {selectedNode && (
-            <button className="ku-detail__close" onClick={() => { select(null); setSelectedEdge(null); }} aria-label="Close detail panel">×</button>
+            <button className="ku-detail__close" onClick={() => { select(null); setSelectedEdge(null); }} aria-label="Close detail panel">
+              <Lucide name="x" size={14} />
+            </button>
           )}
+          {/* The content is keyed, not cross-faded: the inspector previews every
+              active autocomplete row, so an enter/exit pair (especially
+              `AnimatePresence mode="wait"`) parks the panel at opacity 0 while
+              the user arrows through results. The drawer itself still slides in
+              via the existing `.ku-detail` CSS transition; the card swaps
+              instantly so it is always readable. */}
           {selectedNode && (
-            <EntityDetail
-              node={selectedNode}
-              rels={rels}
-              selectedEdge={selectedEdge}
-              onEdge={setSelectedEdge}
-              onNavigate={(id) => { select(id); graphRef.current?.focusNode(id); }}
-              onPathFrom={() => setPathFrom(selectedNode.id)}
-              onPathTo={() => setPathTo(selectedNode.id)}
-              pathFrom={pathFrom}
-              pathTo={pathTo}
-              router={router}
-            />
+            <div key={selectedNode.id} className="ku-detail__body">
+              <EntityInspector
+                node={selectedNode}
+                rels={rels}
+                selectedEdge={selectedEdge}
+                onEdge={setSelectedEdge}
+                onSelectNode={(id) => { select(id); graphRef.current?.focusNode(id); }}
+                onOpenHref={(href) => router.push(href)}
+                onPathFrom={() => setPathFrom(selectedNode.id)}
+                onPathTo={() => setPathTo(selectedNode.id)}
+                pathFrom={pathFrom}
+                pathTo={pathTo}
+              />
+            </div>
           )}
         </aside>
       </div>
     </div>
   );
-}
-
-/* ------------------------------------------------------------------ */
-
-function EntityDetail({
-  node,
-  rels,
-  selectedEdge,
-  onEdge,
-  onNavigate,
-  onPathFrom,
-  onPathTo,
-  pathFrom,
-  pathTo,
-  router,
-}: {
-  node: KNode;
-  rels: { edge: KEdge; out: boolean; other: KNode }[];
-  selectedEdge: KEdge | null;
-  onEdge: (e: KEdge | null) => void;
-  onNavigate: (id: string) => void;
-  onPathFrom: () => void;
-  onPathTo: () => void;
-  pathFrom: string | null;
-  pathTo: string | null;
-  router: ReturnType<typeof useRouter>;
-}) {
-  const byType = useMemo(() => {
-    const m = new Map<string, KNode[]>();
-    for (const r of rels) {
-      if (!m.has(r.other.type)) m.set(r.other.type, []);
-      m.get(r.other.type)!.push(r.other);
-    }
-    return m;
-  }, [rels]);
-
-  const evidence = rels.filter((r) => r.other.type === "document");
-  const workOrders = rels.filter((r) => r.other.type === "work_order");
-
-  return (
-    <div className="ku-entity">
-      <div className="ku-entity__head">
-        <span className="ku-entity__dot" style={{ background: colorOf(node.type) }} />
-        <div>
-          <h2>{node.label}</h2>
-          <p>
-            <Tag>{node.type.replace(/_/g, " ")}</Tag>
-            {node.status && <span className="ku-status">{node.status}</span>}
-          </p>
-        </div>
-      </div>
-
-      <dl className="ku-facts">
-        <div><dt>Entity</dt><dd>{node.id}</dd></div>
-        {node.group && <div><dt>Group</dt><dd>{node.group}</dd></div>}
-        {node.source && <div><dt>Source</dt><dd>{node.source}</dd></div>}
-        {Object.entries(node.facts ?? {}).map(([k, v]) =>
-          v === undefined || v === "" ? null : (
-            <div key={k}>
-              <dt>{k.replace(/_/g, " ")}</dt>
-              <dd>{String(v)}</dd>
-            </div>
-          ),
-        )}
-        <div><dt>Relationships</dt><dd>{rels.length}</dd></div>
-      </dl>
-
-      <div className="ku-actions">
-        {node.href && (
-          <button className="ku-btn ku-btn--primary" onClick={() => router.push(node.href!)}>
-            <Icon name="chevron" size={12} /> Open {labelForHref(node.href)}
-          </button>
-        )}
-        {node.type === "equipment" && (
-          <button className="ku-btn" onClick={() => router.push(`/console/simulation/builder?focus=${encodeURIComponent(node.id.replace(/^equipment:/, ""))}`)}>
-            <Icon name="gauge" size={12} /> Open in simulation
-          </button>
-        )}
-        <button className="ku-btn" onClick={() => router.push(`/console/workspace?entity=${encodeURIComponent(node.label)}`)}>
-          <Icon name="chat" size={12} /> Ask AI about this
-        </button>
-        <div className="ku-actions__pair">
-          <button className={`ku-btn${pathFrom === node.id ? " is-on" : ""}`} onClick={onPathFrom}>Set path start</button>
-          <button className={`ku-btn${pathTo === node.id ? " is-on" : ""}`} onClick={onPathTo}>Set path end</button>
-        </div>
-      </div>
-
-      {evidence.length > 0 && (
-        <section className="ku-sec">
-          <h3>Evidence · {evidence.length} document{evidence.length === 1 ? "" : "s"}</h3>
-          {evidence.map((r) => (
-            <button key={r.other.id} className="ku-rel" onClick={() => (r.other.href ? router.push(r.other.href) : onNavigate(r.other.id))}>
-              <span className="ku-rel__rel">{r.edge.relation.replace(/_/g, " ")}</span>
-              <span className="ku-rel__name">{r.other.label}</span>
-              <span className="ku-rel__prov" style={{ color: PROVENANCE_TONE[r.edge.provenance] }}>{r.edge.provenance}</span>
-            </button>
-          ))}
-        </section>
-      )}
-
-      {workOrders.length > 0 && (
-        <section className="ku-sec">
-          <h3>Work orders</h3>
-          {workOrders.map((r) => (
-            <button key={r.other.id} className="ku-rel" onClick={() => r.other.href && router.push(r.other.href)}>
-              <span className="ku-rel__rel">{r.edge.relation.replace(/_/g, " ")}</span>
-              <span className="ku-rel__name">{r.other.label}</span>
-              <span className="ku-rel__prov" style={{ color: PROVENANCE_TONE[r.edge.provenance] }}>{r.edge.provenance}</span>
-            </button>
-          ))}
-        </section>
-      )}
-
-      <section className="ku-sec">
-        <h3>All relationships · {rels.length}</h3>
-        <div className="ku-rels">
-          {rels.slice(0, 60).map((r) => (
-            <button
-              key={r.edge.id}
-              className={`ku-rel${selectedEdge?.id === r.edge.id ? " is-on" : ""}`}
-              onClick={() => { if (r.other.href) router.push(r.other.href); else onNavigate(r.other.id); }}
-              onContextMenu={(e) => { e.preventDefault(); onEdge(r.edge); }}
-              title="Click to navigate · right-click for provenance"
-            >
-              <span className="ku-rel__rel">{r.out ? "" : "← "}{r.edge.relation.replace(/_/g, " ")}</span>
-              <span className="ku-rel__name">{r.other.label}</span>
-              <span className="ku-rel__prov" style={{ color: PROVENANCE_TONE[r.edge.provenance] }}>{r.edge.provenance}</span>
-            </button>
-          ))}
-        </div>
-        {rels.length > 60 && <p className="ku-more">+{rels.length - 60} more</p>}
-      </section>
-
-      {/* provenance of the last inspected edge */}
-      <section className="ku-sec">
-        <h3>Relationship provenance</h3>
-        {!selectedEdge ? (
-          <p className="ku-prov__hint">Right-click any relationship above to inspect where it came from.</p>
-        ) : (
-          <div className="ku-prov">
-            <div className="ku-prov__row">
-              <span>{selectedEdge.from.replace(/^[a-z_]+:/, "")}</span>
-              <b style={{ color: PROVENANCE_TONE[selectedEdge.provenance] }}>{selectedEdge.relation}</b>
-              <span>{selectedEdge.to.replace(/^[a-z_]+:/, "")}</span>
-            </div>
-            <dl className="ku-facts">
-              <div><dt>Classification</dt><dd style={{ color: PROVENANCE_TONE[selectedEdge.provenance] }}>{selectedEdge.provenance}</dd></div>
-              {selectedEdge.source && <div><dt>Source</dt><dd>{selectedEdge.source}</dd></div>}
-              {selectedEdge.confidence != null && <div><dt>Confidence</dt><dd>{selectedEdge.confidence.toFixed(2)}</dd></div>}
-            </dl>
-          </div>
-        )}
-      </section>
-
-      {byType.size > 0 && (
-        <section className="ku-sec">
-          <h3>Neighbourhood by type</h3>
-          <div className="ku-chips">
-            {[...byType.entries()].sort((a, b) => b[1].length - a[1].length).map(([t, list]) => (
-              <span key={t} className="ku-chip" style={{ borderColor: `${colorOf(t)}66` }}>
-                <i style={{ background: colorOf(t) }} />
-                {t.replace(/_/g, " ")} <b>{list.length}</b>
-              </span>
-            ))}
-          </div>
-        </section>
-      )}
-    </div>
-  );
-}
-
-function labelForHref(href: string): string {
-  if (href.startsWith("/console/equipment/")) return "digital twin";
-  if (href.startsWith("/console/work-orders/")) return "work order";
-  if (href.startsWith("/console/documents")) return "document";
-  if (href.startsWith("/console/history")) return "history";
-  if (href.startsWith("/console/approvals")) return "approval";
-  if (href.startsWith("/console/workspace")) return "AI workspace";
-  return "record";
 }

@@ -1,9 +1,10 @@
 # Project 117 — Frontend Redesign (2026)
 
-> Status: IMPLEMENTED. Backend untouched. All console data flows through the
-> existing mock adapter (`lib/data/console.ts` + `lib/mock/*`) — zero
-> integration work, per plan. Swapping to live endpoints later is a
-> mechanical change inside that one adapter file.
+> Status: IMPLEMENTED. Backend untouched. Console data flows through
+> `lib/data/console.ts`, which now calls the real backend via `lib/api.ts`
+> (`NEXT_PUBLIC_DATA_MODE` defaults to `live`). The dark "Obsidian Reactor"
+> tokens described below live in `src/styles/tokens.css`; the current console
+> surface contract is `docs/design/GLASS_SYSTEM.md`.
 
 ---
 
@@ -93,14 +94,15 @@ notification drawer, agent roster drawer.
 
 ```bash
 cd apps/web
-npm install
-npm run dev        # http://localhost:3000  (mock mode, no backend needed)
-npm run build      # production build
-npm run typecheck  # real @types/* strict pass
+pnpm install
+pnpm dev           # http://localhost:3017  (live mode; backend on :8000)
+pnpm build         # production build
+pnpm typecheck     # real @types/* strict pass
 ```
 
-`NEXT_PUBLIC_DATA_MODE` stays `mock`; flipping to `live` later only touches
-`lib/data/console.ts`.
+`NEXT_PUBLIC_DATA_MODE` defaults to `live`; set it to `mock` explicitly for
+offline UI work (the in-browser engine, development only) — nothing falls back
+into mock on its own.
 
 ---
 

@@ -35,7 +35,11 @@ from backend.api.src.routes import (
     health,
     jobs,
     knowledge,
+    materials,
+    mobile,
     models,
+    network,
+    sovereignty,
     tools,
     work_orders,
     workflows,
@@ -90,11 +94,16 @@ from backend.security.approvals import policy_from_settings as approval_policy_f
 from backend.security.audit import AuditService
 from backend.security.auth import AuthenticationError
 from backend.security.egress import policy_from_settings
+from backend.security.network.audit_sink import register_audit_sink
 from backend.security.rbac import AuthorizationError
+from backend.security.signing import load_or_create_key
 from backend.simulation import api as simulation_api
 from backend.simulation import datasets as sim_datasets
 from backend.simulation.service import simulation_service
 from backend.storage.documents import DocumentStorage, DocumentValidationError
+from backend.storage.identity import DEFAULT_ENROLLMENT_CODES, IdentityStore
+from backend.storage.materials import MaterialsStore
+from backend.storage.mobile import MobileStore, default_mobile_db
 from backend.tools.base import (
     ToolApprovalRequired,
     ToolArgumentError,
@@ -145,6 +154,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "P117_AUTH_REQUIRED=true but P117_AUTH_API_KEY is not set; every "
                 "request will be rejected until a key is configured"
             )
+        # --- materials: seed an empty store ----------------------------------
+        #
+        # Seeding here rather than in a migration keeps a fresh checkout
+        # demonstrable on first start. It is explicitly SYNTHETIC DEMO data, every
+        # record carries that status, and an already-populated database is left
+        # untouched — so a restart never double-counts an inventory position.
+        # The store itself was opened in the factory (the orchestrator needs it);
+        # this block only decides whether it needs populating.
+        try:
+            if getattr(settings, "materials_seed", True) and materials_store.is_empty():
+                from backend.materials.seed import seed_materials
+
+                summary = seed_materials(materials_store)
+                logger.info(
+                    "materials seeded (SYNTHETIC DEMO): %s materials, %s price observations, "
+                    "%s production records",
+                    summary["materials"],
+                    summary["price_observations"],
+                    summary["production_records"],
+                )
+            else:
+                logger.info("materials store ready: %s", materials_store.counts())
+        except Exception as exc:  # noqa: BLE001 - a seed failure must not stop the API
+            logger.error("materials store unavailable: %s", exc)
+
         # --- simulation: attach the service and boot a tick loop per dataset ---
         simulation_api.attach(simulation_service)
         sim_tasks = []
@@ -154,14 +188,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             for meta in sim_datasets.list_plants():
                 try:
                     simulation_service.register(sim_datasets.load_plant(meta["id"]))
-                    sim_tasks.append(
-                        asyncio.create_task(simulation_service.run_loop(meta["id"], settings.simulation_tick_s))
-                    )
+                    simulation_service.ensure_loop(meta["id"], settings.simulation_tick_s)
                     logger.info("simulation registered: %s (%s assets)", meta["id"], meta["assets"])
                 except Exception as exc:  # a broken dataset must not kill the API
                     logger.error("simulation dataset %s failed to load: %s", meta["id"], exc)
+
+            # A plant saved from the Builder is registered at runtime, after this
+            # loop ran. The supervisor keeps a tick loop on every registered
+            # plant, so a built plant is driven exactly like a shipped dataset.
+            async def _sim_loop_supervisor() -> None:
+                while True:
+                    try:
+                        for pid in simulation_service.registered_ids():
+                            simulation_service.ensure_loop(pid, settings.simulation_tick_s)
+                    except Exception as exc:  # noqa: BLE001 - never kill the API
+                        logger.error("simulation supervisor: %s", exc)
+                    await asyncio.sleep(1.0)
+
+            sim_tasks.append(asyncio.create_task(_sim_loop_supervisor()))
         yield
         for t in sim_tasks:
+            t.cancel()
+        # The tick loops are owned by the supervisor's registry rather than this
+        # list, so cancel them explicitly on shutdown.
+        for t in list(simulation_service._tick_tasks.values()):  # noqa: SLF001
             t.cancel()
 
     app = FastAPI(
@@ -173,7 +223,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # --- services --------------------------------------------------------
     metrics = MetricsRegistry()
-    audit_service = AuditService(session_factory)
+    audit_service = AuditService(session_factory, database_url=settings.database_url)
     model_roles = ModelRoles(settings)
     # Built before any provider: the policy is enforced *inside* the provider's
     # HTTP transport, so it has to exist first. Before Phase 0.5 this object
@@ -227,16 +277,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     settings.artifacts_dir.mkdir(parents=True, exist_ok=True)
 
+    # Phase 2: artifacts are signed with Ed25519. The key is generated on first
+    # use and persisted 0600 under the app's data directory (or at
+    # P117_ARTIFACT_SIGNING_KEY). A key that cannot be loaded is a real
+    # configuration error and is raised, not silently degraded — an
+    # unauthenticated artifact must never be presented as a signed one.
+    signing_key = load_or_create_key()
+
     # Phase 11: the verifier never gets a model router — see verifier.py.
     verifier = Verifier(sandbox=sandbox_service)
 
     # Phase 10: artifact lifecycle (spec -> sandbox -> sha256 -> verify -> store).
+    # Phase 2 adds: -> Ed25519 signature, recorded on the artifact row.
     artifact_service = ArtifactService(
         sandbox=sandbox_service,
         storage_dir=settings.artifacts_dir,
         session_factory=session_factory,
         audit=audit_service,
         verifier=verifier,
+        signing_key=signing_key,
     )
 
     # Phase 8: every tool call goes through this registry — schema, RBAC,
@@ -265,6 +324,38 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     agent_manager = AgentManager(
         agent_registry, model_router=router, gateway=gateway, tools=tool_registry
     )
+    # The materials domain store is opened here rather than in the lifespan so it
+    # exists before the orchestrator is built and can be handed to the agent's
+    # tool context. Opening it is just "open SQLite and apply the schema" —
+    # milliseconds. The slower part, seeding a fresh database, stays in the
+    # lifespan where startup work belongs.
+    materials_store = MaterialsStore(db_path=settings.materials_db)
+    app.state.materials = materials_store
+
+    # --- mobile field API -------------------------------------------------
+    # The identity store backs real credential checks for the Android client.
+    # It is opened and seeded here (not per request) so a fresh checkout can log
+    # in immediately; the seeded accounts are flagged is_demo and announced.
+    identity_store = IdentityStore(db_path=settings.identity_db)
+    if settings.seed_demo_users:
+        created = identity_store.seed_demo_accounts()
+        if created:
+            logger.warning(
+                "identity store seeded with %s SYNTHETIC DEMO account(s) "
+                "(technician, operator, supervisor, admin) — these are demo "
+                "credentials, replace them before any shared deployment",
+                created,
+            )
+    identity_store.seed_enrollment_codes(settings.enrollment_codes or DEFAULT_ENROLLMENT_CODES)
+    # The mobile store holds the writes the phone makes; it opens the engine's
+    # simulation database read-only to serve the real agent-task list.
+    mobile_store = MobileStore(
+        db_path=settings.mobile_db or default_mobile_db(),
+        simulation_db=settings.simulation_db,
+    )
+    app.state.identity = identity_store
+    app.state.mobile = mobile_store
+
     execution_manager = ExecutionManager(
         tools=tool_registry,
         agent_manager=agent_manager,
@@ -275,8 +366,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         sandbox=sandbox_service,
         artifacts=artifact_service,
         model_router=router,
+        materials=materials_store,
     )
-    verification_manager = VerificationManager(verifier=verifier, sandbox=sandbox_service)
+    verification_manager = VerificationManager(
+        verifier=verifier, sandbox=sandbox_service, audit=audit_service
+    )
     recovery_manager = RecoveryManager()
     workflow_manager = WorkflowManager(workflow_registry, tool_names=tool_registry.names())
 
@@ -319,6 +413,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.session_factory = session_factory
     app.state.metrics = metrics
     app.state.audit = audit_service
+    # The egress path cannot import the API (the httpx transport imports the
+    # monitor on a hot path), so the durable audit sink is handed to it here.
+    # Without this the sentinel streams and counts a decision but the Security
+    # Events panel never sees it.
+    register_audit_sink(audit_service)
     app.state.memory = memory
     app.state.tracing = AgentTraceRecorder()
     app.state.egress = egress
@@ -403,7 +502,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(tools.router)
     app.include_router(artifacts.router)
     app.include_router(audit.router)
+    app.include_router(network.router)
+    app.include_router(sovereignty.router)
     app.include_router(simulation_api.router)
+    app.include_router(materials.router)
+    # The Android field client's surface: base URL http://<host>:8000/api/v1/.
+    app.include_router(mobile.router)
 
     @app.get("/api/metrics")
     def api_metrics(request: Request) -> dict:

@@ -26,6 +26,11 @@ ENTITY_TYPES: frozenset[str] = frozenset(
         "job",
         "person",
         "site",
+        # Added with the operational graph tool: a spare part and a recorded
+        # inspection are real records the system holds, and the closed set had
+        # no type for either.
+        "material",
+        "inspection",
     }
 )
 

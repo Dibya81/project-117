@@ -13,6 +13,7 @@ export function Counter({
   suffix = "",
   duration = 1400,
   className,
+  as: Tag = "span",
 }: {
   value: number;
   decimals?: number;
@@ -20,6 +21,13 @@ export function Counter({
   suffix?: string;
   duration?: number;
   className?: string;
+  /**
+   * The element to render. Defaults to `span`; pass `"b"` where the caller's own
+   * markup uses a bold value node, so the counter replaces that node instead of
+   * nesting a second inline element inside it (nested spans break selectors that
+   * expect the label to be an element's first `span`).
+   */
+  as?: "span" | "b" | "strong" | "div";
 }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [display, setDisplay] = useState(0);
@@ -61,10 +69,10 @@ export function Counter({
   }, [value, duration]);
 
   return (
-    <span ref={ref} className={className}>
+    <Tag ref={ref as never} className={className}>
       {prefix}
       {display.toFixed(decimals)}
       {suffix}
-    </span>
+    </Tag>
   );
 }

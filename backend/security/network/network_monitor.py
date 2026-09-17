@@ -47,6 +47,15 @@ class EgressDecision:
     #: "external", and conflating the two inflates the very number that proves
     #: the sovereignty claim.
     local: bool = False
+    #: Destination port, when the caller knew it. ``None`` means "not
+    #: observed", which is reported as null on the sentinel stream rather than
+    #: guessed at (the transport can always see the URL's port or default it
+    #: from the scheme; call sites that pass a bare host cannot).
+    port: int | None = None
+    #: The agent/task that made the call, when one is in scope. Outside a task
+    #: context both are None, and the stream says so.
+    agent: str | None = None
+    task_id: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -56,6 +65,9 @@ class EgressDecision:
             "at": self.at,
             "reason": self.reason,
             "local": self.local,
+            "port": self.port,
+            "agent": self.agent,
+            "task_id": self.task_id,
         }
 
 
@@ -86,6 +98,9 @@ class NetworkMonitor:
         decision: Decision,
         reason: str | None = None,
         local: bool = False,
+        port: int | None = None,
+        agent: str | None = None,
+        task_id: str | None = None,
     ) -> EgressDecision:
         entry = EgressDecision(
             host=(host or "?").lower(),
@@ -94,6 +109,9 @@ class NetworkMonitor:
             at=time.time(),
             reason=reason,
             local=local,
+            port=port,
+            agent=agent,
+            task_id=task_id,
         )
         with self._lock:
             self._history.append(entry)
@@ -156,6 +174,10 @@ class NetworkMonitor:
     def summary(self, *, recent: int = 10) -> dict[str, Any]:
         totals = self.totals()
         counts = self.counts()
+        # Imported here rather than at module import: the sentinel imports the
+        # monitor's decision path, and a top-level import would close the cycle.
+        from backend.security.network.sentinel_stream import STREAM  # noqa: PLC0415
+
         return {
             "since": self._started,
             "scope": "this process only",
@@ -168,6 +190,12 @@ class NetworkMonitor:
             "external_blocked": totals["external_blocked"],
             "blocked_hosts": sorted(counts["blocked"]),
             "allowed_hosts": sorted(counts["allowed"]),
+            # How many clients are subscribed to the sentinel stream right now.
+            # Zero is the expected value when no security page is open; a
+            # number that does not fall back to zero after the page closes is a
+            # leaked subscription, which is exactly what §21 asks this route not
+            # to leave behind.
+            "sentinel_subscribers": STREAM.subscriber_count,
             "recent": self.recent(recent),
         }
 
@@ -199,15 +227,59 @@ def record_decision(
     decision: Decision,
     reason: str | None = None,
     local: bool = False,
+    port: int | None = None,
+    agent: str | None = None,
+    task_id: str | None = None,
 ) -> None:
-    """Record against the process-wide monitor. Never raises.
+    """Record against the process-wide monitor and publish to the sentinel stream.
 
-    Bookkeeping must not be able to fail a request that the policy allowed,
-    so every error here is swallowed deliberately.
+    Never raises. Bookkeeping must not be able to fail a request that the
+    policy allowed, and neither must the *stream* built on top of it, so every
+    error here is swallowed deliberately.
+
+    An ``agent``/``task_id`` not supplied is taken from the ambient task
+    context (:func:`backend.security.network.sentinel_stream.network_identity`)
+    and is otherwise left as ``None``. It is never inferred from the host or
+    the URL: a guess here would put a name in the security record that nothing
+    observed.
     """
     try:
-        MONITOR.record(
-            host=host, scheme=scheme, decision=decision, reason=reason, local=local
+        from backend.security.network.audit_sink import record_network_decision  # noqa: PLC0415
+        from backend.security.network.sentinel_stream import (  # noqa: PLC0415
+            current_identity,
+            emit_decision,
+        )
+
+        context_agent, context_task = current_identity()
+        entry = MONITOR.record(
+            host=host,
+            scheme=scheme,
+            decision=decision,
+            reason=reason,
+            local=local,
+            port=port,
+            agent=agent if agent is not None else context_agent,
+            task_id=task_id if task_id is not None else context_task,
+        )
+        emit_decision(
+            host=entry.host,
+            scheme=entry.scheme,
+            port=entry.port,
+            action="ALLOW" if entry.decision == "allowed" else "BLOCK",
+            reason=entry.reason,
+            local=entry.local,
+        )
+        # The durable half. Same decision, same single call site, so a decision
+        # cannot reach the live stream but miss the audit log (or the reverse).
+        record_network_decision(
+            host=entry.host,
+            scheme=entry.scheme,
+            port=entry.port,
+            decision=entry.decision,
+            reason=entry.reason,
+            local=entry.local,
+            agent=entry.agent,
+            task_id=entry.task_id,
         )
     except Exception:  # noqa: BLE001 - observability must never break traffic
         pass

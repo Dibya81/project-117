@@ -8,7 +8,12 @@ this module is what lets a shared deployment turn that default off with
 
 Three headers, no sessions, no JWT: this is a machine-to-machine API key
 model, matching the rest of the sovereignty posture (nothing calls out,
-nothing needs a token service).
+nothing needs a token service). The one addition is the mobile field API: an
+``Authorization: Bearer p117a.…`` access token minted by
+``security/mobile_auth.py`` is verified here and resolved to an authenticated
+Principal, because the Android client authenticates a person rather than a
+machine. A value that is not one of those tokens is still treated as an API
+key.
 
 ===================  ===============================================
 Header               Meaning
@@ -102,6 +107,15 @@ def principal_from_request(request: Request, *, settings: Any = None) -> Princip
     roles = split_roles(request.headers.get(ROLES_HEADER))
 
     if supplied:
+        # A mobile access token is a *person's* credential and is verified by
+        # the token service. It is checked before the API-key path because the
+        # two live in the same header, and the token service is the only thing
+        # that can tell them apart. Imported lazily: mobile_auth imports
+        # AuthenticationError from this module.
+        from backend.security.mobile_auth import is_mobile_token, resolve_mobile_principal
+
+        if is_mobile_token(supplied):
+            return resolve_mobile_principal(supplied, settings=settings)
         if not configured_key or not hmac.compare_digest(supplied, configured_key):
             raise AuthenticationError("the supplied API key is not valid")
         return Principal(

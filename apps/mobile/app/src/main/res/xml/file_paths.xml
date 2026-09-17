@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path name="evidence_cache" path="evidence/" />
+    <files-path name="evidence_files" path="evidence/" />
+    <external-cache-path name="evidence_external_cache" path="evidence/" />
+</paths>

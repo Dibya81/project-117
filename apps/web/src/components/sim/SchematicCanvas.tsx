@@ -50,6 +50,20 @@ export interface SchematicCanvasProps {
   onSelect: (eq: EquipmentDef) => void;
   onHover: (eq: EquipmentDef | null) => void;
   onBackground?: () => void;
+  /**
+   * Decorative mode: render the topology, attach nothing.
+   *
+   * The simulation hub draws this component twice, `aria-hidden`, as a card
+   * thumbnail — and was paying the full interactive cost for both: hover and
+   * click handlers per node, keyboard handling, the minimap, the live sensor
+   * micro-dots. That is why a picker page listing two cards was heavier
+   * (~159 kB first load) than pages rendering real operational tables.
+   *
+   * In this mode every handler is dropped and the minimap is skipped, so the
+   * markup is the same drawing without the machinery. Callers pass no-op
+   * handlers today; this makes that intent explicit and free.
+   */
+  decorative?: boolean;
   /** Opt-in bright spatial layout. Defaults to the classic schematic view. */
   layout?: "schematic" | "spatial";
   /** sensorId → live reading, consumed by the spatial telemetry pills. */
@@ -88,6 +102,7 @@ function EquipmentNode({
   affected,
   onSelect,
   onHover,
+  decorative = false,
 }: {
   eq: EquipmentDef;
   state: SimVisualState;
@@ -96,20 +111,25 @@ function EquipmentNode({
   affected: boolean;
   onSelect: (eq: EquipmentDef) => void;
   onHover: (eq: EquipmentDef | null) => void;
+  decorative?: boolean;
 }) {
   const size = KIND_NODE[eq.kind] ?? 46;
   return (
     <g
       transform={`translate(${eq.x - size / 2}, ${eq.y - size / 2})`}
-      style={{ cursor: "pointer" }}
-      onPointerDown={(e) => {
-        e.stopPropagation();
-        onSelect(eq);
-      }}
-      onPointerEnter={() => onHover(eq)}
-      onPointerLeave={() => onHover(null)}
-      role="button"
-      aria-label={`${eq.tag} ${eq.name}`}
+      style={decorative ? undefined : { cursor: "pointer" }}
+      onPointerDown={
+        decorative
+          ? undefined
+          : (e) => {
+              e.stopPropagation();
+              onSelect(eq);
+            }
+      }
+      onPointerEnter={decorative ? undefined : () => onHover(eq)}
+      onPointerLeave={decorative ? undefined : () => onHover(null)}
+      role={decorative ? undefined : "button"}
+      aria-label={decorative ? undefined : `${eq.tag} ${eq.name}`}
     >
       {(selected || affected) && (
         <rect
@@ -173,6 +193,7 @@ function SchematicView({
   onSelect,
   onHover,
   onBackground,
+  decorative = false,
 }: SchematicCanvasProps) {
   const [cam, setCam] = useState({ x: 0, y: 0, k: 1 });
   /**
@@ -400,6 +421,7 @@ function SchematicView({
             affected={affected.includes(eq.id)}
             onSelect={onSelect}
             onHover={onHover}
+            decorative={decorative}
           />
         ))}
       </svg>

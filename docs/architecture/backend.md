@@ -23,20 +23,21 @@ arrives in Phase 12). Do not expose it to a network yet.
 | GET | `/health` | ✅ real (db, model backend, uploads checks) | 1/2 |
 | GET | `/api/metrics` | ✅ real (in-memory counters/timings) | 1 |
 | GET | `/api/models` | ✅ real (served models + role mapping) | 2 |
-| POST | `/api/chat` | ✅ real (model gateway; no RAG yet) | 2 |
+| POST | `/api/chat` | ✅ real (model gateway; `use_rag` adds document grounding) | 2 |
 | POST | `/api/chat/stream` | ✅ real (SSE streaming) | 2 |
 | POST | `/api/documents/upload` | ✅ real (validate → store → audit) | 1 |
 | GET | `/api/documents` | ✅ real | 1 |
 | GET | `/api/documents/{id}` | ✅ real | 1 |
 | DELETE | `/api/documents/{id}` | ✅ real (file + metadata + audit) | 1 |
 | POST | `/api/documents/{id}/reindex` | ✅ real (localGPT: parse → OCR → chunk → embed → LanceDB+FTS) | 3 |
-| POST | `/api/search` | ✅ real (localGPT hybrid: vector+FTS → RRF → optional rerank → citations) | 4 || GET | `/api/agents` | ✅ real (registry; empty until Phase 7) | 1 |
-| POST | `/api/agents/run` | ⏳ 501 | 7 |
-| GET | `/api/workflows` | ✅ real (registry; empty until Phase 15) | 1 |
+| POST | `/api/search` | ✅ real (localGPT hybrid: vector+FTS → RRF → optional rerank → citations) | 4 |
+| GET | `/api/agents` | ✅ real (agent registry) | 1 |
+| POST | `/api/agents/run` | ✅ real (spawns a job through the orchestrator) | 7 |
+| GET | `/api/workflows` | ✅ real (registry; definitions live in `workflows/definitions`) | 1 |
 | POST | `/api/workflows/run` | ⏳ 501 | 15 |
-| POST | `/api/tools/execute` | ⏳ 501 | 8/9 |
-| POST | `/api/artifacts/generate` | ⏳ 501 | 10 |
-| GET | `/api/artifacts/{id}` | ⏳ 501 | 10 |
+| POST | `/api/tools/execute` | ✅ real (tool registry; execute-risk tools require approval) | 8/9 |
+| POST | `/api/artifacts/generate` | ✅ real (sandbox-rendered pdf/docx/pptx/xlsx) | 10 |
+| GET | `/api/artifacts/{id}` | ✅ real | 10 |
 | GET | `/api/audit/{id}` | ✅ real (audit events) | 1 |
 | GET | `/api/audit` | ✅ real (filtered listing) | 1 |
 
@@ -55,28 +56,41 @@ the turn answers ungrounded instead of failing.
 Every 501 returns `{"error": {"code": "not_implemented", "phase": N, "message": "..."}}`
 — endpoints are real, their phases are not.
 
+The table above covers the Phase-1/2 document surfaces. The running app also
+serves `/api/jobs`, `/api/equipment`, `/api/work-orders`, `/api/approvals`,
+`/api/analytics`, `/api/materials`, `/api/auth`, `/api/knowledge` and
+`/api/simulation` (routers are registered in `backend/api/src/main.py`; the
+simulation router lives in `backend/simulation/api.py`).
+
 ## Layout
 
 ```
-backend/
-├── backend/
-│   ├── api/            # routers + error envelope
-│   ├── orchestrator/   # result envelope (engine lands Phase 6)
-│   ├── agents/         # spec + registry (agents land Phase 7)
-│   ├── workflows/      # registry (engine lands Phase 15)
-│   ├── models/         # model roles + gateway + router
-│   │   └── providers/  # pluggable backends (OpenAI-compatible: Ollama/vLLM)
-│   ├── chat/           # sessions (in-memory) + turn/streaming service
-│   ├── ingestion/      # Phase 3: staging → localGPT adapter → orchestration
-│   ├── rag/            # Phase 4: hybrid retrieval adapter + service (citations)
-│   ├── security/       # audit service + egress policy (auth lands Phase 12)
-│   ├── observability/  # metrics registry + request middleware
-│   ├── storage/        # document file + metadata storage
-│   ├── database/       # SQLAlchemy engine/session/models
-│   ├── config.py       # P117_* env-driven settings
-│   └── main.py         # app factory
-├── tests/              # pytest suite
-└── pyproject.toml      # uv-managed
+backend/                  # imported as `backend.*` from the repository root
+├── api/src/              # app factory (`create_app`), routers + middleware
+├── orchestrator/         # plan/execute loop + result envelope
+├── agents/               # agent implementations + registry
+├── workflows/            # workflow registry + engine
+├── tools/                # tool registry + built-in tools
+├── models/               # model roles + gateway + router
+│   └── providers/        # pluggable backends (OpenAI-compatible: Ollama/vLLM)
+├── chat/                 # sessions (in-memory) + turn/streaming service
+├── ingestion/            # staging → localGPT adapter → orchestration
+├── rag/                  # hybrid retrieval adapter + service (citations)
+├── simulation/           # digital-twin engine, persistence, SSE API
+├── materials/            # materials / inventory / procurement domain
+├── sandbox/              # OpenSandbox adapter + policy
+├── verification/         # verifier + checkers
+├── deliverables/         # artifact generators (pdf/docx/pptx/xlsx)
+├── memory/               # episodic / semantic / procedural / graph memory
+├── connectors/           # SAP / CMMS / historian / DMS adapters
+├── jobs/                 # job service + event bus
+├── security/             # audit, egress policy, RBAC, auth
+├── observability/        # metrics registry + request middleware
+├── storage/              # document file + metadata storage
+├── database/             # SQLAlchemy engine/session/models
+└── config.py             # P117_* env-driven settings
+tests/                    # pytest suite (repository root)
+pyproject.toml            # uv-managed (repository root)
 ```
 
 ## Ingestion (Phase 3)
@@ -103,7 +117,7 @@ End-to-end check against a live stack:
 
 ```bash
 make run   # with P117_EMBEDDING_MODEL served by Ollama
-uv run python ../scripts/smoke_phase3.py
+uv run python scripts/smoke_phase3.py
 ```
 
 ## Retrieval (Phase 4)
@@ -134,7 +148,7 @@ End-to-end check against a live stack:
 
 ```bash
 make run   # with P117_EMBEDDING_MODEL + P117_REASONING_MODEL served by Ollama
-uv run python ../scripts/smoke_phase4.py
+uv run python scripts/smoke_phase4.py
 ```
 
 ## Tests
@@ -146,14 +160,17 @@ uv run ruff check backend tests
 
 ## Phase roadmap
 
+The plan below has since landed; the one endpoint still returning 501 is
+`POST /api/workflows/run`.
+
 | Phase | Content | Status |
 |---|---|---|
 | 1 | Foundation | ✅ |
 | 2 | Model gateway + router (Ollama → vLLM) | ✅ |
 | 3 | Document ingestion (localGPT adapter) | ✅ |
 | 4 | Hybrid RAG + citations (localGPT) | ✅ |
-| 5 | Graph memory (LightRAG) | pending |
-| 6–8 | Orchestrator / agents / tool registry | pending |
-| 9 | Sandbox (OpenSandbox adapter) | pending |
-| 10–11 | Artifacts / verification | pending |
-| 12–17 | Security / connectors / memory / workflows / observability / database | pending |
+| 5 | Graph memory | ✅ in-house (`backend/memory/graph/`); LightRAG is not used |
+| 6–8 | Orchestrator / agents / tool registry | ✅ |
+| 9 | Sandbox (OpenSandbox adapter) | ✅ code (`backend/sandbox/`); needs a reachable OpenSandbox service to execute |
+| 10–11 | Artifacts / verification | ✅ |
+| 12–17 | Security / connectors / memory / workflows / observability / database | ✅ (connectors are adapter interfaces, not live systems) |

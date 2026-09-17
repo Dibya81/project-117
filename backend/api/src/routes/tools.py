@@ -12,11 +12,21 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from backend.api.src.deps import get_artifacts, get_principal, get_retrieval, get_sandbox, get_tools
+from backend.api.src.deps import (
+    get_artifacts,
+    get_materials,
+    get_operations,
+    get_principal,
+    get_retrieval,
+    get_sandbox,
+    get_tools,
+)
 from backend.deliverables.service import ArtifactService
 from backend.rag.service import RetrievalService
 from backend.sandbox.service import SandboxService
 from backend.security.rbac import Principal
+from backend.storage.materials import MaterialsStore
+from backend.storage.operations import OperationsStore
 from backend.tools.base import ToolContext
 from backend.tools.registry import ToolRegistry
 
@@ -43,6 +53,8 @@ async def execute_tool(
     retrieval: RetrievalService = Depends(get_retrieval),
     sandbox: SandboxService = Depends(get_sandbox),
     artifacts: ArtifactService = Depends(get_artifacts),
+    materials: MaterialsStore = Depends(get_materials),
+    operations: OperationsStore = Depends(get_operations),
 ) -> dict:
     context = ToolContext(
         job_id=None,
@@ -52,6 +64,8 @@ async def execute_tool(
         retrieval=retrieval,
         sandbox=sandbox,
         artifacts=artifacts,
+        materials=materials,
+        operations=operations,
     )
     # `approved=False`: a manual call from this endpoint can never carry a
     # prior human approval, so any execute-or-above risk tool correctly

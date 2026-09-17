@@ -54,6 +54,34 @@ def list_artifacts(
     return {"total": len(records), "artifacts": records}
 
 
+@router.get("/signatures")
+def artifact_signatures(
+    limit: int = 25,
+    artifacts: ArtifactService = Depends(get_artifacts),
+) -> dict:
+    """Signature status of recent artifacts — measured, not asserted.
+
+    Declared before ``/{artifact_id}`` so a path parameter cannot swallow it
+    and answer 404 for an "artifact" named 'signatures'. Every figure comes
+    from the artifact rows and the signature files on disk; a deployment with
+    no signed artifacts returns zeros and an empty list rather than a
+    reassuring summary.
+    """
+    return artifacts.signed_artifacts(limit=limit)
+
+
+@router.get("/{artifact_id}/signature")
+def verify_artifact_signature(
+    artifact_id: str,
+    artifacts: ArtifactService = Depends(get_artifacts),
+) -> dict:
+    """Re-verify one artifact's signature against the bytes currently on disk."""
+    try:
+        return artifacts.verify_signature(artifact_id)
+    except ArtifactNotFound as exc:
+        raise HTTPException(status_code=404, detail="artifact not found") from exc
+
+
 @router.get("/{artifact_id}")
 def get_artifact(
     artifact_id: str,

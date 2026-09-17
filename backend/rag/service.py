@@ -40,6 +40,9 @@ from sqlalchemy.orm import sessionmaker
 from backend.database.models import Document
 from backend.rag.adapter import LocalGPTRetriever, ensure_vendor_available
 from backend.rag.errors import IndexUnavailableError, RerankerUnavailableError, RetrievalError
+from backend.security.clearance import Clearance, clearance_of
+from backend.security.clearance.access import filter_chunks
+from backend.security.rbac import Principal
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +140,7 @@ class RetrievalService:
         filters: dict[str, Any] | None = None,
         rerank: bool | None = None,
         user: str | None = None,
+        principal: Principal | None = None,
     ) -> dict[str, Any]:
         """Run one search and return ``{query, mode, total, results, ...}``.
 
@@ -144,6 +148,15 @@ class RetrievalService:
         exist; scoping to a not-indexed document is an error, not silence).
         ``filters`` is localGPT's metadata filter DSL (document_id /
         document_name / chunk_id / chunk_index) applied on top.
+
+        ``principal`` is the caller whose clearance the results are filtered
+        against. The filter runs **before the reranker and before any
+        ``Evidence`` object is built**, which is what keeps unauthorized text
+        out of the model context rather than merely out of the response: a
+        reranker scores the text it is given, and a prompt cites the evidence
+        it is handed. ``withheld`` in the response counts what was removed, so
+        "nothing matched" and "something matched that you may not see" are
+        distinguishable by the caller.
         """
         started = time.perf_counter()
 
@@ -157,6 +170,15 @@ class RetrievalService:
             raise
         except Exception as exc:  # noqa: BLE001 — vendor errors become typed failures
             raise RetrievalError(str(exc)) from exc
+
+        # Clearance, before anything else touches the content. A retrieved chunk
+        # carries its document's label; the authoritative record is the document
+        # row, so that label is read first and the chunk's own metadata is the
+        # fallback for rows whose document has no label.
+        labels = self._clearance_labels_for(rows)
+        rows, withheld = filter_chunks(principal, rows, overrides_by_id=labels)
+        if withheld:
+            logger.info("retrieval withheld %d chunk(s) above the caller's clearance", withheld)
 
         if rerank is None:
             rerank = self._rerank_enabled
@@ -178,6 +200,7 @@ class RetrievalService:
                 "top_k": top_k,
                 "reranked": bool(rerank and rows),
                 "results": len(results),
+                "withheld_by_clearance": withheld,
                 "scoped_documents": len(document_ids or []),
                 "elapsed_seconds": round(elapsed, 2),
             },
@@ -186,6 +209,7 @@ class RetrievalService:
             "query": query,
             "mode": mode,
             "total": len(results),
+            "withheld": withheld,
             "results": [e.to_dict() for e in results],
             "elapsed_seconds": round(elapsed, 2),
         }
@@ -197,12 +221,18 @@ class RetrievalService:
         top_k: int,
         document_ids: list[str] | None = None,
         user: str | None = None,
+        principal: Principal | None = None,
     ) -> list[Evidence]:
         """Retrieval used to ground a chat turn (Phase 4 chat grounding).
 
         Best-effort by design: chat must still answer when nothing is indexed
         or retrieval fails — the caller receives ``[]`` instead of an error.
         Scoped ids that don't exist are still a loud client error (400).
+
+        Clearance is not best-effort: an authorized-only result set is the
+        contract, and the filter is applied inside :meth:`search` before the
+        evidence is built, so a failure to filter cannot be swallowed into
+        "the model answered without context".
         """
         if document_ids:
             self._require_documents(document_ids)
@@ -214,6 +244,7 @@ class RetrievalService:
                 document_ids=document_ids,
                 rerank=self._rerank_enabled,
                 user=user,
+                principal=principal,
             )
         except RetrievalError as exc:
             logger.warning("chat grounding skipped: %s", exc)
@@ -250,6 +281,44 @@ class RetrievalService:
         except FilterError as exc:
             raise RetrievalError(f"invalid filters: {exc}") from exc
         return compiled.where if compiled is not None else None
+
+    def _clearance_labels_for(self, rows: list[dict[str, Any]]) -> dict[str, Clearance]:
+        """Authoritative document clearance, keyed by every id a row may carry.
+
+        One query per search, over just the documents the search touched. The
+        document row is the authority — a chunk's copied metadata can be stale
+        the moment an operator raises a document's clearance — so this is read
+        first and the chunk metadata is only a fallback.
+
+        The staged name (``<uuid><ext>``) and the bare UUID are both keyed, so
+        the filter matches regardless of which one a row carries. A document
+        that cannot be resolved contributes no key and the chunk's own label
+        applies, which is the conservative direction.
+        """
+        ids: set[str] = set()
+        for row in rows:
+            raw = str(row.get("document_id") or "")
+            if not raw:
+                continue
+            ids.add(raw)
+            if "." in raw:
+                ids.add(raw.rsplit(".", 1)[0])
+        if not ids:
+            return {}
+        with self._session_factory() as session:
+            documents = session.query(Document).filter(Document.id.in_(sorted(ids))).all()
+        labels: dict[str, Clearance] = {}
+        for doc in documents:
+            try:
+                metadata = json.loads(doc.metadata_json or "{}")
+            except ValueError:
+                metadata = {}
+            level = clearance_of(metadata)
+            labels[doc.id] = level
+            staged = ((metadata.get("ingestion") or {}).get("index_document_id")) or ""
+            if staged:
+                labels[str(staged)] = level
+        return labels
 
     def _staged_names_for(self, document_ids: list[str]) -> list[str]:
         """Staged basenames (``<uuid><ext>``) for UUIDs that are indexed.

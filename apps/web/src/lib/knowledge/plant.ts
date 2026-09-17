@@ -86,6 +86,17 @@ async function api<T>(path: string): Promise<T> {
 
 let cached: KGraph | null = null;
 let cachedRevision = -1;
+/**
+ * The build in progress.
+ *
+ * `buildPlantGraph` is called from more than one component, and they mount in
+ * the same tick — so both saw an empty cache and both ran the whole build,
+ * reading the 103 KB plant definition and the scenarios twice. Caching the
+ * *promise* rather than only the result makes the second caller await the first
+ * one's build instead of starting its own.
+ */
+let inflightBuild: Promise<KGraph> | null = null;
+
 export function cachedPlantGraph(): KGraph | null {
   return cached;
 }
@@ -94,6 +105,14 @@ export async function buildPlantGraph(): Promise<KGraph> {
   // The builder's session store is the only thing that can change this graph
   // between calls, so its revision is the cache key.
   if (cached && cachedRevision === consoleData.customPlants.revision()) return cached;
+  if (inflightBuild) return inflightBuild;
+  inflightBuild = buildPlantGraphOnce().finally(() => {
+    inflightBuild = null;
+  });
+  return inflightBuild;
+}
+
+async function buildPlantGraphOnce(): Promise<KGraph> {
 
   const def = await api<{
     plant: { id: string; name: string; industry: string } & {
@@ -108,6 +127,14 @@ export async function buildPlantGraph(): Promise<KGraph> {
   const scenarios = await api<{ scenarios: RefScenario[] }>(`/plants/${REFINERY_ID}/scenarios`)
     .then((r) => r.scenarios)
     .catch(() => [] as RefScenario[]);
+
+  /**
+   * The materials subgraph, built by the backend from the same store the
+   * materials pages read. Fetched here rather than derived client-side: a
+   * relationship the console draws must be one the domain actually holds, and
+   * rebuilding it in the browser would be a second definition of "requires".
+   */
+  const materialsGraph = await consoleData.materials.graph().catch(() => null);
 
   const [documents, workOrders, alerts, history, rules, approvals, agents, consoleEquipment] =
     await Promise.all([
@@ -258,10 +285,23 @@ export async function buildPlantGraph(): Promise<KGraph> {
   // ---- narrative units (the console's own equipment set) ---------------
   // These carry the C-3 story. Any tag already present from the refinery
   // dataset is the same physical unit and is merged, not duplicated.
+  //
+  // NOTE the key: the refinery dataset keys a unit on its **tag** (`P-1001`),
+  // while the console record carries an **id** (`e-P-1001`). These are the same
+  // physical unit. This used to filter on `refineryTags.has(x.id)` — comparing a
+  // tag set against an id — which never matched, so every console unit was added
+  // a second time under `equipment:e-P-1001` alongside `equipment:P-1001`. That
+  // doubled the graph: /console/knowledge reported 116 equipment and 448 sensors
+  // for a 58-unit / 224-sensor plant.
+  //
+  // Matching on the tag and reusing it as the node id makes `node()` (an upsert
+  // by id) merge the console record onto the refinery node, which is what the
+  // comment below always claimed happened.
   const refineryTags = new Set(equipment.map((e) => e.tag));
-  for (const e of consoleEquipment.filter((x) => !refineryTags.has(x.id))) {
+  for (const e of consoleEquipment) {
+    const canonicalId = e.tag && refineryTags.has(e.tag) ? e.tag : e.id;
     const existing = node({
-      id: `equipment:${e.id}`,
+      id: `equipment:${canonicalId}`,
       label: `${e.name} (${e.id})`,
       type: "equipment",
       group: e.zone,
@@ -272,6 +312,16 @@ export async function buildPlantGraph(): Promise<KGraph> {
     });
     existing.status = e.status;
     existing.facts = { ...existing.facts, kind: e.kind, zone: e.zone, sensors: e.sensors.length };
+    // Console sensor nodes are only for NARRATIVE units.
+    //
+    // A refinery-backed unit already carries its authoritative sensors from the
+    // dataset — keyed `sensor:<tag>` — and the console's own key is a synthetic
+    // `${signal}-${index}` that cannot be matched to them. Adding both was the
+    // second half of the duplication: the graph reported 448 sensors (224 × 2)
+    // for a 224-sensor plant. Where the unit came from the dataset, skip the
+    // derived set and keep the real one.
+    const fromDataset = canonicalId !== e.id;
+    if (fromDataset) continue;
     for (const s of e.sensors) {
       const sid = `sensor:${e.id}/${s.key}`;
       node({
@@ -279,7 +329,7 @@ export async function buildPlantGraph(): Promise<KGraph> {
         source: "console telemetry",
         facts: { value: s.value, unit: s.unit },
       });
-      add({ from: `equipment:${e.id}`, to: sid, relation: "HAS_SENSOR", provenance: "OBSERVED", source: "console telemetry" });
+      add({ from: `equipment:${canonicalId}`, to: sid, relation: "HAS_SENSOR", provenance: "OBSERVED", source: "console telemetry" });
     }
   }
 
@@ -535,6 +585,105 @@ export async function buildPlantGraph(): Promise<KGraph> {
   // was inert — the overlay side never existed — while its comments described
   // a reconciliation that could not happen. The graph is built from the real
   // register alone, so there is nothing to join.
+
+  /* Materials are spliced in BEFORE the node/edge filter below. The filter drops
+     any edge whose endpoints are not in `liveIds`, so adding them afterwards
+     silently discarded every materials relationship — the graph stayed correct
+     and empty of materials at the same time. */
+  /**
+   * Industrial materials.
+   *
+   * Materials are first-class nodes in the same universe as the plant: a pump
+   * REQUIRES a seal kit, the kit is STOCKED_AT a warehouse, supplied by a
+   * supplier, and the feedstock FLOWS_TO the unit that consumes it. Those edges
+   * come from the backend's own `REQUIRES` / `STOCKED_AT` / `SUPPLIED_BY` /
+   * `FLOWS_TO` / `PRODUCES` relations, not from a client-side guess.
+   *
+   * The mapping to plant nodes is by *tag*: the backend keys equipment as
+   * `e-P-1001` and the plant graph keys it as `equipment:P-1001`, so the join is
+   * made explicit here instead of hoping the two id spaces coincide.
+   */
+  if (materialsGraph) {
+    const MATERIAL_NODE_TYPES = new Set([
+      "RAW_MATERIAL",
+      "INTERMEDIATE",
+      "FINISHED_PRODUCT",
+      "MAINTENANCE_SPARE",
+    ]);
+    for (const m of materialsGraph.nodes) {
+      if (m.kind === "WAREHOUSE" || m.kind === "TANK") {
+        node({
+          id: `location:${m.id}`,
+          label: m.id.startsWith("e-") ? m.id.replace(/^e-/, "") : m.id,
+          type: "storage",
+          group: "Materials",
+          status: m.kind === "WAREHOUSE" ? "warehouse" : "tank",
+          source: "materials store",
+          facts: { kind: m.kind },
+        });
+        continue;
+      }
+      const isMaterial = MATERIAL_NODE_TYPES.has(m.kind);
+      node({
+        id: isMaterial ? `material:${m.id}` : `${m.kind.toLowerCase()}:${m.id}`,
+        label: m.label,
+        type: isMaterial ? "material" : m.kind.toLowerCase(),
+        group: "Materials",
+        status: String((m.status as string | undefined) ?? (m.kind === "SUPPLIER" ? "supplier" : "")),
+        source: "materials store",
+        href: isMaterial ? `/console/materials/${encodeURIComponent(m.id)}` : undefined,
+        facts: {
+          kind: m.kind,
+          unit: m.unit as string | undefined,
+          class: m.material_class as string | undefined,
+          lead_time_days: m.lead_time_days as number | undefined,
+        },
+      });
+    }
+    for (const e of materialsGraph.edges) {
+      // Plant edges join through the tag, because the two id spaces differ.
+      const endpoint = (id: string, kind: string): string => {
+        if (kind === "EQUIPMENT") return `equipment:${id.replace(/^e-/, "")}`;
+        if (kind === "PROCESS_UNIT") return `equipment:${id.replace(/^e-/, "")}`;
+        if (kind === "WAREHOUSE" || kind === "TANK") return `location:${id}`;
+        if (kind === "SUPPLIER") return `supplier:${id}`;
+        if (kind === "FINISHED_PRODUCT" || kind === "RAW_MATERIAL" || kind === "INTERMEDIATE" || kind === "MAINTENANCE_SPARE") {
+          return `material:${id}`;
+        }
+        return `material:${id}`;
+      };
+      const from = endpoint(e.source, String((materialsGraph.nodes.find((n) => n.id === e.source)?.kind) ?? ""));
+      const to = endpoint(e.target, String((materialsGraph.nodes.find((n) => n.id === e.target)?.kind) ?? ""));
+      add({
+        from,
+        to,
+        relation: e.relation,
+        provenance: "EXTRACTED",
+        source: "materials store",
+      });
+      // A spare's price history is an edge, not a decoration: it is what makes
+      // "what has this cost done?" reachable from the asset that needs it.
+      if (e.relation === "REQUIRES") {
+        node({
+          id: `pricehistory:${e.target}`,
+          label: `Price history · ${e.target}`,
+          type: "price_history",
+          group: "Materials",
+          status: "series",
+          source: "materials store",
+          href: `/console/materials/price-history?item=${encodeURIComponent(String(e.target))}`,
+        });
+        add({
+          from: `material:${e.target}`,
+          to: `pricehistory:${e.target}`,
+          relation: "HAS_PRICE_HISTORY",
+          provenance: "EXTRACTED",
+          source: "materials store",
+        });
+      }
+    }
+  }
+
 
   const nodeList = [...nodes.values()];
   const liveIds = new Set(nodeList.map((n) => n.id));

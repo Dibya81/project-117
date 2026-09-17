@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Project 117 launcher icon (round mask).
+  Background: the official flat black field.
+  Foreground: the official 117 mark, centred inside the 108dp adaptive canvas'
+  inner 72dp safe zone so no launcher mask clips it.
+  Monochrome: the Android 13+ themed-icon silhouette.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <monochrome android:drawable="@mipmap/ic_launcher_monochrome" />
+</adaptive-icon>

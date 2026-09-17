@@ -42,6 +42,25 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/approvals", tags=["approvals"])
 
 
+class ApprovalRequest(BaseModel):
+    """Raise something for human decision.
+
+    Deliberately narrow: a title, a type, what it relates to, and the evidence a
+    reviewer needs. A caller cannot set ``status`` — everything this creates is
+    ``pending``, and the only way it becomes anything else is a decision.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = Field(min_length=1, max_length=200)
+    type: str = Field(min_length=1, max_length=60)
+    summary: str = Field(default="", max_length=4000)
+    related_id: str | None = Field(default=None, max_length=120)
+    risk: str = Field(default="medium", max_length=20)
+    required_role: str | None = Field(default=None, max_length=40)
+    evidence: list[dict] = Field(default_factory=list, max_length=50)
+
+
 class ApprovalDecision(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -76,6 +95,50 @@ def list_approvals(
         "canDecide": can_decide,
         "source": OPERATIONS_SOURCE,
     }
+
+
+@router.post("")
+def raise_approval(
+    payload: ApprovalRequest,
+    principal: Principal = Depends(get_principal),
+    operations: OperationsStore = Depends(get_operations),
+    audit: AuditService = Depends(get_audit),
+) -> dict:
+    """Create a PENDING approval.
+
+    This is the only entry point that mints an approval, and it grants nothing:
+    the record is parked for a human, and deciding it is
+    ``POST /api/approvals/{id}/decision``, which requires ``jobs:approve`` and is
+    audited with the acting principal. Idempotent per (type, related_id) so
+    re-raising the same request returns the open one instead of duplicating it.
+    """
+    try:
+        approval = operations.request_approval(
+            title=payload.title,
+            approval_type=payload.type,
+            actor=principal.user,
+            summary=payload.summary,
+            related_id=payload.related_id,
+            risk=payload.risk,
+            required_role=payload.required_role,
+            evidence=payload.evidence,
+        )
+    except OperationsDataUnavailable as exc:
+        raise unavailable(exc) from exc
+    # Audited with the acting principal: who asked, for what, and whether the
+    # request was deduplicated onto an already-open approval.
+    audit.record(
+        action="approval.requested",
+        resource_type=payload.type,
+        resource_id=payload.related_id or approval["id"],
+        user=principal.user,
+        approval="pending",
+        detail={
+            "approval_id": approval["id"],
+            "deduplicated": approval.get("deduplicated", False),
+        },
+    )
+    return {"approval": approval, "source": OPERATIONS_SOURCE}
 
 
 @router.get("/{approval_id}")

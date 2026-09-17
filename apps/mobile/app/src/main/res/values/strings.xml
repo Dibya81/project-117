@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Project 117</string>
+    <string name="app_name_short">P117</string>
+
+    <!-- Server Config -->
+    <string name="server_config_title">Server Configuration</string>
+    <string name="server_url_label">Backend Server URL</string>
+    <string name="server_url_hint">http://your-lan-ip:8000/api/v1/</string>
+    <string name="test_connection">Test Connection</string>
+    <string name="connection_ok">Connection successful</string>
+    <string name="connection_failed">Connection failed</string>
+    <string name="mode_local">LOCAL</string>
+    <string name="mode_production">PRODUCTION</string>
+    <string name="mode_demo">DEMO</string>
+    <string name="mode_label">Operation Mode</string>
+
+    <!-- Enrollment -->
+    <string name="enrollment_title">Device Enrollment</string>
+    <string name="enrollment_code_label">Enrollment Code</string>
+    <string name="enroll_button">Enroll Device</string>
+    <string name="enrollment_success">Device enrolled successfully</string>
+    <string name="enrollment_failed">Enrollment failed. Check your code.</string>
+
+    <!-- Login -->
+    <string name="login_title">Sign In</string>
+    <string name="username_label">Username</string>
+    <string name="password_label">Password</string>
+    <string name="login_button">Sign In</string>
+    <string name="logout_button">Sign Out</string>
+    <string name="login_failed">Authentication failed</string>
+
+    <!-- Home -->
+    <string name="home_title">Field Operations</string>
+    <string name="welcome_back">Welcome back</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_equipment">Equipment</string>
+    <string name="nav_scan">Scan</string>
+    <string name="nav_work_orders">Work Orders</string>
+    <string name="nav_sop">SOPs</string>
+    <string name="nav_report">Report</string>
+    <string name="nav_assistant">Assistant</string>
+    <string name="nav_notifications">Notifications</string>
+    <string name="nav_approvals">Approvals</string>
+    <string name="nav_agent_tasks">Agent Tasks</string>
+
+    <!-- Common states -->
+    <string name="loading">Loading…</string>
+    <string name="retry">Retry</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm">Confirm</string>
+    <string name="save">Save</string>
+    <string name="submit">Submit</string>
+    <string name="backend_offline">Backend / PC Offline</string>
+    <string name="offline_mode">Offline Mode</string>
+    <string name="syncing">Syncing…</string>
+    <string name="saved_locally">Saved Locally</string>
+    <string name="queued">Queued</string>
+    <string name="synced">Synced</string>
+    <string name="sync_failed">Sync Failed</string>
+    <string name="unauthorized">Unauthorized — contact supervisor</string>
+    <string name="no_data">No data available</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
+
+    <!-- Equipment -->
+    <string name="equipment_list_title">Equipment</string>
+    <string name="equipment_detail_title">Equipment Detail</string>
+    <string name="equipment_id_label">Equipment ID</string>
+    <string name="equipment_status_label">Status</string>
+    <string name="equipment_location_label">Location</string>
+    <string name="equipment_type_label">Type</string>
+
+    <!-- QR Scan -->
+    <string name="scan_title">Scan Equipment</string>
+    <string name="scan_instruction">Point camera at QR code or barcode</string>
+    <string name="scan_result">Equipment identified</string>
+    <string name="scan_not_found">Equipment not found for this code</string>
+
+    <!-- Work Orders -->
+    <string name="work_orders_title">Work Orders</string>
+    <string name="work_order_detail_title">Work Order Detail</string>
+    <string name="work_order_status_label">Status</string>
+    <string name="work_order_priority_label">Priority</string>
+    <string name="work_order_due_label">Due Date</string>
+
+    <!-- SOP -->
+    <string name="sop_title">Standard Operating Procedures</string>
+    <string name="sop_detail_title">SOP Detail</string>
+
+    <!-- Report Issue -->
+    <string name="report_issue_title">Report Issue</string>
+    <string name="issue_description_label">Description</string>
+    <string name="issue_severity_label">Severity</string>
+    <string name="issue_submitted">Issue reported successfully</string>
+    <string name="issue_queued">Issue queued for sync</string>
+    <string name="add_photo">Add Photo</string>
+    <string name="remove_photo">Remove Photo</string>
+
+    <!-- Voice Assistant -->
+    <string name="assistant_title">Field Assistant</string>
+    <string name="assistant_hint">Ask about equipment, procedures, or status…</string>
+    <string name="assistant_listening">Listening…</string>
+    <string name="assistant_processing">Processing…</string>
+    <string name="voice_permission_required">Microphone permission is required for voice input</string>
+    <string name="assistant_offline">Assistant unavailable — backend offline</string>
+    <string name="powered_by">Powered by on-premise AI</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Notifications</string>
+    <string name="mark_read">Mark as Read</string>
+    <string name="no_notifications">No notifications</string>
+
+    <!-- Approvals -->
+    <string name="approvals_title">Pending Approvals</string>
+    <string name="approve_button">Approve</string>
+    <string name="reject_button">Reject</string>
+    <string name="approval_confirmation_title">Confirm Approval</string>
+    <string name="rejection_confirmation_title">Confirm Rejection</string>
+    <string name="approval_notes_label">Notes (optional)</string>
+
+    <!-- Agent Tasks -->
+    <string name="agent_tasks_title">Agent Tasks</string>
+    <string name="task_source_label">Source</string>
+    <string name="task_priority_label">Priority</string>
+
+    <!-- Confirmation dialogs -->
+    <string name="consequential_action_warning">This action cannot be undone.</string>
+    <string name="affects_equipment">Affects Equipment</string>
+    <string name="affects_work_order">Affects Work Order</string>
+
+    <!-- Demo mode indicator -->
+    <string name="demo_mode_banner">DEMO MODE — Not connected to live backend</string>
+
+    <!-- Channel names -->
+    <string name="notification_channel_assignments">Assignments</string>
+    <string name="notification_channel_alerts">Alerts</string>
+    <string name="notification_channel_sync">Sync Status</string>
+</resources>

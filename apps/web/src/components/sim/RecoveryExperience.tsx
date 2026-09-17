@@ -22,6 +22,7 @@
  */
 
 import { useMemo } from "react";
+import { StatusDot, Tag } from "@/components/ui/primitives";
 import type { SimEvent } from "@/lib/sim/types";
 
 type AgentId = "diagnostic" | "operations" | "safety";
@@ -30,6 +31,7 @@ interface Panel {
   id: AgentId;
   name: string;
   role: string;
+  model: string;
   tone: string;
   /** Backend task agents that feed this panel. */
   sources: string[];
@@ -40,6 +42,7 @@ const PANELS: Panel[] = [
     id: "diagnostic",
     name: "Diagnostic Agent",
     role: "Identify the fault and the affected assets",
+    model: "qwen3:1.7b",
     tone: "#6366f1",
     sources: ["data_analysis", "maintenance", "documentation"],
   },
@@ -47,6 +50,7 @@ const PANELS: Panel[] = [
     id: "operations",
     name: "Operations Agent",
     role: "Choose the recovery route over the plant topology",
+    model: "llama3.2:3b",
     tone: "#0ea5e9",
     sources: ["operations"],
   },
@@ -54,10 +58,34 @@ const PANELS: Panel[] = [
     id: "safety",
     name: "Safety & Verification Agent",
     role: "Confirm the route is safe before it is executed",
+    model: "gemma3:1b",
     tone: "#10b981",
     sources: ["safety"],
   },
 ];
+
+/**
+ * How long the full-screen three-agent experience stays up AFTER the agents
+ * have returned their decision (the backend's `response.decision` event).
+ *
+ * The clock starts on the DECISION — the moment all three agents have answered —
+ * and never on the incident start and never on resolution. A recovery keeps
+ * running (action, verification) for an arbitrary time after the models reply,
+ * so counting from the incident or from `incident.resolved` would show the
+ * operator the panel for a duration that has nothing to do with the agents.
+ *
+ * This is a dismissal delay only: it never simulates agent work. It is applied
+ * to a panel whose content the backend has already finished producing.
+ */
+export const AGENT_PANEL_DISMISS_MS = 20_000;
+
+/**
+ * Fallback dismissal for a run that ended with no decision at all — the
+ * incident resolved or escalated before any `response.decision` arrived. That
+ * run has no three-agent result to read, so the panel returns to the plant
+ * after the existing short hold rather than hanging open forever.
+ */
+export const AGENT_PANEL_NO_DECISION_DISMISS_MS = 2_800;
 
 interface TaskView {
   agent: string;
@@ -81,9 +109,23 @@ export interface DecisionView {
   safety_confirmed: boolean;
   safety_concerns: string[];
   rationale: string;
+  /**
+   * Per-agent outcome from the backend (`response.decision.agent_status`):
+   * completed | rejected | failed | skipped. A panel may only claim success
+   * for a role the backend marked `completed` — never from task records.
+   */
+  agent_status: Record<string, string>;
 }
 
-export type RecoveryPhase = "analysing" | "decided" | "executing" | "verified" | "unavailable";
+export type RecoveryPhase =
+  | "analysing"
+  | "decided"
+  | "executing"
+  | "verified"
+  | "escalated"
+  | "unavailable"
+  | "safety-rejected"
+  | "invalid";
 
 function readTasks(events: SimEvent[], incidentId: string): TaskView[] {
   const byId = new Map<string, TaskView>();
@@ -95,6 +137,9 @@ function readTasks(events: SimEvent[], incidentId: string): TaskView[] {
     const id = String(p.id ?? p.task_id ?? "");
     if (!id) continue;
     if (ev.type === "agent.task_started" || ev.type === "agent.task_completed") {
+      // A task belongs to exactly one incident. Without this filter a second
+      // incident would render the first incident's tasks in its panels.
+      if (String(p.incident_id ?? "") !== incidentId) continue;
       byId.set(id, {
         agent: String(p.agent ?? ""),
         title: String(p.title ?? ""),
@@ -125,18 +170,149 @@ function readTasks(events: SimEvent[], incidentId: string): TaskView[] {
   return [...byId.values()].filter((t) => t.agent);
 }
 
+/** The outcome a panel can be in, from the backend or, pre-decision, the DAG. */
+export type AgentState =
+  | "waiting"
+  | "running"
+  | "completed"
+  | "blocked"
+  | "rejected"
+  | "failed"
+  | "skipped";
+
+/**
+ * One panel's state, from that agent's OWN outcome.
+ *
+ * This previously read the decision as a single boolean: if the decision was
+ * available, all three panels said "completed"; if it was not, all three said
+ * "unavailable". That is how the console came to show a Diagnostic that had
+ * failed sitting next to a Safety agent marked verified — the panels were
+ * describing the incident, not the agents. It also let a panel claim success
+ * for a role that never ran.
+ *
+ * The backend records per-role truth in `response.decision.agent_status`
+ * (`completed` / `rejected` / `failed` / `skipped`), and only the backend knows
+ * whether Safety actually approved the route or declined it. That is the
+ * authority here; task records are only a fallback for the window before the
+ * decision event arrives.
+ *
+ * Module scope so the full-screen experience and the docked rail share ONE
+ * definition of an agent's outcome rather than re-deriving it.
+ */
+export function panelState(panel: Panel, decision: DecisionView | null, tasks: TaskView[]): AgentState {
+  const reported = decision?.agent_status?.[panel.id];
+  if (reported === "completed") return "completed";
+  if (reported === "rejected") return "rejected";
+  if (reported === "failed") return "failed";
+  if (reported === "skipped") return "skipped";
+
+  // No per-agent answer yet: show progress from the task DAG, and never claim
+  // a completed decision that has not arrived.
+  const mine = tasks.filter((t) => panel.sources.includes(t.agent));
+  const running = mine.some((t) => t.status === "running" || t.status === "queued");
+  const blocked = mine.some((t) => t.status === "blocked");
+  const done = mine.length > 0 && mine.every((t) => t.status === "completed" || t.status === "blocked");
+  if (running) return "running";
+  if (blocked && done) return "blocked";
+  if (done) return "running"; // evidence gathered; the model has not answered yet
+  return "waiting";
+}
+
+/**
+ * Wording per panel per outcome. A distinct label for every state the backend
+ * can report, so "the agent declined" and "the agent never ran" never read as
+ * the same thing.
+ */
+export const STATUS_LABEL: Record<string, Record<string, string>> = {
+  diagnostic: {
+    waiting: "Queued",
+    running: "Diagnosing",
+    completed: "Fault Diagnosed",
+    blocked: "Blocked",
+    rejected: "Diagnosis Declined",
+    failed: "Diagnosis Failed",
+    skipped: "Not Run",
+    unavailable: "Unavailable",
+  },
+  operations: {
+    waiting: "Queued",
+    running: "Routing",
+    completed: "Route Selected",
+    blocked: "Blocked",
+    rejected: "No Route Accepted",
+    failed: "Routing Failed",
+    skipped: "Not Run — diagnosis failed",
+    unavailable: "Unavailable",
+  },
+  safety: {
+    waiting: "Queued",
+    running: "Verifying",
+    completed: "Safety Verified",
+    blocked: "Blocked",
+    rejected: "Safety Declined",
+    failed: "Safety Check Failed",
+    skipped: "Not Run — no route to check",
+    unavailable: "Unavailable",
+  },
+};
+
+/**
+ * The one-line finding each agent produced, in the words the full-screen panel
+ * uses. Shared so the docked rail shows exactly the same result text and never
+ * invents a summary: a role with no finding reports that honestly.
+ */
+export function agentFinding(panel: Panel, decision: DecisionView | null, st: AgentState): string {
+  if (panel.id === "diagnostic") {
+    if (decision?.diagnosis) return decision.diagnosis;
+    if (st === "failed" || st === "rejected") {
+      return "The diagnostic agent did not return a usable finding. See the failure detail above.";
+    }
+    return st === "running" ? "Reasoning over the evidence pack…" : "No finding yet.";
+  }
+  if (panel.id === "operations") {
+    if (decision?.rationale) return decision.rationale;
+    if (st === "failed" || st === "rejected") return "No route was accepted. The recovery was not planned.";
+    if (st === "skipped") return "Not run — there was no valid diagnosis to plan from.";
+    return st === "running" ? "Evaluating candidate routes…" : "No route chosen yet.";
+  }
+  // Safety.
+  const answered =
+    Boolean(decision?.safety_concerns.length) ||
+    Boolean(decision && typeof decision.safety_confirmed === "boolean" && st === "completed");
+  if (answered) {
+    return decision?.safety_confirmed ? "Route confirmed safe to execute." : "Route NOT confirmed safe.";
+  }
+  if (st === "skipped") return "Not run — the operations agent produced no route to verify.";
+  if (st === "failed" || st === "rejected") {
+    return "The safety check did not clear. The route was not executed.";
+  }
+  return st === "running" ? "Checking the safe-operating envelope…" : "No verification yet.";
+}
+
+/** A StatusDot tone per agent outcome — colour always travels with a label. */
+function dockDot(st: AgentState): "ok" | "warning" | "critical" | "ai" | "unknown" {
+  if (st === "completed") return "ok";
+  if (st === "failed" || st === "rejected") return "critical";
+  if (st === "blocked" || st === "skipped") return "warning";
+  if (st === "running") return "ai";
+  return "unknown";
+}
+
 export function RecoveryExperience({
   events,
   incident,
   decision,
   plantName,
   onClose,
+  onRetry,
 }: {
   events: SimEvent[];
   incident: { id: string; title?: string; origin_equipment?: string; severity?: string; status?: string } | null;
   decision: DecisionView | null;
   plantName?: string | null;
   onClose: () => void;
+  /** Re-run the three agents for this incident after an unusable decision. */
+  onRetry?: () => void;
 }) {
   const incidentId = incident?.id ?? "";
 
@@ -144,48 +320,72 @@ export function RecoveryExperience({
 
   const phase: RecoveryPhase = useMemo(() => {
     if (!incident) return "analysing";
-    if (decision && !decision.available) return "unavailable";
-    const resolved = events.some(
-      (e) => e.type === "incident.resolved" && (e.payload as Record<string, unknown>).id === incidentId,
-    );
-    if (resolved) return "verified";
-    if (events.some((e) => e.type === "action.started" || e.type === "action.completed")) return "executing";
+    // A failed decision is not one generic state: a Safety refusal, a route
+    // the validator rejected and a model that never answered are three
+    // different endings and the header names the real one.
+    if (decision && !decision.available) {
+      const err = decision.error ?? "";
+      if (err.startsWith("SAFETY CHECK FAILED")) return "safety-rejected";
+      if (err.startsWith("RECOVERY DECISION INVALID")) return "invalid";
+      return "unavailable";
+    }
+    const mine = (type: string) =>
+      events.some(
+        (e) =>
+          e.type === type &&
+          String((e.payload as Record<string, unknown>).incident_id ?? (e.payload as Record<string, unknown>).id ?? "") ===
+            incidentId,
+      );
+    if (mine("incident.resolved")) return "verified";
+    // Every route the agents could build failed the plant's own verification,
+    // so the orchestrator handed the incident to the operator. That is a real
+    // ending, not a recovery — the panel says so before it closes.
+    if (mine("recovery.escalated")) return "escalated";
+    // Scoped to THIS incident: a previous incident's action beats must not make
+    // this one look like it is already executing.
+    if (mine("action.started") || mine("action.completed")) return "executing";
     if (decision?.available) return "decided";
     return "analysing";
   }, [events, incident, decision, incidentId]);
 
   const verifiedOk = useMemo(() => {
-    const v = [...events].reverse().find((e) => e.type === "verification.completed");
+    const v = [...events].reverse().find(
+      (e) =>
+        e.type === "verification.completed" &&
+        String((e.payload as Record<string, unknown>).incident_id ?? "") === incidentId,
+    );
     return v ? Boolean((v.payload as Record<string, unknown>).ok) : null;
-  }, [events]);
+  }, [events, incidentId]);
+
+  /** The orchestrator's real escalation, with the findings that caused it. */
+  const escalation = useMemo(() => {
+    const v = [...events].reverse().find(
+      (e) =>
+        e.type === "recovery.escalated" &&
+        String((e.payload as Record<string, unknown>).incident_id ?? "") === incidentId,
+    );
+    if (!v) return null;
+    const p = v.payload as Record<string, unknown>;
+    return {
+      message: String(p.message ?? "No verified route — handed to the operator"),
+      findings: Array.isArray(p.findings) ? (p.findings as unknown[]).map(String) : [],
+      attempts: Number(p.attempts ?? 0),
+    };
+  }, [events, incidentId]);
+
+  /** The agents the backend reported as failed or rejected, named for the banner. */
+  const failingAgents = useMemo(
+    () =>
+      PANELS.filter((p) => {
+        const st = decision?.agent_status?.[p.id];
+        return st === "failed" || st === "rejected";
+      }),
+    [decision],
+  );
 
   if (!incident) return null;
 
   const origin = String(incident.origin_equipment ?? "—");
-
-  const panelState = (panel: Panel) => {
-    const mine = tasks.filter((t) => panel.sources.includes(t.agent));
-    const running = mine.some((t) => t.status === "running" || t.status === "queued");
-    const blocked = mine.some((t) => t.status === "blocked");
-    const done = mine.length > 0 && mine.every((t) => t.status === "completed" || t.status === "blocked");
-    // The decision is the Operations and Safety agent's actual output.
-    const decided = decision?.available === true;
-    if (panel.id === "operations" && decided) return "completed" as const;
-    if (panel.id === "safety" && decided) return "completed" as const;
-    if (panel.id === "diagnostic" && decision?.diagnosis) return "completed" as const;
-    if (running) return "running" as const;
-    if (blocked && done) return "blocked" as const;
-    if (done) return "completed" as const;
-    return "waiting" as const;
-  };
-
-  const statusLabel: Record<string, string> = {
-    waiting: "Waiting",
-    running: "Working",
-    completed: "Complete",
-    blocked: "Blocked",
-    unavailable: "Unavailable",
-  };
 
   return (
     <div className="rcx" data-testid="recovery-experience" data-phase={phase}>
@@ -201,6 +401,7 @@ export function RecoveryExperience({
           {phase === "decided" && "Decision ready"}
           {phase === "executing" && "Executing the chosen route…"}
           {phase === "verified" && (verifiedOk === false ? "Verification failed" : "Recovery verified")}
+          {phase === "escalated" && "Escalated — no route verified"}
           {phase === "unavailable" && "LOCAL MODEL UNAVAILABLE"}
         </div>
         <button type="button" className="rcx__close" onClick={onClose} aria-label="Close the agent view">
@@ -208,29 +409,68 @@ export function RecoveryExperience({
         </button>
       </div>
 
+      {phase === "escalated" && (
+        <div className="rcx__alert" role="status" data-testid="rcx-escalated">
+          <b>ESCALATED TO THE OPERATOR</b>
+          <span>
+            {escalation?.message ?? "No route the agents built cleared verification."}{" "}
+            {escalation && escalation.attempts > 1 && (
+              <>The three agents were asked {escalation.attempts} times. The plant keeps the
+              last route they chose until you change it.</>
+            )}
+            {escalation && escalation.findings.length > 0 && <> {escalation.findings[0]}</>}
+          </span>
+        </div>
+      )}
+
       {phase === "unavailable" && (
         <div className="rcx__alert" role="status" data-testid="rcx-unavailable">
-          <b>LOCAL MODEL UNAVAILABLE</b>
+          <b>NO RECOVERY PRODUCED</b>
           <span>
-            The three agents could not reach the local model, so no recovery decision was
-            produced and the plant was not changed. {decision?.error ?? ""}
+            {/* Name the agent(s) that actually failed. "The three agents could not
+                produce a decision" was wrong whenever one of them answered and a
+                later one was skipped as a result — it blamed all three for one
+                agent's failure, and hid which model to look at. */}
+            {failingAgents.length > 0 ? (
+              <>
+                {failingAgents.map((a) => a.name).join(", ")}
+                {failingAgents.length === 1 ? " did not return" : " did not return"} a usable
+                result, so the recovery stopped before any route was applied and the plant was
+                not changed.
+              </>
+            ) : (
+              <>The agents could not produce a usable decision, so no recovery decision was
+              produced and the plant was not changed.</>
+            )}{" "}
+            {decision?.error ?? ""}
           </span>
+          {onRetry && (
+            <button type="button" className="rcx__retry" onClick={onRetry} data-testid="rcx-retry">
+              Re-run the three agents
+            </button>
+          )}
         </div>
       )}
 
       <div className="rcx__grid">
         {PANELS.map((panel) => {
-          const st = panelState(panel);
+          const st = panelState(panel, decision, tasks);
           const mine = tasks.filter((t) => panel.sources.includes(t.agent));
+          const label = STATUS_LABEL[panel.id]?.[st] ?? st;
           return (
             <section key={panel.id} className="rcx__panel" data-agent={panel.id} data-status={st}>
               <header style={{ borderTopColor: panel.tone }}>
                 <span className="rcx__dot" style={{ background: panel.tone }} />
                 <div>
-                  <b>{panel.name}</b>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <b>{panel.name}</b>
+                    <code style={{ fontSize: 10, padding: "1px 5px", borderRadius: 4, background: "rgba(0,0,0,0.06)", color: "var(--ink-2)", fontWeight: 500 }}>
+                      {panel.model}
+                    </code>
+                  </div>
                   <span>{panel.role}</span>
                 </div>
-                <em className={`rcx__state is-${st}`}>{statusLabel[st]}</em>
+                <em className={`rcx__state is-${st}`}>{label}</em>
               </header>
 
               <div className="rcx__body">
@@ -269,33 +509,41 @@ export function RecoveryExperience({
                 {/* Findings: the decision fields each agent owns. */}
                 <div className="rcx__block">
                   <span className="rcx__label">Findings</span>
+                  {/*
+                    Each panel reports its OWN outcome. Previously Operations and
+                    Safety both keyed off `decision.available`, so an Operations
+                    failure — or Safety never running because there was no route
+                    to check — rendered as the passive "No route chosen yet." on
+                    every panel, while the decision banner reported a hard
+                    failure. The panel and the banner described different runs.
+                  */}
                   {panel.id === "diagnostic" && (
                     decision?.diagnosis
                       ? <p>{decision.diagnosis}</p>
-                      : <p className="rcx__muted">{st === "running" ? "Reasoning over the evidence pack…" : "No finding yet."}</p>
+                      : <p className="rcx__muted">{agentFinding(panel, decision, st)}</p>
                   )}
                   {panel.id === "operations" && (
-                    decision?.available
-                      ? <p>{decision.rationale || "Route evaluated against the plant topology."}</p>
-                      : <p className="rcx__muted">{st === "running" ? "Evaluating candidate routes…" : "No route chosen yet."}</p>
+                    decision?.rationale
+                      ? <p>{decision.rationale}</p>
+                      : <p className="rcx__muted">{agentFinding(panel, decision, st)}</p>
                   )}
                   {panel.id === "safety" && (
-                    decision?.available
+                    decision?.safety_concerns.length || (decision && typeof decision.safety_confirmed === "boolean" && st === "completed")
                       ? (
                         <div>
                           <p>
-                            {decision.safety_confirmed
-                              ? "Route confirmed safe to execute."
-                              : "Route NOT confirmed safe."}
+                            {/* Same text the docked rail shows — one definition
+                                of what each agent found, in agentFinding(). */}
+                            {agentFinding(panel, decision, st)}
                           </p>
-                          {decision.safety_concerns.length > 0 && (
+                          {decision && decision.safety_concerns.length > 0 && (
                             <ul className="rcx__concerns">
                               {decision.safety_concerns.map((c, i) => <li key={i}>{c}</li>)}
                             </ul>
                           )}
                         </div>
                       )
-                      : <p className="rcx__muted">{st === "running" ? "Checking the safe-operating envelope…" : "No verification yet."}</p>
+                      : <p className="rcx__muted">{agentFinding(panel, decision, st)}</p>
                   )}
                 </div>
 
@@ -362,70 +610,90 @@ export function RecoveryExperience({
 }
 
 /**
- * The compact summaries kept after the operator returns to the plant.
+ * The three-agent rail kept after the operator returns to the plant.
  *
- * Same three results as the full view, at panel size — the actual text and the
- * actual route ids the agents produced, so the decision remains on screen while
- * the plant is being operated.
+ * One compact card per agent — the same three agents, the same real model, the
+ * same per-agent outcome and the same finding text as the full-screen
+ * experience. Every value is read through the shared helpers above, which take
+ * it from the backend's own `response.decision`: the per-role `agent_status` is
+ * the authority for success, so the rail cannot mark an agent completed because
+ * a task record exists, and a role with no result says so rather than inventing
+ * one.
+ *
+ * It is dismissible, and the plant page remembers the dismissal per incident.
  */
-export function RecoverySummary({
+export function RecoveryDock({
   decision,
   events,
+  onDismiss,
 }: {
-  decision: DecisionView | null;
+  decision: DecisionView;
   events: SimEvent[];
+  onDismiss: () => void;
 }) {
-  const verification = useMemo(() => {
-    const v = [...events].reverse().find((e) => e.type === "verification.completed");
-    if (!v) return null;
-    const p = v.payload as Record<string, unknown>;
-    return { ok: p.ok === true, findings: Array.isArray(p.findings) ? (p.findings as unknown[]).map(String) : [] };
-  }, [events]);
-
-  if (!decision) return null;
+  const tasks = useMemo(
+    () => readTasks(events, decision.incidentId ?? ""),
+    [events, decision.incidentId],
+  );
 
   return (
-    <aside className="rcx-sum" data-testid="recovery-summary">
-      <header>
+    <aside className="rcx-dock" data-testid="agent-rail" aria-label="Agent responses">
+      <header className="rcx-dock__head">
         <span>Agent response</span>
-        <em className={decision.available ? "is-ok" : "is-crit"}>
+        <Tag tone={decision.available ? "ok" : "crit"}>
           {decision.available ? "decided" : "unavailable"}
-        </em>
+        </Tag>
+        <button
+          type="button"
+          className="rcx-dock__close"
+          onClick={onDismiss}
+          aria-label="Dismiss the agent responses"
+          title="Dismiss agent responses"
+          data-testid="agent-rail-dismiss"
+        >
+          ×
+        </button>
       </header>
 
       {!decision.available && (
-        <p className="rcx-sum__alert">LOCAL MODEL UNAVAILABLE — no recovery was applied.</p>
+        // The backend's own error, not a guess: a Safety refusal and a model
+        // that never answered are different failures and read differently.
+        <p className="rcx-dock__alert">{decision.error ?? "No recovery was produced."}</p>
       )}
 
-      <div className="rcx-sum__row" data-agent="diagnostic">
-        <b>Diagnostic</b>
-        <span>{decision.diagnosis || "—"}</span>
-      </div>
-      <div className="rcx-sum__row" data-agent="operations">
-        <b>Operations</b>
-        {decision.block.length === 0 && decision.restore.length === 0 ? (
-          <span>No route change chosen.</span>
-        ) : (
-          <span>
-            {decision.block.length > 0 && <>shut <code>{decision.block.join(", ")}</code> </>}
-            {decision.restore.length > 0 && <>open <code>{decision.restore.join(", ")}</code></>}
-          </span>
-        )}
-      </div>
-      <div className="rcx-sum__row" data-agent="safety">
-        <b>Safety</b>
-        <span>
-          {decision.safety_confirmed ? "Route confirmed safe." : "Route not confirmed safe."}
-          {decision.safety_concerns.length > 0 && <> · {decision.safety_concerns.join("; ")}</>}
-        </span>
-      </div>
-
-      {verification && (
-        <div className="rcx-sum__verdict" data-ok={verification.ok ? "true" : "false"}>
-          {verification.ok ? "Recovery verified" : "Verification failed"}
-          {verification.findings.length > 0 && <span>{verification.findings[0]}</span>}
-        </div>
-      )}
+      {PANELS.map((panel) => {
+        const st = panelState(panel, decision, tasks);
+        const label = STATUS_LABEL[panel.id]?.[st] ?? st;
+        const base = agentFinding(panel, decision, st);
+        // The full panel lists Safety's concerns beneath its sentence; the rail
+        // keeps them on the same line rather than dropping real findings.
+        const finding =
+          panel.id === "safety" && decision.safety_concerns.length > 0
+            ? `${base} · ${decision.safety_concerns.join("; ")}`
+            : base;
+        return (
+          <section
+            key={panel.id}
+            className="rcx-dock__card"
+            data-agent={panel.id}
+            data-agent-box={panel.id}
+            data-status={st}
+            data-testid={`agent-rail-${panel.id}`}
+            /* A CSS variable, not `borderLeftColor`: the class already sets the
+               `border` shorthand, and mixing a longhand inline style with it
+               makes React warn about conflicting properties on every rerender. */
+            style={{ "--tone": panel.tone } as React.CSSProperties}
+          >
+            <div className="rcx-dock__top">
+              <StatusDot state={dockDot(st)} />
+              <b>{panel.name}</b>
+              <em className={`rcx__state is-${st}`}>{label}</em>
+            </div>
+            <code className="rcx-dock__model">{panel.model}</code>
+            <p className="rcx-dock__finding" title={finding}>{finding}</p>
+          </section>
+        );
+      })}
     </aside>
   );
 }

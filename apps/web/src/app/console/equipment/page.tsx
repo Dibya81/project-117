@@ -2,55 +2,25 @@
 
 /**
  * Equipment — zone-grouped asset explorer, status-sorted.
- * Each card: identity, live sensor chips, health ring, insight. Click → detail.
+ * Each card: 3D tilt surface with identity, live sensor chips, health ring,
+ * insight and per-instrument trend strips (see SensorTrend for the data note).
+ * Click → detail.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Panel, Ring, SkeletonRows, StatusDot, Tag } from "@/components/ui/primitives";
-import { Tilt } from "@/components/fx/Tilt";
+import Link from "next/link";
+import { EmptyState, Panel, SkeletonRows } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
-import { EquipmentRenderer, normalizeEquipmentAsset, preferredAssetSize } from "@/components/equipment";
+import { Lucide } from "@/components/ui/LucideIcon";
+import { EquipmentTiltCard, STATUS_RANK, healthOf } from "@/components/equipment/EquipmentTiltCard";
 import { consoleData } from "@/lib/data/console";
-import type { Equipment, HealthState } from "@/types";
-
-const STATUS_RANK: Record<HealthState, number> = { critical: 0, warning: 1, ok: 2, unknown: 3 };
-
-/** Health score heuristic from sensor threshold proximity. */
-function healthOf(e: Equipment): number {
-  let worst = 100;
-  for (const s of e.sensors) {
-    if (s.critAbove && s.value >= s.critAbove) worst = Math.min(worst, 35);
-    else if (s.warnAbove && s.value >= s.warnAbove) worst = Math.min(worst, 62);
-    else if (s.warnAbove && s.value >= s.warnAbove * 0.92) worst = Math.min(worst, 80);
-  }
-  return worst;
-}
-
-function ringTone(h: number): "ok" | "warn" | "crit" {
-  return h >= 85 ? "ok" : h >= 65 ? "warn" : "crit";
-}
-
-function EquipmentAssetPreview({ equipment }: { equipment: Equipment }) {
-  const asset = normalizeEquipmentAsset(equipment.kind, equipment.name, equipment.id);
-  const preferred = preferredAssetSize[asset];
-  const scale = Math.min(154 / preferred.w, 118 / preferred.h);
-  const box = {
-    x: (170 - preferred.w * scale) / 2,
-    y: (126 - preferred.h * scale) / 2 + 2,
-    w: preferred.w * scale,
-    h: preferred.h * scale,
-  };
-  return (
-    <svg className="cs-eqasset" viewBox="0 0 170 136" role="img" aria-label={`${equipment.name} equipment asset`}>
-      <EquipmentRenderer asset={asset} kind={equipment.kind} name={equipment.name} id={equipment.id} status={equipment.status} box={box} />
-    </svg>
-  );
-}
+import type { Equipment } from "@/types";
 
 export default function EquipmentPage() {
   const router = useRouter();
   const [equipment, setEquipment] = useState<Equipment[] | null>(null);
   const [zoneFilter, setZoneFilter] = useState("all");
+  const [query, setQuery] = useState("");
   const [attention, setAttention] = useState(false);
 
   useEffect(() => {
@@ -59,18 +29,25 @@ export default function EquipmentPage() {
 
   const zones = useMemo(() => Array.from(new Set((equipment ?? []).map((e) => e.zone))), [equipment]);
 
-  const sorted = useMemo(
-    () =>
-      (equipment ?? [])
-        .filter((e) => zoneFilter === "all" || e.zone === zoneFilter)
-        .slice()
-        .sort((a, b) =>
-          attention
-            ? healthOf(a) - healthOf(b) // lowest health first = highest attention
-            : STATUS_RANK[a.status] - STATUS_RANK[b.status],
-        ),
-    [equipment, zoneFilter, attention],
-  );
+  const sorted = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return (equipment ?? [])
+      .filter((e) => zoneFilter === "all" || e.zone === zoneFilter)
+      .filter(
+        (e) =>
+          !needle ||
+          e.name.toLowerCase().includes(needle) ||
+          e.id.toLowerCase().includes(needle) ||
+          e.kind.toLowerCase().includes(needle) ||
+          e.zone.toLowerCase().includes(needle),
+      )
+      .slice()
+      .sort((a, b) =>
+        attention
+          ? healthOf(a) - healthOf(b) // lowest health first = highest attention
+          : STATUS_RANK[a.status] - STATUS_RANK[b.status],
+      );
+  }, [equipment, zoneFilter, attention, query]);
 
   return (
     <>
@@ -80,6 +57,35 @@ export default function EquipmentPage() {
           <h1>Equipment</h1>
         </div>
         <div className="cs-pagehead__actions" style={{ marginLeft: "auto" }}>
+          <div className="cs-eqsearch">
+            <Lucide name="search" size={13} className="cs-eqsearch__glyph" />
+            <input
+              className="cs-eqsearch__input"
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search tag, name, zone…"
+              aria-label="Search equipment"
+              data-equipment-search
+            />
+            {query && (
+              <button
+                type="button"
+                className="cs-eqsearch__clear"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+              >
+                <Lucide name="x" size={12} />
+              </button>
+            )}
+          </div>
+          <Link
+            className="cs-btn cs-btn--ghost"
+            href="/console/equipment/labels"
+            title="Printable QR labels for every asset"
+          >
+            <Lucide name="printer" size={13} /> QR labels
+          </Link>
           <button
             className={`cs-btn${attention ? " cs-btn--primary" : " cs-btn--ghost"}`}
             onClick={() => setAttention((v) => !v)}
@@ -105,79 +111,40 @@ export default function EquipmentPage() {
 
       {!equipment ? (
         <Panel><SkeletonRows rows={6} label="Synchronizing telemetry…" /></Panel>
-      ) : (
-        <div className="cs-eqgrid cs-fade-list">
-          {sorted.map((e) => {
-            const health = healthOf(e);
-            return (
-              <Tilt key={e.id} max={5}>
-                <div
-                  className={`cs-eqcard cs-eqcard--${e.status}`}
-                  onClick={() => router.push(`/console/equipment/${e.id}`)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(ev) => ev.key === "Enter" && router.push(`/console/equipment/${e.id}`)}
-                  aria-label={`Open ${e.name}`}
+      ) : sorted.length === 0 ? (
+        <Panel>
+          <EmptyState
+            title="No equipment matches"
+            detail={
+              equipment.length === 0
+                ? "The plant register returned no assets."
+                : `No asset matches the current search and zone filter (${equipment.length} asset${equipment.length === 1 ? "" : "s"} in the register).`
+            }
+            action={
+              (query || zoneFilter !== "all") ? (
+                <button
+                  className="cs-btn cs-btn--ghost"
+                  onClick={() => {
+                    setQuery("");
+                    setZoneFilter("all");
+                  }}
                 >
-                  <div className="cs-eqcard__asset">
-                    <EquipmentAssetPreview equipment={e} />
-                  </div>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                        <StatusDot state={e.status} pulse={e.status === "critical"} />
-                        <span className="cs-mono cs-text-cyan" style={{ fontSize: 12, fontWeight: 700 }}>{e.id}</span>
-                        <Tag>{e.kind}</Tag>
-                        {attention && (
-                          <Tag tone={health < 65 ? "crit" : health < 85 ? "warn" : "ok"}>
-                            attention #{sorted.indexOf(e) + 1}
-                          </Tag>
-                        )}
-                      </div>
-                      <h3 style={{ margin: "8px 0 3px", fontSize: 15.5, letterSpacing: "-0.01em" }}>{e.name}</h3>
-                      <p className="cs-mono cs-dim" style={{ margin: 0, fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase" }}>
-                        {e.zone}
-                      </p>
-                    </div>
-                    <Ring value={health} tone={ringTone(health)} size={58} label={`health ${health}`} />
-                  </div>
-
-                  <div style={{ display: "flex", gap: 7, flexWrap: "wrap", margin: "14px 0 0" }}>
-                    {e.sensors.map((s) => {
-                      const hot = (s.critAbove != null && s.value >= s.critAbove) || (s.warnAbove != null && s.value >= s.warnAbove);
-                      return (
-                        <span key={s.key} className={`cs-tag${hot ? " cs-tag--warn" : ""}`}>
-                          {s.label} <b className="cs-mono">{s.value} {s.unit}</b>
-                        </span>
-                      );
-                    })}
-                  </div>
-
-                  {e.insight && (
-                    <p
-                      style={{
-                        margin: "13px 0 0",
-                        padding: "9px 12px",
-                        fontSize: 12,
-                        lineHeight: 1.55,
-                        color: "var(--ink-2)",
-                        borderLeft: "2px solid var(--cyan)",
-                        background: "rgba(69,213,255,0.05)",
-                        borderRadius: "0 6px 6px 0",
-                      }}
-                    >
-                      <Icon name="zap" size={11} /> {e.insight}
-                    </p>
-                  )}
-
-                  <div className="cs-mono cs-dim" style={{ marginTop: 13, fontSize: 10, display: "flex", justifyContent: "space-between" }}>
-                    <span>inspected {e.last_inspection ?? "—"}</span>
-                    <span className="cs-text-cyan">OPEN →</span>
-                  </div>
-                </div>
-              </Tilt>
-            );
-          })}
+                  Clear filters
+                </button>
+              ) : undefined
+            }
+          />
+        </Panel>
+      ) : (
+        <div className="cs-eqgrid cs-fade-list" data-equipment-count={sorted.length}>
+          {sorted.map((e) => (
+            <EquipmentTiltCard
+              key={e.id}
+              equipment={e}
+              {...(attention ? { attentionRank: sorted.indexOf(e) + 1 } : {})}
+              onOpen={() => router.push(`/console/equipment/${e.id}`)}
+            />
+          ))}
         </div>
       )}
     </>

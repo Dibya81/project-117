@@ -31,6 +31,67 @@ def _events(svc, prefix: str | None = None) -> list:
     return [e for e in evs if prefix is None or e.type.startswith(prefix)]
 
 
+def _decide(svc, incident_id: str) -> None:
+    """Drive the incident through the real three-agent decision.
+
+    The lane FINDINGS are emitted only once the models have answered, so a test
+    that asserts them must run the decision first. Asserting them straight after
+    ``inject_failure`` is what encoded the old defect: the console was told the
+    root cause, the prediction and the chosen alternate within milliseconds of
+    the fault, before any model had been asked anything.
+    """
+    svc.decide("refinery", incident_id, True)
+
+
+class TestFindingsWaitForTheAgents:
+    """The lane conclusions must not exist before the agents have run."""
+
+    @pytest.mark.parametrize(
+        "event",
+        [
+            "response.failover_completed",
+            "response.history_reviewed",
+            "response.root_cause_identified",
+            "response.prediction",
+            "response.user_notified",
+        ],
+    )
+    def test_not_emitted_at_handoff(self, svc, event):
+        svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
+        assert _events(svc, event) == [], (
+            f"{event} was emitted before the agents answered — the console would "
+            "render a conclusion the models had not reached"
+        )
+
+    def test_start_beats_are_emitted_at_handoff(self, svc):
+        """Work actually begins at handoff, so these are true immediately."""
+        svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
+        assert len(_events(svc, "response.lane_started")) == 2
+        assert _events(svc, "response.operations_notified")
+        assert _events(svc, "response.failover_evaluating")
+
+    def test_findings_appear_once_the_decision_exists(self, svc):
+        out = svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
+        _decide(svc, out["incident"]["id"])
+        for event in (
+            "response.failover_completed",
+            "response.root_cause_identified",
+            "response.prediction",
+            "response.user_notified",
+        ):
+            assert _events(svc, event), f"{event} never emitted after the decision"
+
+    def test_every_finding_follows_the_decision_event(self, svc):
+        """Ordering is the whole point: conclusions come after the model output."""
+        out = svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
+        _decide(svc, out["incident"]["id"])
+        evs = svc.runtime("refinery").events
+        decision_seq = next(e.seq for e in evs if e.type == "response.decision")
+        for event in ("response.failover_completed", "response.root_cause_identified", "response.prediction"):
+            seq = next(e.seq for e in evs if e.type == event)
+            assert seq > decision_seq, f"{event} (#{seq}) preceded the decision (#{decision_seq})"
+
+
 class TestPerception:
     def test_perception_carries_job_and_asset_context(self, svc):
         out = svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
@@ -60,7 +121,7 @@ class TestPerception:
 
 class TestOperationsLane:
     def test_sensor_failure_emits_chosen_failover(self, svc):
-        svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
+        out = svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
         [notified] = _events(svc, "response.operations_notified")
         assert notified.payload["role"] == "shift supervisor"
         assert notified.payload["department"] == "Crude Distillation"
@@ -68,7 +129,9 @@ class TestOperationsLane:
         [evaluating] = _events(svc, "response.failover_evaluating")
         assert evaluating.payload["origin_sensor_id"] == "s-PT-1042A"
         assert evaluating.payload["candidates"], "must report the alternates it considered"
+        assert _events(svc, "response.failover_completed") == [], "the choice is a finding"
 
+        _decide(svc, out["incident"]["id"])
         [completed] = _events(svc, "response.failover_completed")
         related = completed.payload["related_equipment_id"]
         plant_ids = {e.id for e in svc.runtime("refinery").engine.plant.equipment}
@@ -96,7 +159,8 @@ class TestOperationsLane:
 
 class TestDiagnosticsLane:
     def test_history_counts_only_real_records(self, svc):
-        svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
+        out = svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
+        _decide(svc, out["incident"]["id"])
         [history] = _events(svc, "response.history_reviewed")
         counts = history.payload["counts"]
         assert counts["maintenance_records"] >= 1
@@ -104,7 +168,8 @@ class TestDiagnosticsLane:
         assert counts["last_inspection"]
 
     def test_root_cause_is_a_declared_failure_mode(self, svc):
-        svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
+        out = svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
+        _decide(svc, out["incident"]["id"])
         [root] = _events(svc, "response.root_cause_identified")
         payload = root.payload
         eq = next(e for e in svc.runtime("refinery").engine.plant.equipment if e.id == "e-P-1042")
@@ -113,14 +178,16 @@ class TestDiagnosticsLane:
         assert payload["explanation"]
 
     def test_sensor_loss_reports_no_invented_mode(self, svc):
-        svc.disable_sensor("refinery", "s-PT-1042A")
+        out = svc.disable_sensor("refinery", "s-PT-1042A")
+        _decide(svc, out["incident_id"])
         [root] = _events(svc, "response.root_cause_identified")
         assert root.payload["failure_mode"] is None
         assert root.payload["failure_mode_declared"] is False
         assert "PT-1042A" in root.payload["explanation"]
 
     def test_prediction_candidates_are_real_equipment(self, svc):
-        svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
+        out = svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
+        _decide(svc, out["incident"]["id"])
         [prediction] = _events(svc, "response.prediction")
         plant_ids = {e.id for e in svc.runtime("refinery").engine.plant.equipment}
         assert prediction.payload["available"] is True
@@ -138,7 +205,8 @@ class TestDiagnosticsLane:
         assert set(result) >= {"available", "candidates", "caveat"}
 
     def test_user_notification_summarises_real_fields(self, svc):
-        svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
+        out = svc.inject_failure("refinery", "e-P-1042", "sensor_failure")
+        _decide(svc, out["incident"]["id"])
         [notice] = _events(svc, "response.user_notified")
         summary = notice.payload["summary"]
         assert "P-1042" in summary

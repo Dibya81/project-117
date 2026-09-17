@@ -15,7 +15,7 @@
  * `relationOf` derives a relation for legacy data that only carries `kind`, so
  * nothing has to be migrated and every consumer works on both.
  */
-import type { ConnectionDef, ConnectionKind, RelationType } from "./types";
+import type { ConnectionDef, ConnectionKind, PortKind, RelationType } from "./types";
 
 export interface RelationMeta {
   id: RelationType;
@@ -123,6 +123,22 @@ const KIND_DEFAULT: Record<ConnectionKind, RelationType> = {
 /** The relation of a connection, falling back to its `kind` for legacy data. */
 export function relationOf(c: Pick<ConnectionDef, "kind" | "relation">): RelationType {
   return c.relation ?? KIND_DEFAULT[c.kind] ?? "MATERIAL_FLOW";
+}
+
+/**
+ * The port at one end of a line.
+ *
+ * Legacy rows (everything the datasets shipped) carry no ports, but their
+ * direction is not in doubt — a connection's `source` is where it leaves and
+ * its `target` is where it enters — so the default is the direction the record
+ * already asserts rather than an invented one.
+ */
+export function portOf(
+  c: Pick<ConnectionDef, "source_port" | "target_port">,
+  end: "source" | "target",
+): PortKind {
+  if (end === "source") return c.source_port ?? "out";
+  return c.target_port ?? "in";
 }
 
 /** The carrier implied by a relation, for when a user picks a relation first. */

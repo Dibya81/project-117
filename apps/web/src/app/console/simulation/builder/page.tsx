@@ -6,21 +6,27 @@
  * This page proves generalization: no prebuilt dataset involved.
  */
 import { type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronRight } from "lucide-react";
 import { Button, Panel, StatusDot, Tag } from "@/components/ui/primitives";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { emptyRuntime, runtimeFromEngine } from "@/components/sim/SchematicCanvas";
+import { snapToGrid } from "@/components/sim/ProcessMap";
 import { MeridianRefineryView } from "@/components/sim/MeridianRefineryView";
 import { AgentCommandCenter } from "@/components/sim/AgentCommandCenter";
 import { SimSymbol, symbolForEquipment } from "@/lib/sim/symbols";
 import { simAdapter, asEmbedded, asLive, DATA_MODE } from "@/lib/sim/adapter";
 import { consoleData } from "@/lib/data/console";
 import { useSimulation } from "@/lib/sim/store";
-import { assemblePlant, defaultSensors, makeConnection, makeEquipment, FM_BY_KIND, FAILURE_MODES } from "@/lib/sim/custom";
+import { assemblePlant, defaultSensors, makeConnection, makeEquipment, makeSensorOf, SENSOR_MEASUREMENTS, FM_BY_KIND, FAILURE_MODES } from "@/lib/sim/custom";
 import { validatePlant, type PlantValidation } from "@/lib/sim/validate";
-import { RELATION_BY_ID, relationOf, validRelations } from "@/lib/sim/relations";
+import { RELATION_BY_ID, portOf, relationOf, validRelations } from "@/lib/sim/relations";
+import { lucideFor } from "@/components/ui/LucideIcon";
+import { SPRING } from "@/lib/ui/motion";
 import type { RelationType } from "@/lib/sim/types";
 import { BUILDER_TEMPLATES, type PlantTemplate } from "@/lib/sim/templates";
-import type { EquipmentDef, EquipmentKind, PlantDef } from "@/lib/sim/types";
+import type { EquipmentDef, EquipmentKind, PlantDef, SensorDef } from "@/lib/sim/types";
 
 /**
  * A reusable building block saved from the canvas.
@@ -94,11 +100,19 @@ const PALETTE: { group: string; icon: IconName; items: PaletteItem[] }[] = [
 ];
 
 export default function BuilderPage() {
+  const router = useRouter();
   const [equipment, setEquipment] = useState<EquipmentDef[]>([]);
   const [connections, setConnections] = useState<PlantDef["connections"]>([]);
   const [armed, setArmed] = useState<PaletteItem | null>(null);
+  /** Connect mode: units show their in/out ports and pipes are made port-to-port. */
+  const [connectMode, setConnectMode] = useState(false);
+  /** The output port that has been armed, waiting for a target input. */
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const [selected, setSelected] = useState<EquipmentDef | null>(null);
+  /** The line picked on the drawing, for the connection inspector. */
+  const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
+  /** A connection being re-pointed: the next port click moves this end. */
+  const [reconnect, setReconnect] = useState<{ id: string; end: "source" | "target" } | null>(null);
   const [running, setRunning] = useState(false);
   const [seq, setSeq] = useState(1);
   const [connSeq, setConnSeq] = useState(1);
@@ -111,6 +125,12 @@ export default function BuilderPage() {
   const [saveState, setSaveState] = useState<{ tone: "ok" | "err" | "busy"; text: string } | null>(null);
   /** Right-hand asset dock. Collapsible so the canvas can be fully open. */
   const [dockOpen, setDockOpen] = useState(true);
+  /**
+   * Which palette categories are open. The first is open on load so the drawer
+   * never opens empty; the rest are collapsed, which is what makes a 30-symbol
+   * library scannable instead of a wall.
+   */
+  const [openGroups, setOpenGroups] = useState<string[]>(() => [PALETTE[0]?.group ?? ""]);
   /** Result of the last VALIDATE PLANT run, or null if never run. */
   const [report, setReport] = useState<PlantValidation | null>(null);
   /** A connection awaiting confirmation, so the relation can be chosen. */
@@ -184,7 +204,7 @@ export default function BuilderPage() {
           criticality: 2,
           capacity: 100,
           state: "normal",
-          sensors: defaultSensors(kind, id, rec.id.replace(/^[A-Z]+-/, "")),
+          sensors: defaultSensors(kind, id, rec.id),
           failure_modes: FM_BY_KIND[kind],
           manufacturer: "Project 117 Synthetic Plant",
           model: "SIM-2026",
@@ -244,6 +264,10 @@ export default function BuilderPage() {
       setConnections(loaded.connections);
       setPlant(null);
       setRunning(false);
+      setSelected(null);
+      setSelectedLineId(null);
+      setReconnect(null);
+      setConnectFrom(null);
       setSaveState({ tone: "ok", text: `Loaded ${id} from database (${loaded.equipment.length} assets)` });
     } catch (err) {
       setSaveState({ tone: "err", text: `Load failed: ${(err as Error).message}` });
@@ -256,6 +280,8 @@ export default function BuilderPage() {
     setPlant(null);
     setRunning(false);
     setSelected(null);
+    setSelectedLineId(null);
+    setReconnect(null);
     setConnectFrom(null);
     setSaveState({ tone: "ok", text: `Loaded template: ${template.name}` });
   };
@@ -272,54 +298,228 @@ export default function BuilderPage() {
     return emptyRuntime(plant);
   }, [plant, equipment, connections, embedded, running, sim.tick]);
 
-  const drop = useCallback(
-    (e: ReactPointerEvent) => {
-      if (!armed || !dropRef.current || running) return;
-      const rect = dropRef.current.getBoundingClientRect();
-      const x = Math.round(((e.clientX - rect.left) / rect.width) * 1800) + 60;
-      const y = Math.round(((e.clientY - rect.top) / rect.height) * 1000) + 60;
-      setEquipment((cur) => [...cur, makeEquipment(armed.kind, armed.label, x, y, seq)]);
+  /** Drop a palette symbol at a screen point, snapped to the drawing grid. */
+  const placeAt = useCallback(
+    (item: PaletteItem, clientX: number, clientY: number) => {
+      const el = dropRef.current;
+      if (!el || running) return;
+      const rect = el.getBoundingClientRect();
+      const x = snapToGrid(((clientX - rect.left) / rect.width) * 1800 + 60);
+      const y = snapToGrid(((clientY - rect.top) / rect.height) * 1000 + 60);
+      setEquipment((cur) => [...cur, makeEquipment(item.kind, item.label, x, y, seq)]);
       setSeq((s) => s + 1);
       setArmed(null);
     },
-    [armed, running, seq],
+    [running, seq],
+  );
+
+  const drop = useCallback(
+    (e: ReactPointerEvent) => {
+      if (!armed) return;
+      placeAt(armed, e.clientX, e.clientY);
+    },
+    [armed, placeAt],
   );
 
   /**
-   * Click behaviour in connect mode, kept to two clicks with no hidden step:
-   *   "__arm__"  → this unit becomes the SOURCE
-   *   a real id  → this unit becomes the TARGET and the relation dialog opens
-   * Outside connect mode a click simply selects.
+   * Canvas click. In connect mode the wiring is done on the ports (see
+   * `onPortClick`), so a body click always just selects — the two operations
+   * never contend for the same gesture.
    */
-  const onSelect = useCallback(
+  const onSelect = useCallback((eq: EquipmentDef) => {
+    setSelected(eq);
+    setSelectedLineId(null);
+    // A body click is a selection, never a wiring gesture, so it cancels a
+    // half-finished re-point instead of leaving it armed behind the scenes.
+    setReconnect(null);
+  }, []);
+
+  /**
+   * A line was picked on the drawing.
+   *
+   * A connection is a first-class selectable object, not a side effect of the
+   * unit panel: the operator clicks the pipe they mean and gets its record.
+   */
+  const onSelectLine = useCallback((id: string | null) => {
+    setSelectedLineId(id);
+    if (id) setSelected(null);
+  }, []);
+
+  /** Duplicate a unit: same design, new tag, new ids, offset on the grid. */
+  const duplicateEquipment = useCallback(
     (eq: EquipmentDef) => {
-      if (running) {
-        setSelected(eq);
-        return;
-      }
-      if (connectFrom === "__arm__") {
-        setConnectFrom(eq.id);
-        setSelected(eq);
-        return;
-      }
-      if (connectFrom && connectFrom !== eq.id) {
-        const source = equipment.find((e) => e.id === connectFrom);
-        if (source) {
-          const allowed = validRelations("equipment", "equipment");
-          setRelation(allowed[0]?.id ?? "MATERIAL_FLOW");
-          setPending({ source, target: eq });
-          setConnectFrom(null);
+      const taken = new Set(equipment.map((e) => e.tag));
+      let tag = `${eq.tag}-C`;
+      let n = 2;
+      while (taken.has(tag)) tag = `${eq.tag}-C${n++}`;
+      const copy: EquipmentDef = {
+        ...structuredClone(eq),
+        id: `e-${tag}`,
+        tag,
+        name: `${eq.name} (copy)`,
+        x: eq.x + 60,
+        y: eq.y + 60,
+        sensors: eq.sensors.map((sn) => ({
+          ...sn,
+          id: `s-${sn.tag.replace(eq.tag, tag)}`,
+          equipment_id: `e-${tag}`,
+          tag: sn.tag.replace(eq.tag, tag),
+        })),
+      };
+      setEquipment((cur) => [...cur, copy]);
+      setSelected(copy);
+      setSaveState({ tone: "ok", text: `Duplicated ${eq.tag} as ${tag}` });
+    },
+    [equipment],
+  );
+
+  /** Move a unit on the drawing. Already snapped by the renderer. */
+  const moveEquipment = useCallback((id: string, x: number, y: number) => {
+    setEquipment((cur) => cur.map((e) => (e.id === id ? { ...e, x, y } : e)));
+    setSelected((s) => (s && s.id === id ? { ...s, x, y } : s));
+  }, []);
+
+  /** Edit a unit's own fields (tag, name, position, …). */
+  const updateEquipment = useCallback((id: string, patch: Partial<EquipmentDef>) => {
+    setEquipment((cur) => cur.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+    setSelected((s) => (s && s.id === id ? { ...s, ...patch } : s));
+  }, []);
+
+  /**
+   * Change a unit's type. The canonical asset follows the type, and so must the
+   * instrumentation and the failure modes — they are properties of the KIND, so
+   * leaving a pump's points on a tank would be a lie the engine then reads.
+   */
+  const changeKind = useCallback((id: string, kind: EquipmentKind) => {
+    setEquipment((cur) =>
+      cur.map((e) => {
+        if (e.id !== id) return e;
+        return {
+          ...e,
+          kind,
+          // Keyed on the unit's own tag: two units of different kinds can share
+          // a number, and deriving the suffix from the number collided their
+          // instruments onto one id.
+          sensors: defaultSensors(kind, e.id, e.tag || String(seq)),
+          failure_modes: FM_BY_KIND[kind],
+        };
+      }),
+    );
+  }, [seq]);
+
+  const addSensor = useCallback((eq: EquipmentDef, measurement: SensorDef["measurement"]) => {
+    const n = eq.sensors.length + 1;
+    const tag = `${measurement.slice(0, 2).toUpperCase()}-${eq.tag}-${n}`;
+    const sensor = makeSensorOf(eq.id, tag, measurement);
+    setEquipment((cur) => cur.map((e) => (e.id === eq.id ? { ...e, sensors: [...e.sensors, sensor] } : e)));
+    setSelected((s) => (s && s.id === eq.id ? { ...s, sensors: [...s.sensors, sensor] } : s));
+  }, []);
+
+  const removeSensor = useCallback((eq: EquipmentDef, sensorId: string) => {
+    setEquipment((cur) =>
+      cur.map((e) => (e.id === eq.id ? { ...e, sensors: e.sensors.filter((s) => s.id !== sensorId) } : e)),
+    );
+    setSelected((s) => (s && s.id === eq.id ? { ...s, sensors: s.sensors.filter((x) => x.id !== sensorId) } : s));
+  }, []);
+
+  /** Tags must be unique: the id is derived from the tag and the plant is keyed by it. */
+  const duplicateTags = useMemo(() => {
+    const seen = new Map<string, number>();
+    for (const e of equipment) seen.set(e.tag, (seen.get(e.tag) ?? 0) + 1);
+    return new Set([...seen.entries()].filter(([, n]) => n > 1).map(([t]) => t));
+  }, [equipment]);
+
+  /**
+   * A port was clicked. Output arms the source; input completes the pipe.
+   *
+   * Direction is structural, not incidental: a pipe always leaves an OUTPUT and
+   * enters an INPUT, so an input→input or output→output attempt is refused
+   * rather than silently reversed. When a line is being re-pointed the same
+   * gesture moves that end of the EXISTING record instead of creating a second
+   * one — the id, the relation and the other end are all kept.
+   */
+  const onPortClick = useCallback(
+    (id: string, port: "in" | "out") => {
+      const eq = equipment.find((e) => e.id === id);
+      if (!eq) return;
+
+      if (reconnect) {
+        const line = connections.find((c) => c.id === reconnect.id);
+        if (!line) {
+          setReconnect(null);
           return;
         }
+        const otherEnd = reconnect.end === "source" ? line.target : line.source;
+        if (otherEnd === id) {
+          setSaveState({ tone: "err", text: `${eq.tag} cannot feed itself.` });
+          return;
+        }
+        const next = reconnect.end === "source"
+          ? { ...line, source: id }
+          : { ...line, target: id };
+        if (connections.some((c) => c.id !== line.id && c.source === next.source && c.target === next.target)) {
+          setSaveState({ tone: "err", text: "That link already exists — refusing a duplicate." });
+          return;
+        }
+        setConnections((cur) => cur.map((c) => (c.id === line.id ? next : c)));
+        setSaveState({
+          tone: "ok",
+          text: `${line.id} re-pointed: ${equipment.find((e) => e.id === next.source)?.tag ?? next.source} → ${equipment.find((e) => e.id === next.target)?.tag ?? next.target}`,
+        });
+        setReconnect(null);
+        setConnectFrom(null);
+        return;
       }
-      setSelected(eq);
+
+      if (port === "out") {
+        setConnectFrom(id);
+        setSelected(eq);
+        setSelectedLineId(null);
+        setSaveState({ tone: "busy", text: `${eq.tag} output armed — now click a unit's input port` });
+        return;
+      }
+      if (!connectFrom) {
+        setSaveState({ tone: "err", text: "That is an input. Start from a unit's output port (the right-hand dot)." });
+        return;
+      }
+      if (connectFrom === id) {
+        setSaveState({ tone: "err", text: `${eq.tag} cannot feed itself.` });
+        return;
+      }
+      const source = equipment.find((e) => e.id === connectFrom);
+      if (!source) return;
+      if (connections.some((c) => c.source === connectFrom && c.target === id)) {
+        setSaveState({ tone: "err", text: `${source.tag} → ${eq.tag} already exists.` });
+        return;
+      }
+      const allowed = validRelations("equipment", "equipment");
+      setRelation(allowed[0]?.id ?? "MATERIAL_FLOW");
+      setPending({ source, target: eq });
+      setConnectFrom(null);
     },
-    [connectFrom, equipment, running],
+    [connectFrom, connections, equipment, reconnect],
+  );
+
+  /** Drop one line. Nothing else changes — no unit is touched. */
+  const removeConnection = useCallback(
+    (id: string) => {
+      setConnections((cur) => cur.filter((c) => c.id !== id));
+      setSelectedLineId((cur) => (cur === id ? null : cur));
+      setSaveState({ tone: "ok", text: `Removed ${id}` });
+    },
+    [],
   );
 
   /** Commit the staged connection with the chosen relation. */
   const commitConnection = () => {
     if (!pending) return;
+    // Defensive: the port flow already refuses duplicates, but a commit must
+    // never be able to create two identical links from any path.
+    if (connections.some((c) => c.source === pending.source.id && c.target === pending.target.id)) {
+      setSaveState({ tone: "err", text: `${pending.source.tag} → ${pending.target.tag} already exists.` });
+      setPending(null);
+      return;
+    }
     setConnections((cur) => [...cur, makeConnection(pending.source.id, pending.target.id, connSeq, relation)]);
     setConnSeq((n) => n + 1);
     setPending(null);
@@ -418,20 +618,26 @@ export default function BuilderPage() {
 
   const dropFromLibrary = (id: string) => setLibrary((cur) => cur.filter((x) => x.id !== id));
 
+  /**
+   * Save the built plant, start it, then open it in LIVE mode.
+   *
+   * This is the whole point of the builder: what was designed becomes the
+   * running plant. The definition is the SAME object the canvas is made of —
+   * equipment, positions, sensors and connections — saved to the store and then
+   * loaded by the live screen through the ordinary plant route, so nothing is
+   * recreated or hardcoded on the way.
+   */
   const run = async () => {
     if (equipment.length === 0) return;
     const p = assemblePlant(equipment, connections);
     setPlant(p);
     try {
-      // The backend only knows plants it has been told about. In live mode the
-      // custom topology exists solely in this browser, so it must be registered
-      // before it can be started — otherwise the start call 404s and Run is a
-      // dead button, which is exactly what it was.
       if (embedded) embedded.registerCustomPlant(p);
       else if (live) await live.savePlant(p);
       await simAdapter.start(p.id);
       setRunning(true);
-      setSaveState({ tone: "ok", text: `Running ${p.equipment.length} units on the engine` });
+      setSaveState({ tone: "ok", text: `Running ${p.equipment.length} units — opening the live plant` });
+      router.push(`/console/simulation/plant/${encodeURIComponent(p.id)}`);
     } catch (err) {
       setRunning(false);
       setSaveState({ tone: "err", text: `Run failed: ${(err as Error).message}` });
@@ -448,6 +654,8 @@ export default function BuilderPage() {
     setRunning(false);
     setPlant(null);
     setSelected(null);
+    setSelectedLineId(null);
+    setReconnect(null);
   };
 
   const inject = (equipmentId: string, modeId: string) => {
@@ -461,8 +669,17 @@ export default function BuilderPage() {
       {/* ---- the process canvas: full bleed, infinite-feeling ---- */}
       <div
         ref={dropRef}
-        className={`sm-stage__canvas${armed ? " is-armed" : ""}`}
+        className={`sm-stage__canvas${armed ? " is-armed" : ""}${connectMode ? " is-wiring" : ""}`}
         onPointerDown={drop}
+        onDragOver={(e) => {
+          if (armed) e.preventDefault();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          const id = e.dataTransfer.getData("text/plain");
+          const item = PALETTE.flatMap((g) => g.items).find((i) => i.id === id) ?? armed;
+          if (item) placeAt(item, e.clientX, e.clientY);
+        }}
         role="application"
         aria-label="Plant builder canvas"
       >
@@ -510,6 +727,13 @@ export default function BuilderPage() {
             activeIncident={sim.activeIncident}
             tasks={[]}
             models={{}}
+            editable={!running}
+            onEquipmentMove={moveEquipment}
+            connectMode={connectMode && !running}
+            connectFromId={connectFrom}
+            onPortClick={onPortClick}
+            selectedLineId={selectedLineId}
+            onSelectLine={onSelectLine}
           />
           </>
         )}
@@ -546,8 +770,18 @@ export default function BuilderPage() {
                   </option>
                 ))}
               </select>
-              <Button variant={connectFrom ? "primary" : "ghost"} onClick={() => setConnectFrom(connectFrom ? null : "__arm__")}>
-                <Icon name="workflow" size={13} /> {connectFrom ? "Cancel connect" : "Connect mode"}
+              <Button
+                variant={connectMode ? "primary" : "ghost"}
+                onClick={() => {
+                  setConnectMode((v) => !v);
+                  setConnectFrom(null);
+                  // Leaving connect mode abandons a half-finished re-point:
+                  // the next port click must never silently move a line.
+                  setReconnect(null);
+                }}
+                title="Show every unit's in/out ports, then wire output → input"
+              >
+                <Icon name="workflow" size={13} /> {connectMode ? "Exit connect" : "Connect mode"}
               </Button>
               <Button variant="ghost" onClick={validate} disabled={equipment.length === 0}>
                 <Icon name="check" size={13} /> Validate plant
@@ -652,34 +886,157 @@ export default function BuilderPage() {
         </header>
         {dockOpen && (
           <div className="sm-dock__body">
-            {PALETTE.map((g) => (
-              <section key={g.group} className="sm-dock__group">
-                <h4>{g.group}</h4>
-                {g.items.map((item) => (
+            {PALETTE.map((g) => {
+              const isOpen = openGroups.includes(g.group);
+              const GroupIcon = lucideFor(g.icon);
+              return (
+                <section key={g.group} className={`sm-dock__group${isOpen ? " is-open" : ""}`}>
                   <button
-                    key={item.id}
-                    className={`sm-palette-item${armed?.id === item.id ? " is-armed" : ""}`}
-                    onClick={() => setArmed(armed?.id === item.id ? null : item)}
-                    disabled={running}
-                    title={armed?.id === item.id ? "Click the canvas to place" : `Place a ${item.label}`}
+                    type="button"
+                    className="sm-dock__grouphead"
+                    aria-expanded={isOpen}
+                    onClick={() =>
+                      setOpenGroups((cur) =>
+                        cur.includes(g.group) ? cur.filter((x) => x !== g.group) : [...cur, g.group],
+                      )
+                    }
                   >
-                    <SimSymbol type={symbolForEquipment(item.kind, item.label)} size={22} />
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {item.label}
-                    </span>
-                    <span className="cs-mono cs-dim" style={{ marginLeft: "auto", fontSize: 8.5 }}>
-                      {defaultSensors(item.kind, "x", "0").length}
-                    </span>
+                    <GroupIcon size={13} strokeWidth={2} aria-hidden="true" />
+                    <span>{g.group}</span>
+                    <span className="sm-dock__groupcount">{g.items.length}</span>
+                    <motion.span
+                      className="sm-dock__chev"
+                      animate={{ rotate: isOpen ? 90 : 0 }}
+                      transition={SPRING.panel}
+                      aria-hidden="true"
+                    >
+                      <ChevronRight size={12} strokeWidth={2.6} />
+                    </motion.span>
                   </button>
-                ))}
-              </section>
-            ))}
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        className="sm-dock__groupbody"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={SPRING.surface}
+                        style={{ overflow: "hidden" }}
+                      >
+                        {/* Plain <button> elements, deliberately: these rows
+                            are native HTML5 drag sources, and Framer Motion's
+                            `motion.button` claims onDragStart for its own pan
+                            gesture, which would fight the native drag. The hover
+                            shift is CSS instead. */}
+                        {g.items.map((item) => (
+                          <button
+                            key={item.id}
+                            className={`sm-palette-item${armed?.id === item.id ? " is-armed" : ""}`}
+                            onClick={() => setArmed(armed?.id === item.id ? null : item)}
+                            draggable={!running}
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData("text/plain", item.id);
+                              e.dataTransfer.effectAllowed = "copy";
+                              // A real drag ghost: the canvas shows the symbol
+                              // being carried rather than a browser-default
+                              // snapshot of the list row.
+                              const ghost = document.createElement("div");
+                              ghost.className = "sm-dragghost";
+                              ghost.innerHTML = `<span>${item.label}</span>`;
+                              document.body.appendChild(ghost);
+                              e.dataTransfer.setDragImage(ghost, 18, 18);
+                              window.setTimeout(() => ghost.remove(), 0);
+                              setArmed(item);
+                            }}
+                            disabled={running}
+                            title={
+                              armed?.id === item.id
+                                ? "Click the canvas to place"
+                                : "Drag onto the canvas, or arm and click"
+                            }
+                          >
+                            <SimSymbol type={symbolForEquipment(item.kind, item.label)} size={22} />
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {item.label}
+                            </span>
+                            <span className="cs-mono cs-dim" style={{ marginLeft: "auto", fontSize: 8.5 }}>
+                              {defaultSensors(item.kind, "x", "0").length}
+                            </span>
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </section>
+              );
+            })}
             <p className="sm-dock__hint">
               Arm a symbol, then click the canvas to place it. Select a unit to wire or fault it.
             </p>
           </div>
         )}
       </aside>
+
+      {/* ---- selected line: the connection's own record ---- */}
+      {!running && (() => {
+        const line = connections.find((c) => c.id === selectedLineId);
+        if (!line) return null;
+        const src = equipment.find((e) => e.id === line.source);
+        const tgt = equipment.find((e) => e.id === line.target);
+        const meta = RELATION_BY_ID[relationOf(line)];
+        const rePointing = reconnect?.id === line.id;
+        return (
+          <aside
+            className="sm-float sm-float--line"
+            role="dialog"
+            aria-label={`Connection ${line.id}`}
+            data-testid="connection-inspector"
+          >
+            <header className="sm-panel__head">
+              <span className="sm-panel__tag">{line.id}</span>
+              <button className="sm-panel__close" onClick={() => { setSelectedLineId(null); setReconnect(null); }} aria-label="Close line panel">×</button>
+            </header>
+            <p className="sm-panel__name">
+              {src?.tag ?? line.source} <span className="cs-dim">→</span> {tgt?.tag ?? line.target}
+            </p>
+
+            <dl className="sm-line__facts">
+              <div><dt>From</dt><dd className="cs-mono">{src?.tag ?? line.source} · port <b>{portOf(line, "source")}</b></dd></div>
+              <div><dt>To</dt><dd className="cs-mono">{tgt?.tag ?? line.target} · port <b>{portOf(line, "target")}</b></dd></div>
+              <div><dt>Type</dt><dd>{meta?.label ?? relationOf(line)} <span className="cs-dim">({meta?.hint ?? relationOf(line)})</span></dd></div>
+              <div><dt>Carrier</dt><dd>{line.kind}</dd></div>
+              <div><dt>Medium</dt><dd className="cs-mono">{line.medium}</dd></div>
+              <div><dt>Capacity</dt><dd className="cs-mono">{line.capacity}</dd></div>
+            </dl>
+
+            {rePointing ? (
+              <p className="sm-panel__hint" data-testid="line-reconnect-hint">
+                Re-pointing the <b>{reconnect.end}</b> end of <b>{line.id}</b>: click the{" "}
+                <b>{reconnect.end === "source" ? "output" : "input"}</b> port of the unit that should
+                take its place. The id, the type and the other end are kept.
+              </p>
+            ) : (
+              <div className="sm-line__actions">
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => { setConnectMode(true); setConnectFrom(null); setReconnect({ id: line.id, end: "source" }); }}
+                >
+                  <Icon name="workflow" size={12} /> Reconnect from…
+                </button>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => { setConnectMode(true); setConnectFrom(null); setReconnect({ id: line.id, end: "target" }); }}
+                >
+                  <Icon name="workflow" size={12} /> Reconnect to…
+                </button>
+                <Button variant="reject" onClick={() => removeConnection(line.id)}>
+                  <Icon name="x" size={12} /> Delete line
+                </Button>
+              </div>
+            )}
+          </aside>
+        );
+      })()}
 
       {/* ---- connect confirmation: source -> target -> relation ---- */}
       {pending && (
@@ -727,6 +1084,69 @@ export default function BuilderPage() {
             <button className="sm-panel__close" onClick={() => setSelected(null)} aria-label="Close panel">×</button>
           </header>
           <p className="sm-panel__name">{selected.name}</p>
+
+          {/* Equipment properties. Everything here is written straight into the
+              plant definition the canvas is built from, so the drawing, the
+              validation, the saved record and the running engine all agree. */}
+          {!running && (
+            <div className="sm-props">
+              <label className="sm-props__field">
+                <span>Tag</span>
+                <input
+                  className="cs-mono"
+                  value={selected.tag}
+                  aria-label="Equipment tag"
+                  onChange={(e) => updateEquipment(selected.id, { tag: e.target.value })}
+                />
+              </label>
+              <label className="sm-props__field">
+                <span>Name</span>
+                <input
+                  value={selected.name}
+                  aria-label="Equipment name"
+                  onChange={(e) => updateEquipment(selected.id, { name: e.target.value })}
+                />
+              </label>
+              <label className="sm-props__field">
+                <span>Type</span>
+                <select
+                  value={selected.kind}
+                  aria-label="Equipment type"
+                  onChange={(e) => changeKind(selected.id, e.target.value as EquipmentKind)}
+                >
+                  {(["tank", "vessel", "column", "furnace", "pump", "compressor", "valve", "exchanger", "motor", "utility", "safety"] as EquipmentKind[]).map((k) => (
+                    <option key={k} value={k}>{k}</option>
+                  ))}
+                </select>
+              </label>
+              <div className="sm-props__row">
+                <label className="sm-props__field">
+                  <span>X</span>
+                  <input
+                    type="number"
+                    value={selected.x}
+                    aria-label="Equipment X"
+                    onChange={(e) => updateEquipment(selected.id, { x: Number(e.target.value) })}
+                  />
+                </label>
+                <label className="sm-props__field">
+                  <span>Y</span>
+                  <input
+                    type="number"
+                    value={selected.y}
+                    aria-label="Equipment Y"
+                    onChange={(e) => updateEquipment(selected.id, { y: Number(e.target.value) })}
+                  />
+                </label>
+              </div>
+              {duplicateTags.has(selected.tag) && (
+                <p className="sm-props__warn">Tag <b>{selected.tag}</b> is used by another unit — tags must be unique.</p>
+              )}
+              <p className="sm-props__note">
+                Status <b>{selected.state}</b> · {selected.failure_modes.length} failure mode(s) · drag on the canvas to move (snaps to {20}-unit grid)
+              </p>
+            </div>
+          )}
           {connections.filter((c) => c.source === selected.id || c.target === selected.id).length > 0 && (
             <ul className="sm-panel__links">
               {connections
@@ -739,6 +1159,9 @@ export default function BuilderPage() {
                     <li key={c.id}>
                       <span className={`sm-link sm-link--${relationOf(c)}`}>{meta?.label ?? relationOf(c)}</span>
                       <span className="sm-panel__link-target">{c.source === selected.id ? "→" : "←"} {other?.tag ?? otherId}</span>
+                      <span className="cs-mono cs-dim sm-panel__link-id" title={`${c.id} · ${c.medium} · ${c.kind}`}>
+                        {c.id}
+                      </span>
                       <button
                         className="sm-panel__save"
                         onClick={() => saveConnection(c)}
@@ -804,9 +1227,43 @@ export default function BuilderPage() {
                       </div>
                       <div><dt>Wired</dt><dd>{linked.length ? `${linked.length} link(s)` : "not wired"}</dd></div>
                     </dl>
+                    {!running && (
+                      <button
+                        type="button"
+                        className="sm-sensor__del"
+                        onClick={(ev) => {
+                          ev.preventDefault();
+                          removeSensor(selected, sn.id);
+                        }}
+                        aria-label={`Remove ${sn.tag} from ${selected.tag}`}
+                      >
+                        Remove this point
+                      </button>
+                    )}
                   </details>
                 );
               })}
+              {!running && (
+                <form
+                  className="sm-sensor__add"
+                  onSubmit={(ev) => {
+                    ev.preventDefault();
+                    const data = new FormData(ev.currentTarget);
+                    const m = String(data.get("measurement") ?? "pressure") as SensorDef["measurement"];
+                    addSensor(selected, m);
+                    setSaveState({ tone: "ok", text: `Added a ${m} point to ${selected.tag}` });
+                  }}
+                >
+                  <select name="measurement" aria-label="Sensor measurement" defaultValue="temperature">
+                    {SENSOR_MEASUREMENTS.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                  <button type="submit" className="sm-sensor__addbtn">
+                    <Icon name="plus" size={11} /> Add sensor
+                  </button>
+                </form>
+              )}
               <p className="sm-sensors__hint">
                 Wire instruments with Connect mode, or attach them to the unit — the engine reads both.
               </p>
@@ -815,13 +1272,16 @@ export default function BuilderPage() {
 
           {!running ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-              {connectFrom === "__arm__" && (
-                <Button variant="primary" onClick={() => setConnectFrom(selected.id)}>
-                  <Icon name="workflow" size={12} /> Pipe from {selected.tag}
-                </Button>
+              {connectMode && (
+                <p className="sm-panel__hint">
+                  Connect mode: click <b>{selected.tag}</b>&apos;s output port (right dot), then a target&apos;s input port.
+                </p>
               )}
               <Button variant="ghost" onClick={() => saveItem(selected)}>
                 <Icon name="plus" size={12} /> Save this unit for reuse
+              </Button>
+              <Button variant="ghost" onClick={() => duplicateEquipment(selected)}>
+                <Icon name="layers" size={12} /> Duplicate unit
               </Button>
               <Button
                 variant="reject"
@@ -853,18 +1313,20 @@ export default function BuilderPage() {
       )}
 
       {/* ---- connect-mode hint: always says what the next click does ---- */}
-      {connectFrom && !pending && (
+      {connectMode && !pending && (
         <div className="sm-float sm-float--hint" role="status">
           <span className="sm-hint__dot" aria-hidden="true" />
-          {connectFrom === "__arm__" ? (
-            <>Select the <b>source</b> unit</>
+          {connectFrom ? (
+            <>
+              Output <b>{equipment.find((e) => e.id === connectFrom)?.tag ?? connectFrom}</b> armed — click a
+              target&apos;s <b>input</b> port
+            </>
           ) : (
             <>
-              Source <b>{equipment.find((e) => e.id === connectFrom)?.tag ?? connectFrom}</b> — now select the{" "}
-              <b>target</b>
+              Click a unit&apos;s <b>output</b> port (right dot) to start a pipe
             </>
           )}
-          <button onClick={() => setConnectFrom(null)}>Cancel</button>
+          {connectFrom && <button onClick={() => setConnectFrom(null)}>Cancel</button>}
         </div>
       )}
 

@@ -655,3 +655,337 @@
   .ku-detail.is-open { transform: none; }
   .ku-stats__hint { display: none; }
 }
+
+/* ==========================================================================
+   KNOWLEDGE UNIVERSE — chrome & finish (appended)
+   ==========================================================================
+   Nothing above this line was rewritten; these rules sit on top of the
+   existing ones. The legacy hooks (.ku-nav__item, .ku-ns, .ku-hits …) are
+   still in the DOM and are only re-skinned here.
+   ========================================================================== */
+
+/* Wider filter column: the segmented chips carry a label, a glyph and a count. */
+@media (min-width: 861px) {
+  .ku-body { grid-template-columns: 256px minmax(0, 1fr); }
+}
+@media (min-width: 861px) and (max-width: 1400px) {
+  .ku-body { grid-template-columns: 240px minmax(0, 1fr); }
+}
+@media (min-width: 861px) and (max-width: 1100px) {
+  .ku-body { grid-template-columns: 216px minmax(0, 1fr); }
+}
+
+/* ---------------- navigation shell ---------------- */
+
+/* `position` + `z-index` matter here: the search dropdown is absolutely
+   positioned inside this column and must paint over the graph stage. */
+.ku-nav {
+  position: relative;
+  z-index: 10;
+  overflow: visible;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.ku-nav__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ku-filter { margin-bottom: 10px; }
+.ku-filter__label {
+  margin: 0 0 5px 4px;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.ku-nav__comm { border-radius: 10px; padding: 6px 8px; }
+.ku-nav__comm:hover { background: rgba(255, 255, 255, 0.85); }
+
+.ku-trace { border-radius: 9999px; }
+
+/* ---------------- sidebar search + autocomplete ---------------- */
+
+.ku-search--side {
+  position: relative;
+  z-index: 20;
+  margin: 0 0 12px;
+  flex: none;
+  min-width: 0;
+  max-width: none;
+  width: 100%;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.85);
+}
+.ku-search--side:focus-within { border-color: rgba(8, 145, 178, 0.45); }
+
+/* Reposition the existing result list under the input. */
+.ku-search--side .ku-hits {
+  top: calc(100% + 6px);
+  left: 0;
+  right: auto;
+  width: 310px;
+  max-width: min(340px, 80vw);
+  z-index: 30;
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+}
+.ku-hits .ku-hits__opt.is-cursor { background: var(--raised); color: var(--ink-1); }
+.ku-hits .ku-hits__opt:last-child { border-bottom: 0; }
+
+/* ---------------- segmented control ---------------- */
+
+.ku-seg {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.ku-seg--v { flex-direction: column; }
+.ku-seg__chip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 9999px;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: color 140ms;
+}
+.ku-seg__chip:hover:not(:disabled) { color: var(--ink-1); }
+.ku-seg__chip:disabled { opacity: 0.32; cursor: default; }
+.ku-seg__chip.is-active { color: var(--ink-1); }
+
+/* The one shared element per group; it glides between chips. */
+.ku-seg__glide {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.9));
+  border: 1px solid rgba(8, 145, 178, 0.22);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 6px 16px rgba(8, 145, 178, 0.1);
+}
+.ku-seg__dot,
+.ku-seg__glyph,
+.ku-seg__label,
+.ku-seg__count { position: relative; z-index: 1; }
+.ku-seg__dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.ku-seg__glyph { display: inline-flex; flex: none; }
+.ku-seg__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ku-seg__count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-style: normal;
+  color: var(--ink-3);
+  flex: none;
+}
+
+/* Lens chips keep the legacy `.ku-nav__item` hook; neutralise its old paint. */
+.ku-nav__item.ku-seg__chip {
+  padding: 7px 10px;
+  border-radius: 9999px;
+  background: none;
+  box-shadow: none;
+  font-size: 12px;
+}
+.ku-nav__item.ku-seg__chip.is-active { background: none; box-shadow: none; color: var(--ink-1); }
+.ku-nav__item.ku-seg__chip:hover:not(:disabled) { background: none; }
+
+/* Namespace tabs keep the `.ku-ns` hook and tablist ARIA. */
+.ku-ns {
+  margin-left: auto;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+}
+.ku-ns .ku-seg__chip {
+  border-radius: 9999px;
+  padding: 6px 14px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.ku-ns .ku-seg__chip.is-active { background: none; box-shadow: none; }
+
+/* ---------------- entity inspector ---------------- */
+
+.ku-detail { border-radius: 16px; overflow-x: hidden; }
+.ku-detail__close { display: grid; place-items: center; }
+
+.ku-entity__head {
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+}
+.ku-entity__tile {
+  width: 30px;
+  height: 30px;
+  margin-top: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+}
+.ku-entity__ident { min-width: 0; flex: 1; }
+.ku-entity__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.ku-entity__ident h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; line-height: 1.35; word-break: break-word; }
+.ku-entity__id {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  word-break: break-all;
+}
+.ku-status {
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: 9999px;
+  font-size: 9px;
+}
+
+/* Metadata grid — the direct child only, so the provenance facts stay compact. */
+.ku-entity > .ku-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 14px 16px;
+}
+.ku-entity > .ku-facts > div {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.62);
+}
+.ku-entity > .ku-facts dt { width: auto; }
+.ku-entity > .ku-facts dd { font-size: 11.5px; }
+
+.ku-actions__quick { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ku-actions__quick .ku-btn {
+  justify-content: center;
+  padding: 8px 8px;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.ku-btn-tip { display: block; cursor: not-allowed; }
+.ku-btn-tip .ku-btn { width: 100%; justify-content: center; cursor: not-allowed; }
+.ku-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.ku-btn--ai {
+  border-color: rgba(8, 145, 178, 0.4);
+  background: linear-gradient(180deg, rgba(8, 145, 178, 0.14), rgba(8, 145, 178, 0.05));
+  color: var(--cyan);
+}
+.ku-btn--ai:hover { background: rgba(8, 145, 178, 0.16); border-color: rgba(8, 145, 178, 0.55); }
+.ku-btn--twin { border-color: rgba(37, 99, 235, 0.32); }
+
+/* ---------------- relationship tree ---------------- */
+
+.ku-tree { display: flex; flex-direction: column; gap: 10px; }
+.ku-tree__group { display: flex; flex-direction: column; gap: 4px; }
+.ku-tree__relation {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.ku-tree__bullet {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.12);
+  flex: none;
+}
+.ku-tree__relname { color: var(--ink-2); }
+.ku-tree__relation b { margin-left: auto; color: var(--ink-1); font-size: 9.5px; }
+.ku-tree__children {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 12px;
+  border-left: 1px solid var(--line-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ku-tree__children > li { position: relative; }
+.ku-tree__children > li::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  top: 15px;
+  width: 9px;
+  height: 1px;
+  background: var(--line-2);
+}
+.ku-tree__more { margin: 2px 0 0 12px; font-size: 10px; color: var(--ink-3); }
+
+.ku-rel--tree { align-items: center; border-radius: 8px; }
+.ku-rel--tree .ku-rel__name { flex: 1 1 auto; }
+.ku-rel__dir { flex: none; display: inline-flex; color: var(--ink-3); }
+.ku-rel__dir--in { transform: rotate(180deg); }
+.ku-rel__type {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ---------------- stage overlays ---------------- */
+
+.ku-stats {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.ku-controls { border-radius: 12px; }
+.ku-hint {
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(14px);
+}

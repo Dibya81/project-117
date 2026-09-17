@@ -25,6 +25,21 @@ import type { PlantDef, SimEvent } from "@/lib/sim/types";
 // imports were left behind, which made the module look far more mock-backed
 // than it is. The three below are the genuine remainder.
 import { api } from "@/lib/api";
+import type {
+  EquipmentRequirementsRecord,
+  InventoryStatusRecord,
+  LimitationRecord,
+  MaterialDetailEnvelope,
+  MaterialForecastRecord,
+  MaterialInsightRecord,
+  MaterialRecord,
+  MaterialRequirementRecord,
+  MaterialsDashboardRecord,
+  MaterialsGraphRecord,
+  PriceHistoryRecord,
+  ProductionSeriesRecord,
+  RecommendationRecord,
+} from "@/lib/api";
 
 const ok = <T,>(value: T) => Promise.resolve(value);
 
@@ -224,6 +239,10 @@ function toEquipment(r: EquipmentRecord): Equipment {
     }),
     last_inspection: r.lastInspection,
     insight: r.summary,
+    // The real plant tag (`P-1001`), which is what a QR label encodes and what
+    // the backend resolves. It is packed last in the API's `tags` array; the id
+    // (`e-P-1001`) is a different string, so the label must carry this one.
+    ...(r.tags?.length ? { tag: r.tags[r.tags.length - 1] } : {}),
   };
 }
 
@@ -296,8 +315,11 @@ function toApproval(r: ApprovalRecord): ApprovalRequest {
  * "organizational memory, not an activity log" was rendering exactly that, one
  * `/api/simulation/plants/refinery/reset` at a time.
  */
+/** The action namespace the API middleware writes for every request. */
+const TRANSPORT_ACTION_PREFIX = "http.";
+
 function isTransportAudit(action: string): boolean {
-  return action.startsWith("http.");
+  return action.startsWith(TRANSPORT_ACTION_PREFIX);
 }
 
 /**
@@ -351,6 +373,39 @@ export const consoleData = {
     // not the six-row synthetic set the console used to read.
     list: () => api.equipment.list().then((r) => r.items.map((e) => toEquipment(e))),
     /**
+     * The asset's printable QR label as inline-ready SVG.
+     *
+     * One source of truth: the backend renders it and encodes the namespaced
+     * `P117:EQUIP:<tag>` payload, so the console ships no QR library and cannot
+     * drift from what the scanner resolves. A failed render resolves to `null`
+     * so the label panel can say so instead of showing a broken image.
+     */
+    qrSvg: (id: string): Promise<string | null> => api.equipment.qrSvg(id).catch(() => null),
+    /**
+     * Every asset's label for the printable sheet, in one call.
+     *
+     * The symbols are fetched in parallel; the backend caches each tag's SVG
+     * and the read cache de-duplicates a re-mount. One failed symbol is reported
+     * as `null` for that row only — the rest of the sheet still prints.
+     *
+     * `tag` and `zone` come from the raw record, not the view model: the label
+     * must print the real plant tag (`P-1001`), not the asset id (`e-P-1001`).
+     */
+    labelSheet: async (): Promise<
+      { id: string; tag: string; name: string; zone: string; svg: string | null }[]
+    > => {
+      const { items } = await api.equipment.list();
+      return Promise.all(
+        items.map(async (r) => ({
+          id: r.id,
+          tag: r.tags?.[r.tags.length - 1] ?? r.id,
+          name: r.name,
+          zone: r.area || r.unit || "",
+          svg: await api.equipment.qrSvg(r.id).catch(() => null),
+        })),
+      );
+    },
+    /**
      * Resolve an equipment tag to its record.
      *
      * The console names units by their narrative tag (C-3); the simulation
@@ -387,6 +442,7 @@ export const consoleData = {
             zone: view.zone,
             status: view.status,
             insight: view.insight,
+            ...(view.tag ? { tag: view.tag } : {}),
             readings: view.sensors.map((s) => ({
               key: s.key,
               label: s.label,
@@ -481,7 +537,11 @@ export const consoleData = {
     // orders created here are persisted by the backend, so there is one source
     // of truth and a created order survives a reload.
     list: () => api.workOrders.list().then((r) => r.items.map(toWorkOrder)),
-    get: (id: string) => api.workOrders.get(id).then(toWorkOrder),
+    // `GET /api/work-orders/{id}` returns `{ workOrder, equipment, … }`, not a
+    // bare order. Mapping the envelope as if it were the record produced an
+    // object with every field `undefined` — the detail page showed no title,
+    // "PRIORITY MEDIUM" and "ASSIGNEE unassigned" for a real high-priority order.
+    get: (id: string) => api.workOrders.get(id).then((r) => toWorkOrder(r.workOrder)),
     create: (input: { title: string; equipment_id: string; priority: string; assignee: string }) =>
       api.workOrders
         .create({
@@ -491,7 +551,9 @@ export const consoleData = {
           assignee: input.assignee || null,
           origin: "console",
         })
-        .then(toWorkOrder),
+        // POST returns the same envelope as GET — unwrap it, or a newly created
+        // order is a record with every field `undefined`.
+        .then((r) => toWorkOrder(r.workOrder)),
   },
   approvals: {
     list: () => api.approvals.list().then((r) => r.items.map(toApproval)),
@@ -505,6 +567,73 @@ export const consoleData = {
   // The knowledge graph builds itself from the plant definition and the console
   // records (lib/knowledge/plant.ts); this adapter's graph section was a mock
   // leftover that nothing rendered. Empty rather than a second, stale topology.
+  /**
+   * Industrial materials, inventory and business intelligence.
+   *
+   * Deliberately thin. Every number the backend computed is passed through
+   * unchanged — no re-derivation, no unit conversion, no rounding — because a
+   * second implementation of "available stock" in the browser is exactly how a
+   * console comes to disagree with the engine it is reporting on. The adapter
+   * exists only so pages have one import surface, and so a limitation the
+   * backend reported survives the trip to the component that must display it.
+   */
+  materials: {
+    /** Materials Overview: dashboard counters, raw-material cover, critical list. */
+    overview: async (): Promise<{
+      dashboard: MaterialsDashboardRecord;
+      insights: MaterialInsightRecord[];
+      insightCounts: { critical: number; warning: number; info: number };
+      dataStatus: string;
+    } | null> => {
+      try {
+        const r = await api.materials.intelligence();
+        return {
+          dashboard: r.dashboard,
+          insights: r.intelligence.insights,
+          insightCounts: r.intelligence.counts,
+          dataStatus: r.data_status,
+        };
+      } catch {
+        // The materials layer is additive. A deployment without it must degrade
+        // to an explicit empty state, not to invented figures.
+        return null;
+      }
+    },
+    list: (params: { materialClass?: string; search?: string; limit?: number; offset?: number } = {}) =>
+      api.materials.list(params).then((r) => ({ items: r.items, total: r.total ?? r.count })),
+    detail: (id: string): Promise<MaterialDetailEnvelope> => api.materials.get(id),
+    inventory: (params: { materialClass?: string; search?: string; limit?: number } = {}) =>
+      api.materials.inventory(params),
+    movements: (params: { materialId?: string; movementType?: string; limit?: number } = {}) =>
+      api.materials.movements(params).then((r) => r.items),
+    production: (params: { period?: string; productId?: string } = {}): Promise<ProductionSeriesRecord> =>
+      api.materials.production(params),
+    priceHistory: (itemId: string, windowDays = 30): Promise<PriceHistoryRecord> =>
+      api.materials.priceHistory(itemId, { windowDays }),
+    suppliers: () => api.materials.suppliers().then((r) => r.items),
+    financialEvents: (limit = 50) => api.materials.financialEvents({ limit }).then((r) => r.items),
+    /** Spares an asset requires, with the live inventory position for each. */
+    requirementsFor: (equipmentId: string, failureMode?: string): Promise<EquipmentRequirementsRecord> =>
+      api.materials.equipmentRequirements({ equipmentId, failureMode }),
+    /** Required vs available vs safety stock, with the backend's coverage verdict. */
+    maintenanceRequirement: (equipmentId: string, failureMode?: string): Promise<MaterialRequirementRecord> =>
+      api.materials.maintenanceRequirements(equipmentId, { failureMode }),
+    /** The composed recommendation. Read-only: it proposes, it does not order. */
+    recommendation: (equipmentId: string, failureMode?: string): Promise<RecommendationRecord> =>
+      api.materials.recommendation(equipmentId, failureMode),
+    /** One material's subgraph — scoped, not the whole industrial graph. */
+    graphFor: (materialId: string): Promise<MaterialsGraphRecord> => api.materials.graphFor(materialId),
+    graph: (): Promise<MaterialsGraphRecord> => api.materials.graph(),
+    forecast: async (materialId: string): Promise<MaterialForecastRecord | null> => {
+      try {
+        const detail = await api.materials.get(materialId);
+        return detail.forecast;
+      } catch {
+        return null;
+      }
+    },
+  },
+
   graph: { get: () => ok({ nodes: [], edges: [] }) },
   history: {
     /**
@@ -517,9 +646,24 @@ export const consoleData = {
      * the plant. Keeping them meant the newest 200 audit rows were 76%
      * transport noise, and they buried the domain events they were mixed with.
      */
-    list: async () => {
+    /**
+     * @param limit How many audit rows to read. Defaults to what a summary
+     *   surface needs. The endpoint returns every row type — the request log is
+     *   roughly three quarters of them and is discarded just below — so asking
+     *   for 500 cost 201 KB to display five lines on the home page and a few
+     *   dozen on the knowledge graph. The full-history page asks for the larger
+     *   window it actually renders.
+     */
+    list: async (limit = 120) => {
       const audited = await api.audit
-        .query({ limit: 500 })
+        // The request log is excluded AT THE SOURCE, not here. Filtering after
+        // the fact meant `limit` counted rows that were then thrown away: the
+        // newest 120 audit rows are *entirely* `http.*` transport entries, so the
+        // register filtered down to nothing and the page reported "no memory yet"
+        // while the plant was running. Excluding server-side makes `limit` mean
+        // "this many rows the caller can use", and removes ~three quarters of the
+        // payload at the same time.
+        .query({ limit, excludeActionPrefix: TRANSPORT_ACTION_PREFIX })
         .then((r) =>
           (r.events ?? [])
             .filter((e) => !isTransportAudit(String(e.action ?? "")))
@@ -650,11 +794,36 @@ export const consoleData = {
 };
 
 /** Role → nav visibility. Hides (not disables) unauthorized sections. */
+/**
+ * Which navigation ids each role may see.
+ *
+ * The materials layer is additive and role-appropriate rather than universal: an
+ * operator needs the spares shelf and the overview, a safety officer needs the
+ * register and the price movement that signals a supply problem, and everyone
+ * with plant responsibility needs the materials register itself.
+ *
+ * The security pair (`sovereignty`, `confidentiality`) is the exception: it is
+ * present for every role. Hiding the posture from the people who run the plant
+ * meant nobody except an admin could see whether egress was being refused or
+ * whether the sandbox was actually up — which is the one reading a security
+ * surface exists to give. The pages themselves are read-only measurements, so
+ * there is no privileged action to withhold here.
+ */
 export const ROLE_NAV: Record<ConsoleRole, string[]> = {
-  operator: ["home", "workspace", "equipment", "work-orders", "simulation"],
-  engineer: ["home", "workspace", "documents", "knowledge", "history", "equipment", "work-orders", "insights", "simulation"],
-  maintenance: ["home", "workspace", "equipment", "work-orders", "documents", "simulation"],
-  safety: ["home", "documents", "history", "approvals", "insights", "simulation"],
-  manager: ["home", "workspace", "approvals", "insights", "equipment", "work-orders", "simulation"],
-  admin: ["home", "workspace", "documents", "knowledge", "history", "equipment", "work-orders", "insights", "approvals", "admin", "simulation"],
+  operator: ["home", "workspace", "equipment", "work-orders", "simulation", "sovereignty", "confidentiality", "mat-overview", "mat-spares"],
+  engineer: [
+    "home", "workspace", "documents", "knowledge", "history", "equipment", "work-orders", "insights", "simulation", "sovereignty", "confidentiality",
+    "mat-overview", "mat-materials", "mat-inventory", "mat-production", "mat-prices", "mat-spares", "mat-suppliers",
+  ],
+  maintenance: ["home", "workspace", "equipment", "work-orders", "documents", "simulation", "sovereignty", "confidentiality", "mat-overview", "mat-spares", "mat-inventory"],
+  safety: ["home", "documents", "history", "approvals", "insights", "simulation", "sovereignty", "confidentiality", "mat-overview", "mat-prices", "mat-suppliers"],
+  manager: [
+    "home", "workspace", "approvals", "insights", "equipment", "work-orders", "simulation", "sovereignty", "confidentiality",
+    "mat-overview", "mat-inventory", "mat-production", "mat-prices", "mat-suppliers",
+  ],
+  admin: [
+    "home", "workspace", "documents", "knowledge", "history", "equipment", "work-orders",
+    "insights", "approvals", "admin", "sovereignty", "confidentiality", "simulation",
+    "mat-overview", "mat-materials", "mat-inventory", "mat-production", "mat-prices", "mat-spares", "mat-suppliers",
+  ],
 };

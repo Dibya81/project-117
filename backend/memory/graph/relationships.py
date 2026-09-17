@@ -31,6 +31,11 @@ RELATION_TYPES: dict[str, tuple[frozenset[str], frozenset[str]]] = {
     "analysed_in": (frozenset({"equipment", "signal"}), frozenset({"job"})),
     "installed_at": (frozenset({"equipment"}), frozenset({"site"})),
     "related_to": (frozenset({"equipment"}), frozenset({"equipment"})),
+    # Spares and inspections. Both were added with the operational graph tool:
+    # a spare's requirement and an asset's recorded inspection are facts the
+    # system already stores, and the closed schema above had no way to say so.
+    "requires_spare": (frozenset({"equipment"}), frozenset({"material"})),
+    "has_inspection": (frozenset({"equipment"}), frozenset({"inspection"})),
 }
 
 #: Reading an edge backwards, for neighbourhood queries.
@@ -45,6 +50,8 @@ INVERSE_LABELS: dict[str, str] = {
     "analysed_in": "analysed",
     "installed_at": "hosts",
     "related_to": "related to",
+    "requires_spare": "spare for",
+    "has_inspection": "inspection of",
 }
 
 

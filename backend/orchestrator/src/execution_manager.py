@@ -93,6 +93,12 @@ class ExecutionState:
     plan: Plan
     user: str | None = None
     roles: tuple[str, ...] = ()
+    #: The caller's explicit clearance badge, when they hold one, in the
+    #: security layer's vocabulary (PUBLIC…HIGHLY_CONFIDENTIAL). Threaded
+    #: through to ``ToolContext`` so a tool's retrieval is filtered by the same
+    #: clearance the RBAC gate approved — a plain string here, because the
+    #: orchestrator should not import the clearance model to carry one value.
+    clearance: str | None = None
     document_ids: list[str] = field(default_factory=list)
     #: Step ids a reviewer has approved.
     approved_steps: set[str] = field(default_factory=set)
@@ -158,6 +164,7 @@ class ExecutionManager:
         sandbox: Any = None,
         artifacts: Any = None,
         model_router: Any = None,
+        materials: Any = None,
     ) -> None:
         self._tools = tools
         self._agents = agent_manager
@@ -170,6 +177,10 @@ class ExecutionManager:
         self._sandbox = sandbox
         self._artifacts = artifacts
         self._model_router = model_router
+        # The materials domain store, so the materials tools can read inventory,
+        # price and production figures. None in a deployment without the domain,
+        # which the tools report as ToolUnavailable rather than guessing.
+        self._materials = materials
 
     async def run(
         self,
@@ -372,6 +383,7 @@ class ExecutionManager:
             job_id=state.job_id,
             user=state.user,
             roles=state.roles,
+            clearance=state.clearance,
             document_ids=list(state.document_ids),
             retrieval=self._retrieval,
             sandbox=self._sandbox,
@@ -379,6 +391,7 @@ class ExecutionManager:
             session_factory=self._session_factory,
             audit=self._audit,
             router=self._model_router,
+            materials=self._materials,
         )
         result = await self._tools.execute(
             step.name or "",

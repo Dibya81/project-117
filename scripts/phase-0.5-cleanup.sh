@@ -51,7 +51,9 @@ fi
 
 echo
 echo "Done. Now verify - Phase 0.5 is not complete until all four pass:"
-echo "  cd backend"
+# Run from the REPOSITORY ROOT. pyproject.toml, tests/ and the ruff/pyright
+# configuration all live at the root; `cd backend` first (as this block used to
+# say) makes every one of these commands fail to find its config.
 echo "  uv sync"
 echo "  uv run pytest -q"
 echo "  uv run ruff check backend tests"

@@ -56,6 +56,37 @@ function mkSensor(tag: string, eqId: string, measurement: SensorDef["measurement
   };
 }
 
+/** Defaults for a point an engineer adds by hand, per measurement. */
+const NOMINAL: Record<string, number> = {
+  pressure: 9.5, temperature: 180, flow: 100, level: 60, vibration: 5.7,
+  rpm: 3000, current: 90, power: 460, gas: 0, leak: 0, position: 60, speed: 2.2,
+};
+
+/** Measurements the Builder can attach to a unit. */
+export const SENSOR_MEASUREMENTS: SensorDef["measurement"][] = [
+  "pressure", "temperature", "flow", "level", "vibration", "rpm",
+  "current", "power", "gas", "leak", "position", "speed",
+];
+
+/**
+ * One instrument, built exactly the way the per-kind defaults are built, so a
+ * point added by hand carries the same bands, units and detector flag as one
+ * that shipped with the asset.
+ */
+export function makeSensorOf(
+  equipmentId: string,
+  tag: string,
+  measurement: SensorDef["measurement"],
+): SensorDef {
+  return mkSensor(
+    tag,
+    equipmentId,
+    measurement,
+    NOMINAL[measurement] ?? 50,
+    measurement === "gas" || measurement === "leak",
+  );
+}
+
 /** Default instrumentation per kind — mirrors the dataset generator. */
 export function defaultSensors(kind: EquipmentKind, eqId: string, tag: string): SensorDef[] {
   if (kind === "pump")
@@ -128,6 +159,10 @@ export function makeConnection(
     relation,
     source,
     target,
+    // The wire is made port-to-port, so the record keeps the ports it was made
+    // on. Written from the same constants the canvas draws, never re-derived.
+    source_port: "out",
+    target_port: "in",
     medium: relation === "MATERIAL_FLOW" ? "process" : relation.toLowerCase(),
     capacity: 100,
     flow: 0,

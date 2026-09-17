@@ -19,11 +19,24 @@ that the in-memory store in `event_store` enforces exactly the same rule.
 from __future__ import annotations
 
 import logging
+import sqlite3
+import threading
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select
 
 from backend.database.models import AuditEvent
+from backend.security.audit.audit_chain import (
+    GENESIS_HASH,
+    ChainVerification,
+    append_link,
+    chain_transaction,
+    ensure_chain,
+    verify_chain,
+)
 from backend.security.audit.audit_log import (
     APPROVAL_STATES,
     MAX_DETAIL_CHARS,
@@ -54,6 +67,7 @@ __all__ = [
     "OUTCOME_ALIASES",
     "AuditFieldError",
     "AuditService",
+    "ChainVerification",
     "EventStore",
     "InMemoryEventStore",
     "StoredEvent",
@@ -66,14 +80,109 @@ __all__ = [
 ]
 
 
+def _new_event_id() -> str:
+    """Same shape as ``AuditEvent.id``'s default, applied before hashing."""
+    return str(uuid.uuid4())
+
+
+def sqlite_path_for(database_url: str) -> Path | None:
+    """The file behind a SQLite ``database_url``, or None for other backends.
+
+    The hash chain is implemented against SQLite because that is what Phase 1
+    persists to and what :mod:`backend.storage.operations` establishes as the
+    convention. A non-SQLite URL returns None and the chain degrades to
+    "not linked here" rather than pretending to be verified.
+    """
+    prefix = "sqlite:///"
+    if not database_url.startswith(prefix):
+        return None
+    raw = database_url[len(prefix) :]
+    if not raw or raw == ":memory:":
+        return None
+    return Path(raw).expanduser()
+
+
 class AuditService:
     """Database-backed audit sink. Satisfies the `EventStore` intent, but
     returns ORM rows rather than `StoredEvent`, because callers filter on
     indexed columns.
+
+    As of Phase 2 every row is also linked into a SHA-256 hash chain, so the
+    log is tamper-*evident* and not merely durable. The chain is applied here,
+    in the one place rows are written, rather than at each call site: an audit
+    row that skipped the chain would be detected as a break, and a caller
+    cannot be trusted to remember.
     """
 
-    def __init__(self, session_factory) -> None:
+    def __init__(self, session_factory, database_url: str | None = None) -> None:
         self._session_factory = session_factory
+        self._db_path = sqlite_path_for(database_url) if database_url else None
+        self._chain_ready = False
+        self._chain_lock = threading.Lock()
+
+    # --- chain plumbing ---------------------------------------------------
+
+    @property
+    def chain_path(self) -> Path | None:
+        """The SQLite file the chain lives in, or None when not SQLite."""
+        return self._db_path
+
+    def _ensure_chain(self) -> None:
+        """Create/backfill chain columns once per process.
+
+        Lazy rather than done in ``__init__``: constructing the audit service
+        must not touch the filesystem (tests build an app with a database URL
+        that does not exist yet), and the migration has to happen before the
+        first append, which is exactly here.
+        """
+        if self._chain_ready or self._db_path is None:
+            return
+        with self._chain_lock:
+            if self._chain_ready:
+                return
+            ensure_chain(self._db_path)
+            self._chain_ready = True
+
+    def _next_link(self, payload: dict[str, Any]) -> tuple[int, str, str] | None:
+        """Compute the next chain link, or None when the chain cannot be used.
+
+        A failure here must not lose the audit row: losing the record of an
+        action in order to protect the record of an action is the wrong
+        trade. The row is written unchained, which the verifier then reports as
+        a broken link — loudly, and without the event being lost.
+        """
+        if self._db_path is None:
+            return None
+        try:
+            self._ensure_chain()
+            conn = sqlite3.connect(str(self._db_path), timeout=30.0)
+            try:
+                link = append_link(conn, payload)
+                conn.rollback()  # read-only: never hold a write lock for a read
+                return link
+            finally:
+                conn.close()
+        except Exception:  # noqa: BLE001 - see docstring
+            logger.warning("audit chain link could not be computed", exc_info=True)
+            return None
+
+    def verify(self) -> ChainVerification:
+        """Walk this service's chain and report VALID / the first broken link."""
+        if self._db_path is None:
+            return ChainVerification(
+                valid=False,
+                events=0,
+                last_hash=GENESIS_HASH,
+                last_seq=0,
+                error=(
+                    "the audit log is not on SQLite, so no hash chain is maintained "
+                    "for it"
+                ),
+            )
+        self._ensure_chain()
+        return verify_chain(self._db_path)
+
+    # --- writing ----------------------------------------------------------
 
     def record(
         self,
@@ -113,10 +222,25 @@ class AuditService:
             error=error,
         )
         event = AuditEvent(**payload)
-        with self._session_factory() as session:
-            session.add(event)
-            session.commit()
-            session.refresh(event)
+        with chain_transaction():
+            # The hash covers id and timestamp, and both are Python-side
+            # defaults applied at flush. They are seeded here so the value
+            # hashed is exactly the value stored; hashing a None id and then
+            # writing a UUID would make every fresh row fail verification.
+            event.id = event.id or _new_event_id()
+            event.timestamp = event.timestamp or datetime.now(timezone.utc)
+            link = self._next_link(
+                {**payload, "id": event.id, "timestamp": event.timestamp}
+            )
+            if link is not None:
+                seq, previous_hash, current_hash = link
+                event.chain_seq = seq
+                event.previous_hash = previous_hash
+                event.current_hash = current_hash
+            with self._session_factory() as session:
+                session.add(event)
+                session.commit()
+                session.refresh(event)
         log_event(payload)
         return event
 

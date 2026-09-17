@@ -168,10 +168,15 @@ class EgressGuardTransport(httpx.AsyncBaseTransport):
                 decision="blocked",
                 reason="denied by egress policy",
                 local=local,
+                port=request.url.port,
             )
             raise EgressBlocked(url)
         record_decision(
-            host=host, scheme=request.url.scheme, decision="allowed", local=local
+            host=host,
+            scheme=request.url.scheme,
+            decision="allowed",
+            local=local,
+            port=request.url.port,
         )
         return await self._inner.handle_async_request(request)
 
@@ -210,10 +215,15 @@ class EgressGuardSyncTransport(httpx.BaseTransport):
                 decision="blocked",
                 reason="denied by egress policy",
                 local=local,
+                port=request.url.port,
             )
             raise EgressBlocked(url)
         record_decision(
-            host=host, scheme=request.url.scheme, decision="allowed", local=local
+            host=host,
+            scheme=request.url.scheme,
+            decision="allowed",
+            local=local,
+            port=request.url.port,
         )
         return self._inner.handle_request(request)
 

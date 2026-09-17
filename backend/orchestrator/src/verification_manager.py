@@ -49,9 +49,15 @@ logger = logging.getLogger(__name__)
 
 
 class VerificationManager:
-    def __init__(self, *, verifier: Any = None, sandbox: Any = None) -> None:
+    def __init__(
+        self, *, verifier: Any = None, sandbox: Any = None, audit: Any = None
+    ) -> None:
         self._verifier = verifier
         self._sandbox = sandbox
+        # Optional durable audit sink. Supplied so the audit-chain checker can
+        # run against the same log the orchestrator writes to; when it is None
+        # that checker reports SKIPPED rather than passing.
+        self._audit = audit
 
     @property
     def enabled(self) -> bool:
@@ -91,6 +97,7 @@ class VerificationManager:
             evidence=list(evidence or []),
             artifacts=list(artifacts or []),
             sandbox=self._sandbox,
+            audit=self._audit,
             job_id=job_id,
             user=user,
         )

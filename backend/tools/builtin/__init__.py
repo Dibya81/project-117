@@ -33,6 +33,8 @@ from backend.tools.builtin.documents import (
     ReadDocumentTool,
     SearchDocumentsTool,
 )
+from backend.tools.builtin.graph import QueryKnowledgeGraphTool
+from backend.tools.materials import MATERIALS_TOOL_CLASSES
 from backend.tools.registry import ToolRegistry
 
 #: Registration order is also catalogue order: read, compute, then produce.
@@ -40,20 +42,38 @@ DEFAULT_TOOL_CLASSES: tuple[type[Any], ...] = (
     SearchDocumentsTool,
     ReadDocumentTool,
     ExtractTableTool,
+    QueryKnowledgeGraphTool,
     AnalyzeCsvTool,
     RunPythonTool,
     CreatePptxTool,
     CreateDocxTool,
     CreateXlsxTool,
     CreatePdfTool,
+    *MATERIALS_TOOL_CLASSES,
 )
 
 DEFAULT_TOOL_NAMES: tuple[str, ...] = (
     "search_documents",
     "read_document",
     "extract_table",
+    # The operational knowledge graph, assembled from real records (see
+    # backend/tools/builtin/graph.py). Read-only and clearance-aware.
+    "query_knowledge_graph",
     "analyze_csv",
     "run_python",
+    # Materials / inventory / business intelligence. Read-only: they expose the
+    # domain's computed values to the agent without giving it a way to change
+    # stock, order anything or approve its own proposal.
+    "get_material",
+    "get_inventory_status",
+    "get_material_movements",
+    "get_production_output",
+    "get_equipment_material_requirements",
+    "get_maintenance_requirements",
+    "search_price_history",
+    "calculate_material_requirement",
+    "forecast_inventory",
+    "generate_procurement_recommendation",
     "create_pptx",
     "create_docx",
     "create_xlsx",
@@ -114,6 +134,7 @@ __all__ = [
     "CreatePptxTool",
     "CreateXlsxTool",
     "ExtractTableTool",
+    "QueryKnowledgeGraphTool",
     "ReadDocumentTool",
     "RunPythonTool",
     "SearchDocumentsTool",

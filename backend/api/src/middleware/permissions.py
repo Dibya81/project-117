@@ -31,6 +31,13 @@ READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 #: path prefix -> (permission for reads, permission for writes)
 #: ``None`` means "this layer does not gate that method" — the handler still does.
 ROUTE_PERMISSIONS: tuple[tuple[str, Permission | None, Permission | None], ...] = (
+    # The mobile field API. Reads need connector read, writes need connector
+    # write, as this layer requires for the operations surfaces; the mobile
+    # bearer token resolves to the RBAC ``field`` role, which carries the write
+    # right (security/rbac.py). The finer-grained mobile grants
+    # (work_orders:update, approvals:decide, …) are enforced in the handlers
+    # because they do not exist in the backend's role matrix.
+    ("/api/v1", Permission.CONNECTORS_READ, Permission.CONNECTORS_WRITE),
     ("/api/equipment", Permission.CONNECTORS_READ, Permission.CONNECTORS_WRITE),
     ("/api/work-orders", Permission.CONNECTORS_READ, Permission.WORK_ORDERS_WRITE),
     ("/api/analytics", Permission.CONNECTORS_READ, None),
@@ -39,6 +46,11 @@ ROUTE_PERMISSIONS: tuple[tuple[str, Permission | None, Permission | None], ...] 
     ("/api/search", Permission.SEARCH_QUERY, Permission.SEARCH_QUERY),
     ("/api/knowledge", Permission.SEARCH_QUERY, Permission.SEARCH_QUERY),
     ("/api/artifacts", Permission.DOCUMENTS_READ, Permission.ARTIFACTS_WRITE),
+    # Materials: reading the domain needs connector read; the only write-shaped
+    # calls are seeding demo data and raising a procurement approval, both of
+    # which need the operational-record permission. No materials call can place
+    # an order — procurement is a request for a human decision.
+    ("/api/materials", Permission.CONNECTORS_READ, Permission.WORK_ORDERS_WRITE),
 )
 
 

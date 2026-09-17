@@ -12,7 +12,13 @@
         typecheck-web health clean
 
 PY := .venv/bin/python
-UVICORN := uvicorn backend.api.src.main:create_app --factory --host 127.0.0.1 --port 8000
+# Bound to every interface on purpose. The Android app in apps/mobile runs on a
+# device or emulator that cannot reach the host's loopback: a phone needs the
+# machine's LAN address and an emulator needs 10.0.2.2. With --host 127.0.0.1
+# the API answers curl on this machine and nothing else, which the app reports
+# as "Backend offline" because the connection is refused before any HTTP status
+# exists. Access is still gated: every /api/v1 route requires enrollment + login.
+UVICORN := uvicorn backend.api.src.main:create_app --factory --host 0.0.0.0 --port 8000
 
 help:
 	@echo "install         Install backend (uv) and JS workspace (pnpm) dependencies"

@@ -19,7 +19,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, DateTime, String, Text
+from sqlalchemy import BigInteger, DateTime, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -83,3 +83,16 @@ class AuditEvent(Base):
     # Structured, non-sensitive detail (ids, sizes, durations). Never content.
     detail_json: Mapped[str] = mapped_column(Text, default="{}")
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # --- tamper-evident chain (Phase 2) -----------------------------------
+    # Dense, ascending position in the hash chain. Ordering by `timestamp`
+    # would be ambiguous for two events in the same second (and editable), so
+    # the chain carries its own order. Nullable because rows written before
+    # the chain existed are backfilled by
+    # backend/security/audit/audit_chain.ensure_chain.
+    chain_seq: Mapped[int | None] = mapped_column(Integer, nullable=True, unique=True, index=True)
+    # sha256 of the preceding row's current_hash, or the genesis constant.
+    previous_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # sha256(previous_hash || canonical_json(row)); the exact serialisation
+    # lives in backend/security/audit/audit_chain.py.
+    current_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)

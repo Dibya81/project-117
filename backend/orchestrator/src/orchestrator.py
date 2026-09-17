@@ -246,6 +246,7 @@ class Orchestrator:
             plan=plan,
             user=job.get("user"),
             roles=tuple(roles),
+            clearance=request.get("clearance"),
             document_ids=document_ids,
             approved_steps=approved,
             data_policy=policy_for_job(

@@ -2,18 +2,24 @@
 
 Status: accepted · Date: 2026-09-09
 
+> Historical audit. Only the localGPT integration remains vendored (at
+> `vendor/localGPT`); `ToolOrchestra-main/` was removed per
+> `docs/decisions/0002-remove-toolorchestra.md`, and the other repositories are
+> no longer present in the working tree. The console port is `3017`, not the
+> `3000` guessed below.
+
 ## 1. The five vendored repositories
 
-All five were downloaded as GitHub archives (no `.git` directories) and sit
-unmodified at the workspace root. They are vendored third-party code; the
-backend integrates with them through adapters, never by editing them.
+All five were downloaded as GitHub archives (no `.git` directories) and, at
+audit time, sat unmodified at the workspace root. They are vendored third-party
+code; the backend integrates with them through adapters, never by editing them.
 
 | Repo | Verified purpose (from source) | Role in Project 117 |
 |---|---|---|
 | `localGPT-main/` | Local document intelligence: Docling ingestion + OCR, LanceDB vector+FTS hybrid retrieval with RRF, cross-encoder rerank, query decomposition, semantic cache, verification. Python, stdlib HTTP RAG API (:8001), backend gateway (:8000), SQLite. | **Primary ingestion + RAG engine** (Phase 3/4). Imported as a Python library. |
 | `LightRAG-main/` | Graph-based RAG: per-chunk entity/relation extraction, dual-layer KG + vector, 4 pluggable storage backends, role-based LLMs (EXTRACT/QUERY/KEYWORD/VLM), 5 query modes, FastAPI server (:9621), 542 test files. Core has **no torch/transformers dependency**. | **Knowledge-graph memory** (Phase 5): graph extraction over the same corpus; multi-hop industrial reasoning. Not a second vector store. |
 | `OpenSandbox-main/` | General-purpose sandbox platform: FastAPI control plane (:8080), Docker/K8s runtimes, lifecycle/command/filesystem APIs, per-sandbox egress policy + ingress proxy + credential vault, gVisor/Kata/Firecracker, multi-language SDKs, MCP, CLI. 158 test files. | **Isolated code/artifact execution** (Phase 9). Called via its Python SDK. |
-| `ToolOrchestra-main/` | NVIDIA **research/RL-training** repo for a tool-orchestrator model (verl training, HLE/FRAMES/τ²-Bench eval harnesses, `tools.json`, prompt templates). Not embeddable as a runtime. | **Reference only**: orchestration prompt template + the `nvidia/Orchestrator-8B` model (servable later via vLLM/Ollama as the orchestrator's planner model). No code reuse. |
+| `ToolOrchestra-main/` | NVIDIA **research/RL-training** repo for a tool-orchestrator model (verl training, HLE/FRAMES/τ²-Bench eval harnesses, `tools.json`, prompt templates). Not embeddable as a runtime. | **Reference only**: orchestration prompt template + the `nvidia/Orchestrator-8B` model (servable later via vLLM/Ollama as the orchestrator's planner model). No code reuse. **Removed — see ADR 0002.** |
 | `graphify-8/` | Code knowledge-graph CLI/MCP: tree-sitter AST → `graph.json`, communities, `query/path/explain`, HTML viz, optional Neo4j/FalkorDB push. Code pass is fully local; doc pass can call cloud LLMs. | **Dev tooling only**: maps `backend/` code; its `graph.html` + MCP-serve patterns are reference for future graph visualization. Not in the production document path. |
 
 ## 2. Conflict analysis
@@ -29,7 +35,7 @@ backend integrates with them through adapters, never by editing them.
 - **Ports:** localGPT gateway :8000 (we take :8000 for our gateway and run
   localGPT's RAG API in-process or on :8001), LightRAG server :9621,
   OpenSandbox :8080 (also graphify's MCP-HTTP default — graphify is on-demand
-  only), Ollama :11434, future web :3000. No conflicts at these defaults.
+  only), Ollama :11434, console :3017. No conflicts at these defaults.
 - **Databases:** localGPT SQLite + LanceDB; LightRAG in-memory/file (or
   Postgres/Neo4j/…); OpenSandbox Postgres + Redis. Consolidation decision:
   **one PostgreSQL** (relational data: users/sessions/documents/artifacts/

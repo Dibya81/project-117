@@ -507,6 +507,69 @@ class OperationsStore:
             out["decisionNote"] = row["decision_note"]
         return out
 
+    def next_approval_id(self) -> str:
+        """``APR-9001``-style identifier, matching the work-order convention."""
+        with self._lock:
+            rows = self._db.execute("SELECT id FROM approvals").fetchall()
+        numbers = [int(t) for r in rows if (t := str(r["id"]).rsplit("-", 1)[-1]).isdigit()]
+        return f"APR-{(max(numbers) + 1) if numbers else 9001}"
+
+    def request_approval(
+        self,
+        *,
+        title: str,
+        approval_type: str,
+        actor: str,
+        summary: str = "",
+        related_id: str | None = None,
+        risk: str = "medium",
+        required_role: str | None = None,
+        evidence: list[Any] | None = None,
+    ) -> dict[str, Any]:
+        """Park something for human decision. Idempotent per (type, related_id).
+
+        Returns the existing PENDING approval when one is already open for the
+        same subject. Raising a second identical request would let a queue look
+        busier than the work actually is, and the operator would have to decide
+        the same thing twice.
+
+        This creates a *request*. Nothing here approves anything, and nothing
+        here executes the underlying action — deciding is a separate call that
+        requires ``jobs:approve``.
+        """
+        with self._lock:
+            if related_id:
+                existing = self._db.execute(
+                    "SELECT * FROM approvals WHERE type=? AND related_id=? AND status='pending'",
+                    (approval_type, related_id),
+                ).fetchone()
+                if existing is not None:
+                    out = self._approval_row(existing)
+                    out["deduplicated"] = True
+                    return out
+            approval_id = self.next_approval_id()
+            self._db.execute(
+                "INSERT INTO approvals (id,title,type,status,risk,requested_by,requested_at,"
+                "required_role,related_id,summary,evidence) VALUES (?,?,?,'pending',?,?,?,?,?,?,?)",
+                (
+                    approval_id,
+                    title,
+                    approval_type,
+                    risk,
+                    actor,
+                    _now(),
+                    required_role,
+                    related_id,
+                    summary,
+                    json.dumps(evidence or []),
+                ),
+            )
+            self._db.commit()
+            row = self._db.execute("SELECT * FROM approvals WHERE id=?", (approval_id,)).fetchone()
+        out = self._approval_row(row)
+        out["deduplicated"] = False
+        return out
+
     def approvals(self, *, status: str | None = None) -> list[dict[str, Any]]:
         sql = "SELECT * FROM approvals"
         params: list[Any] = []

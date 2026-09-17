@@ -19,6 +19,9 @@ from backend.security.approvals import ApprovalPolicy
 from backend.security.audit import AuditService
 from backend.security.rbac import Principal
 from backend.storage.documents import DocumentStorage
+from backend.storage.identity import IdentityStore, default_identity_db
+from backend.storage.materials import MaterialsStore, default_materials_db
+from backend.storage.mobile import MobileStore, default_mobile_db, default_simulation_db
 from backend.storage.operations import OperationsStore
 from backend.tools.registry import ToolRegistry
 from backend.verification.verifier import Verifier
@@ -100,6 +103,23 @@ def get_memory(request: Request) -> MemoryService:
     return request.app.state.memory
 
 
+def get_materials(request: Request) -> MaterialsStore:
+    """Materials, inventory, production, price history and requirements.
+
+    One SQLite file (``P117_MATERIALS_DB``, default ``data/materials.db``) holding
+    the whole Industrial Materials layer. Cached on ``app.state`` so a write
+    through one request is visible to the next, and shared by the HTTP API, the
+    agent tools and the startup seeder — there is one materials store in the
+    process, not one per consumer.
+    """
+    store = getattr(request.app.state, "materials", None)
+    if store is None:
+        settings = request.app.state.settings
+        store = MaterialsStore(db_path=getattr(settings, "materials_db", None) or default_materials_db())
+        request.app.state.materials = store
+    return store
+
+
 def get_operations(request: Request) -> OperationsStore:
     """Operations records (equipment, work orders, approvals, analytics).
 
@@ -118,4 +138,41 @@ def get_operations(request: Request) -> OperationsStore:
             default_plant=settings.operations_plant,
         )
         request.app.state.operations = store
+    return store
+
+
+def get_identity(request: Request) -> IdentityStore:
+    """Users, enrolled devices, sessions and the token secret.
+
+    One SQLite file (``P117_IDENTITY_DB``, default ``data/identity.db``). Cached
+    on ``app.state`` so a login is visible to the very next request and the
+    token-signing secret is resolved once per process.
+    """
+    store = getattr(request.app.state, "identity", None)
+    if store is None:
+        settings = request.app.state.settings
+        store = IdentityStore(
+            db_path=getattr(settings, "identity_db", None) or default_identity_db()
+        )
+        request.app.state.identity = store
+    return store
+
+
+def get_mobile(request: Request) -> MobileStore:
+    """Mobile runtime state: agent-task handling, issues, notifications, evidence.
+
+    ``P117_MOBILE_DB`` (default ``data/mobile.db``) holds the writes; the
+    simulation database is opened read-only to serve the engine's real agent
+    task list. See ``backend/storage/mobile.py``.
+    """
+    store = getattr(request.app.state, "mobile", None)
+    if store is None:
+        settings = request.app.state.settings
+        store = MobileStore(
+            db_path=getattr(settings, "mobile_db", None) or default_mobile_db(),
+            simulation_db=(
+                getattr(settings, "simulation_db", None) or default_simulation_db()
+            ),
+        )
+        request.app.state.mobile = store
     return store

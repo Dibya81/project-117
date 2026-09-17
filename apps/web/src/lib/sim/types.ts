@@ -83,6 +83,9 @@ export type RelationType =
   | "FEEDS"
   | "OUTPUT_TO";
 
+/** The two port sexes a unit exposes. Wiring is port-to-port. */
+export type PortKind = "in" | "out";
+
 export interface ConnectionDef {
   id: string;
   kind: ConnectionKind;
@@ -90,6 +93,17 @@ export interface ConnectionDef {
   relation?: RelationType;
   source: string;
   target: string;
+  /**
+   * The ports the line actually leaves and enters.
+   *
+   * Direction is structural, not a convention the editor checks for afterwards:
+   * a line always leaves an `out` port and enters an `in` port, so an in→in or
+   * out→out link has no representation to be built in the first place.
+   * Optional because dataset connections predate the Builder; read them with
+   * `portOf(connection, "source" | "target")`.
+   */
+  source_port?: PortKind;
+  target_port?: PortKind;
   medium: string;
   capacity: number;
   flow: number;
@@ -218,6 +232,12 @@ export interface IncidentPlan {
 
 export interface SimSnapshot {
   t: number;
+  /**
+   * The runtime's run flag. `/frame` carries it (the run flag lives on the
+   * PlantRuntime, not on `engine.snapshot()`), so a liveness check can tell a
+   * paused plant from a stream that has stopped describing the live runtime.
+   */
+  running?: boolean;
   equipment: Record<string, { state: AssetState; capacity: number; faults: string[] }>;
   sensors: Record<string, { value: number; quality: TelemetryQuality; failed: boolean }>;
   /**

@@ -77,6 +77,50 @@ def test_tripped_detector_still_fails_verification() -> None:
     assert any("detector tripped" in f for f in findings)
 
 
+def test_builder_plant_zero_band_detector_is_not_tripped() -> None:
+    """Defect 3 (BLOCKER for Builder plants).
+
+    The Builder gives a detector `nominal = 0`, so its derived bands are
+    `critical_min = critical_max = 0`. `verify_plan` used to test
+    `value >= critical_max`, and `0 >= 0` reported every HEALTHY detector as
+    tripped — so no incident on a hand-built plant could ever verify, and every
+    one of them ended in an escalation.
+    """
+    from backend.simulation.agents import verify_plan
+
+    svc = SimulationService()
+    plant = datasets.load_plant("steel")
+    rt = svc.register(plant)
+    svc.start("steel")
+    svc.step("steel")
+
+    # Exactly what `mkSensor` in apps/web/src/lib/sim/custom.ts produces for a
+    # gas/leak point: nominal 0, so every band collapses to 0.
+    det_id, det_model = next(
+        (sid, m) for sid, m in rt.engine.sensor_model.items() if m.is_detector
+    )
+    det_model.nominal = 0.0
+    det_model.normal_min = det_model.normal_max = 0.0
+    det_model.warning_min = det_model.warning_max = 0.0
+    det_model.critical_min = det_model.critical_max = 0.0
+    rt.engine.sensors[det_id].value = 0.0
+
+    inc = next(iter(rt.engine.incidents.values())) if rt.engine.incidents else None
+    if inc is None:
+        res = svc.inject_failure("steel", "e-P-2033", "sensor_failure")
+        inc = rt.engine.incidents[res["incident"]["id"]]
+    inc.affected = list({*inc.affected, det_model.equipment_id})
+
+    ok, findings = verify_plan(rt.engine, inc)
+    assert not any("detector tripped" in f for f in findings), findings
+
+    # …and the same detector, actually latched, is still a real finding.
+    rt.engine.sensors[det_id].value = 1.0
+    ok2, findings2 = verify_plan(rt.engine, inc)
+    assert ok2 is False
+    assert any("detector tripped" in f for f in findings2)
+
+
 def test_full_incident_lifecycle_emits_the_documented_event_sequence() -> None:
     d = _run("refinery", "e-P-1171", "sensor_failure")
     required = {

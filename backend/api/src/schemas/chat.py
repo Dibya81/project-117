@@ -15,7 +15,7 @@ read the wrong fields.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -76,7 +76,10 @@ class ChatResponse(BaseModel):
     provider: str
     latency_ms: float
     session_id: str | None = None
-    usage: dict[str, int] = Field(default_factory=dict)
+    #: Opaque provider usage metadata. Not ``dict[str, int]``: the
+    #: OpenAI-compatible format nests ``prompt_tokens_details``, and the strict
+    #: value type rejected every real Ollama reply (a 400 from this contract).
+    usage: dict[str, Any] = Field(default_factory=dict)
     #: Populated only when the turn was grounded; empty otherwise.
     evidence: list[Evidence] = Field(default_factory=list)
 

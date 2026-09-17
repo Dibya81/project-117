@@ -16,6 +16,7 @@
  * prefers-reduced-motion renders the same story as a static stack.
  */
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 
 import CinematicSequence, { CinematicSequenceHandle } from "./CinematicSequence";
@@ -27,6 +28,16 @@ import { Magnetic } from "@/components/fx/Magnetic";
 import { Counter } from "@/components/fx/Counter";
 
 import "@/styles/project117-landing.css";
+
+/**
+ * The commercial section is ~3000vh below the film, so its code is not part of
+ * what the first screen needs. `next/dynamic` splits it out of the initial
+ * landing chunk and it is mounted once the reader approaches the end of the
+ * track — the film's own code, animations and frame sequence are untouched.
+ */
+const PricingCommercial = dynamic(() => import("./PricingCommercial"), {
+  loading: () => <div className="p117-com p117-com--loading" aria-hidden="true" />,
+});
 
 const CHAPTERS: Chapter[] = [
   { id: "01", label: "The World", progress: 0.0 },
@@ -105,6 +116,48 @@ export default function Project117Landing() {
 
   const [reduced, setReduced] = useState(false);
   const [chapter, setChapter] = useState(0);
+  /**
+   * Whether the commercial section has been reached.
+   *
+   * A sentinel is observed at the end of the film; the section's chunk is
+   * fetched only when the reader gets there, so a visitor who never scrolls past
+   * the finale never downloads it. `prefers-reduced-motion` renders the film as
+   * a static stack, where the section is immediately reachable, so it mounts at
+   * once in that case.
+   */
+  const [commercialReady, setCommercialReady] = useState(false);
+
+  useEffect(() => {
+    if (reduced) {
+      setCommercialReady(true);
+      return;
+    }
+    const track = trackRef.current;
+    if (!track || typeof IntersectionObserver === "undefined") {
+      setCommercialReady(true);
+      return;
+    }
+    const sentinel = document.createElement("div");
+    sentinel.setAttribute("aria-hidden", "true");
+    sentinel.style.cssText = "position:absolute;bottom:0;left:0;width:1px;height:1px;";
+    track.appendChild(sentinel);
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setCommercialReady(true);
+          io.disconnect();
+        }
+      },
+      // Start loading a screen before the end, so the section is already there
+      // when the reader arrives rather than popping in under them.
+      { rootMargin: "0px 0px 120% 0px" },
+    );
+    io.observe(sentinel);
+    return () => {
+      io.disconnect();
+      sentinel.remove();
+    };
+  }, [reduced]);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -148,6 +201,10 @@ export default function Project117Landing() {
           <li><a href="#problem" onClick={(e) => { e.preventDefault(); goTo(0.36); }}>Problem</a></li>
           <li><a href="#security" onClick={(e) => { e.preventDefault(); goTo(0.54); }}>Security</a></li>
           <li><a href="#system" onClick={(e) => { e.preventDefault(); goTo(0.68); }}>System</a></li>
+          {/* Additive. Reuses the existing item markup and classes so the nav's
+              behaviour and look are unchanged; it scrolls past the film to the
+              commercial section rather than driving the director. */}
+          <li><a href="#commercial" onClick={(e) => { e.preventDefault(); document.getElementById("commercial")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>Commercial</a></li>
         </ul>
         <Link href="/console/home" className="p117-nav-cta">
           Enter
@@ -391,6 +448,12 @@ export default function Project117Landing() {
           </div>
         </div>
       </div>
+
+      {/* The commercial section begins where the film ends. It is ordinary
+          document flow after the sticky stage, so the director's progress maths
+          (`window.scrollY / (track.offsetHeight - innerHeight)`) is unaffected:
+          neither the track's height nor its offset changes. */}
+      {commercialReady && <PricingCommercial />}
 
       <noscript>
         <style>{".p117-canvas,.p117-fx{display:none}.p117-beat{opacity:1 !important;visibility:visible !important;position:relative;min-height:70vh}"}</style>

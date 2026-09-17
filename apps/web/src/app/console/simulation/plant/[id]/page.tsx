@@ -26,7 +26,13 @@ import { AgentCommandCenter } from "@/components/sim/AgentCommandCenter";
 import { AssessmentPanel } from "@/components/sim/AssessmentPanel";
 import { AgentResponseConsole } from "@/components/sim/AgentResponseConsole";
 import { AgentDispatchBoxes } from "@/components/sim/AgentDispatchBoxes";
-import { RecoveryExperience, RecoverySummary, type DecisionView } from "@/components/sim/RecoveryExperience";
+import {
+  RecoveryExperience,
+  RecoveryDock,
+  AGENT_PANEL_DISMISS_MS,
+  AGENT_PANEL_NO_DECISION_DISMISS_MS,
+  type DecisionView,
+} from "@/components/sim/RecoveryExperience";
 import { ProcessMap, type ProcessMapSelection } from "@/components/sim/ProcessMap";
 import { MeridianRefineryView } from "@/components/sim/MeridianRefineryView";
 import { EquipmentRenderer, normalizeEquipmentAsset, preferredAssetSize } from "@/components/equipment";
@@ -136,6 +142,12 @@ const EVENT_TONE: Record<string, string> = {
 export default function PlantTwinPage() {
   const params = useParams<{ id: string }>();
   const plantId = decodeURIComponent(params.id);
+  /**
+   * The oil refinery is the live control-room view: one locked camera on the
+   * whole circuit, no zoom, no pan. Other plants (and the builder) keep the
+   * navigable canvas.
+   */
+  const liveFixedCamera = plantId === "refinery";
   const { visit } = useJourney();
   const router = useRouter();
 
@@ -228,88 +240,242 @@ export default function PlantTwinPage() {
       safety_confirmed: p.safety_confirmed === true,
       safety_concerns: list("safety_concerns"),
       rationale: String(p.rationale ?? ""),
+      // Per-agent outcome as the backend recorded it. The type requires this,
+      // the payload has always carried it, and it was simply not mapped — so a
+      // panel could not tell a role that completed from one that never ran.
+      agent_status:
+        p.agent_status && typeof p.agent_status === "object"
+          ? Object.fromEntries(
+              Object.entries(p.agent_status as Record<string, unknown>).map(([k, v]) => [k, String(v)]),
+            )
+          : {},
     };
   }, []);
 
   const [openIncidentId, setOpenIncidentId] = useState<string | null>(null);
+  /**
+   * Incidents whose docked agent rail the operator has dismissed. Keyed by
+   * incident id so a new incident's rail still appears, while a rail the
+   * operator closed stays closed for the run it belonged to.
+   */
+  const [dismissedDocks, setDismissedDocks] = useState<Set<string>>(new Set());
+  /**
+   * The incident the plant itself is concerned with: the newest one the stream
+   * has produced. Every top-level overlay and every compact summary is keyed to
+   * it, so a finished incident's route can never bleed into the next incident.
+   */
+  const currentIncident = useMemo(
+    () => (sim.incidents.length ? sim.incidents[sim.incidents.length - 1] : null),
+    [sim.incidents],
+  );
   // The stream replays from seq 0, so on load `sim.incidents` already contains
   // every past incident. Only incidents that appear *after* the first render
   // should take over the screen — otherwise opening the page pops the panel for
-  // an incident that finished before the operator arrived.
+  // an incident that finished before the operator arrived. An incident that is
+  // still running when the operator arrives does take over, because it is not.
   const seenIncidentIds = useRef<Set<string> | null>(null);
+
+  /**
+   * Whether the fault's isolation has actually been painted.
+   *
+   * The panel opens on `agent.started`, which the backend emits a few
+   * milliseconds after `incident.created` — both can land in one SSE flush, so
+   * React would commit the isolation and the panels in the same frame and the
+   * operator would never see which chamber failed before the AI took the screen.
+   *
+   * This is a **paint barrier, not a delay**: `requestAnimationFrame` fires when
+   * the browser is about to paint, so it guarantees the isolated section is on
+   * screen. No duration is invented and nothing waits on a clock.
+   */
+  const [isolationPainted, setIsolationPainted] = useState(false);
+
+  /**
+   * Incidents whose agents have actually been dispatched.
+   *
+   * The three-agent panel opens on `agent.started`, NOT when the incident row
+   * appears and NOT when the disable request returns. The order the operator
+   * must see is: the sensor goes out of service, the affected chamber isolates
+   * and its flow stops, and only then does the AI take the screen. Opening on
+   * the incident opened the panels in the same frame as the fault, so the
+   * drawing's isolation was never visible — the agents appeared to be reacting
+   * to a plant that had not changed yet.
+   */
+  const startedIncidents = useMemo(() => {
+    const ids = new Set<string>();
+    for (const e of sim.events) {
+      if (e.type !== "agent.started") continue;
+      const p = e.payload as Record<string, unknown>;
+      const id = String(p.incident_id ?? p.job_id ?? "");
+      if (id) ids.add(id);
+    }
+    return ids;
+  }, [sim.events]);
+
   useEffect(() => {
-    const ids = new Set(sim.incidents.map((i) => i.id));
-    if (seenIncidentIds.current === null) {
-      seenIncidentIds.current = ids;
+    const seen = seenIncidentIds.current;
+    if (seen === null) {
+      seenIncidentIds.current = new Set(sim.incidents.map((i) => i.id));
+      // A page opened while an incident is already running still shows it, but
+      // only once its agents exist — otherwise the panel would describe a run
+      // that has not started.
+      const running = [...sim.incidents]
+        .reverse()
+        .find((i) => i.status !== "resolved" && i.status !== "escalated" && startedIncidents.has(i.id));
+      if (running) setOpenIncidentId(running.id);
       return;
     }
-    const fresh = sim.incidents.find((i) => !seenIncidentIds.current!.has(i.id));
-    if (fresh) {
-      seenIncidentIds.current.add(fresh.id);
-      setOpenIncidentId(fresh.id);
-    }
-  }, [sim.incidents]);
+    const fresh = sim.incidents.filter((i) => !seen.has(i.id) && startedIncidents.has(i.id));
+    if (!fresh.length) return;
+    // Do not cover the plant until the failure itself is on screen.
+    if (!isolationPainted) return;
+    for (const i of fresh) seen.add(i.id);
+    // A new sensor failure starts its own recovery. If a burst carries more
+    // than one, the newest is the one the operator must deal with.
+    setOpenIncidentId(fresh[fresh.length - 1].id);
+  }, [sim.incidents, startedIncidents, isolationPainted]);
   const recoveryIncident = useMemo(
     () => sim.incidents.find((i) => i.id === openIncidentId) ?? null,
     [sim.incidents, openIncidentId],
   );
 
   /**
-   * The validated recovery decision the three agents produced. Read straight
-   * from the `response.decision` event — the route ids are whatever the backend
-   * returned, never a local default.
+   * The validated recovery decision for one incident, read straight from the
+   * `response.decision` event emitted for that incident id. It never falls back
+   * to another incident's decision: a decision belongs to exactly the incident
+   * that produced it, so incident B cannot inherit incident A's route.
    */
-  const recoveryDecision = useMemo<DecisionView | null>(() => {
-    const wantedIncidentId = openIncidentId ?? sim.activeIncident?.id ?? consoleJobId;
-    const ev = [...sim.events].reverse().find((e) => {
-      if (e.type !== "response.decision") return false;
-      if (!wantedIncidentId) return true;
-      const p = e.payload as Record<string, unknown>;
-      return String(p.incident_id ?? p.job_id ?? "") === wantedIncidentId;
-    });
-    if (!ev) return null;
-    return decisionFromEvent(ev);
-  }, [sim.events, openIncidentId, sim.activeIncident?.id, consoleJobId, decisionFromEvent]);
+  const decisionForIncident = useCallback(
+    (incidentId: string | null): DecisionView | null => {
+      if (!incidentId) return null;
+      const ev = [...sim.events].reverse().find((e) => {
+        if (e.type !== "response.decision") return false;
+        const p = e.payload as Record<string, unknown>;
+        return String(p.incident_id ?? p.job_id ?? "") === incidentId;
+      });
+      return ev ? decisionFromEvent(ev) : null;
+    },
+    [sim.events, decisionFromEvent],
+  );
 
-  const lastVerifiedDecision = useMemo<DecisionView | null>(() => {
-    const ev = [...sim.events].reverse().find((e) => {
-      if (e.type !== "response.decision") return false;
-      const p = e.payload as Record<string, unknown>;
-      return p.available === true && p.safety_confirmed === true;
-    });
-    return ev ? decisionFromEvent(ev) : null;
-  }, [sim.events, decisionFromEvent]);
+  /** The decision the full-screen three-agent experience is showing. */
+  const openDecision = useMemo(
+    () => decisionForIncident(openIncidentId),
+    [decisionForIncident, openIncidentId],
+  );
+
+  /**
+   * The decision the PLANT reflects: the current incident's own decision.
+   *
+   * The topology overlay, the wiring state and the three compact summaries all
+   * read this, so the plant and the summaries always describe the same real
+   * incident — the latest one — and never a mixture of two.
+   */
+  const plantDecision = useMemo(
+    () => decisionForIncident(currentIncident?.id ?? null),
+    [decisionForIncident, currentIncident?.id],
+  );
+
+  /**
+   * The plant's own state, as the operator reads it. `recovered` is a fact about
+   * the last incident — it resolved and its verified decision is what the
+   * drawing is showing — not a timer's opinion.
+   */
+  const recovered =
+    !sim.activeIncident &&
+    currentIncident?.status === "resolved" &&
+    plantDecision?.available === true &&
+    plantDecision.safety_confirmed === true;
+  const plantState = sim.activeIncident ? "responding" : recovered ? "recovered" : "running";
 
   /**
    * The canvas runtime with the failover and verified topology overlays
    * applied. Both overlays are copied from backend events and decision ids:
    * no local path or connection id is invented here.
    */
+  /**
+   * The ISOLATION the plant is showing, taken from the backend's own
+   * `sensor.disabled` event.
+   *
+   * This is what makes the fault visible *before* any agent speaks. The event
+   * carries the origin asset and the exact set of assets the lost measurement
+   * touched (`affected`), so the drawing can isolate precisely those and stop
+   * their flow — no more, no less. Nothing here is inferred from a timer or a
+   * placeholder: if the backend did not say an asset is affected, it is not
+   * drawn as affected.
+   *
+   * It is cleared when the incident it belongs to ends, at which point the
+   * verified decision owns the drawing.
+   */
+  const isolation = useMemo(() => {
+    const incident = currentIncident;
+    if (!incident || incident.status === "resolved" || incident.status === "escalated") return null;
+    // The incident record itself carries the origin asset and the exact blast
+    // radius the engine computed. Reading it here rather than from the
+    // `sensor.disabled` event is deliberate: that event names only the sensor,
+    // and it does not exist at all for an injected fault or a blocked line —
+    // this way every incident isolates the right section.
+    const equipmentIds = new Set<string>();
+    if (incident.origin_equipment) equipmentIds.add(incident.origin_equipment);
+    for (const id of incident.affected ?? []) equipmentIds.add(id);
+    if (!equipmentIds.size) return null;
+    // Every line that touches an isolated asset is out of service, because a
+    // chamber with a stopped process cannot be feeding or drawing through it.
+    const connectionIds = (plant?.connections ?? [])
+      .filter((c) => equipmentIds.has(c.source) || equipmentIds.has(c.target))
+      .map((c) => c.id);
+    return { incidentId: incident.id, equipmentIds: [...equipmentIds], connectionIds };
+  }, [currentIncident, plant?.connections]);
+
+  useEffect(() => {
+    if (!isolation) {
+      setIsolationPainted(false);
+      return;
+    }
+    const raf = requestAnimationFrame(() => setIsolationPainted(true));
+    return () => cancelAnimationFrame(raf);
+  }, [isolation]);
+
   const displayRuntime = useMemo(() => {
     if (!runtime) return runtime;
     const sensorId = activeResponseJob?.failover?.relatedSensorId;
     const next: CanvasRuntime = {
       ...runtime,
+      // `states` must be copied too: the isolation below writes into it, and
+      // writing through the shared reference would corrupt the runtime the
+      // store polls.
+      states: { ...runtime.states },
       qualities: { ...runtime.qualities },
       pipes: Object.fromEntries(Object.entries(runtime.pipes).map(([id, pipe]) => [id, { ...pipe }])),
     };
+    // Immediate isolation, applied before any decision exists.
+    if (isolation) {
+      for (const id of isolation.equipmentIds) next.states[id] = "failed" as CanvasRuntime["states"][string];
+      for (const id of isolation.connectionIds) {
+        if (!next.pipes[id]) continue;
+        next.pipes[id] = { ...next.pipes[id], enabled: false, flow: 0, leaking: false };
+      }
+    }
     if (sensorId && runtime.qualities[sensorId]) {
       next.qualities[sensorId] = "substituted" as const;
     }
-    if (lastVerifiedDecision?.available && lastVerifiedDecision.safety_confirmed) {
+    if (plantDecision?.available && plantDecision.safety_confirmed) {
+      // The decision's own block/restore sets are what the drawing follows once
+      // the agents have spoken. Note the restore loop below only opens lines the
+      // decision named; a line isolated by the fault and NOT named in `restore`
+      // stays shut, which is the honest reading of the route.
       const known = new Set(plant?.connections.map((c) => c.id) ?? []);
-      for (const id of lastVerifiedDecision.block) {
+      for (const id of plantDecision.block) {
         if (!known.has(id) || !next.pipes[id]) continue;
         next.pipes[id] = { ...next.pipes[id], enabled: false, flow: 0 };
       }
-      for (const id of lastVerifiedDecision.restore) {
+      for (const id of plantDecision.restore) {
         if (!known.has(id) || !next.pipes[id]) continue;
         const base = plant?.connections.find((c) => c.id === id);
         next.pipes[id] = { ...next.pipes[id], enabled: true, leaking: false, flow: Math.max(next.pipes[id].flow ?? 0, base?.flow ?? 0, 8) };
       }
     }
     return next;
-  }, [runtime, activeResponseJob, lastVerifiedDecision, plant?.connections]);
+  }, [runtime, activeResponseJob, plantDecision, plant?.connections, isolation]);
 
   /**
    * The three-agent view opens on a new incident and stays up after it resolves
@@ -322,18 +488,66 @@ export default function PlantTwinPage() {
    * incident to render once it is over.
    */
   /**
-   * Return to the plant once the incident is over.
+   * Return to the plant once the agents have answered.
    *
-   * The view closes on the real `incident.resolved` event, never on a timer —
-   * the delay only holds the final state on screen long enough to read before
-   * the plant takes the space back.
+   * The countdown starts on the DECISION — the backend's `response.decision`
+   * event for this incident, which is the real "all three agents have returned"
+   * signal. It is NOT started by a frontend timer and it is NOT started by the
+   * incident's start or its resolution: a recovery executes and verifies long
+   * after the models reply, so those would hold the panel for a duration that
+   * has nothing to do with the agents.
+   *
+   * The clock is triggered by the decision event ARRIVING, not by it being
+   * usable. A run where Operations could not find a valid route
+   * (`available === false`, "ROUTING FAILED") has still finished — all three
+   * agents have answered — and the operator needs the plant back, with the three
+   * results docked on the right. Holding a failed run open forever also meant the
+   * panel never closed on the common validator-rejected path.
+   *
+   * The flag is a primitive, not the incident object: `sim.incidents` is rebuilt
+   * on every store publish, and depending on the incident object would restart
+   * the countdown on each poll so it could never elapse. The effect re-runs only
+   * when the decision first arrives, or the open incident changes.
    */
+  const openDecisionArrived = openDecision !== null;
+  const openIncidentStatus = recoveryIncident?.status ?? null;
+
+  // The clock starts here, on `response.decision` — usable or not. Once it has
+  // arrived this effect does not re-run while the same incident stays open, so
+  // the 20 s is a single uninterrupted countdown. Switching incident clears it,
+  // so a countdown that belonged to one incident can never close another.
   useEffect(() => {
-    if (!openIncidentId || !recoveryIncident) return;
-    if (recoveryIncident.status !== "resolved" && recoveryIncident.status !== "escalated") return;
-    const t = setTimeout(() => setOpenIncidentId(null), 2800);
+    if (!openIncidentId || !openDecisionArrived) return;
+    const t = setTimeout(() => setOpenIncidentId(null), AGENT_PANEL_DISMISS_MS);
     return () => clearTimeout(t);
-  }, [openIncidentId, recoveryIncident]);
+  }, [openIncidentId, openDecisionArrived]);
+
+  // A run that ended (resolved / escalated) with NO decision at all has nothing
+  // for the panel to show. Fall back to a short hold and return to the plant
+  // rather than hanging open forever. (The countdown above covers every case
+  // where a decision did arrive.)
+  useEffect(() => {
+    if (!openIncidentId || openDecisionArrived) return;
+    if (openIncidentStatus !== "resolved" && openIncidentStatus !== "escalated") return;
+    const t = setTimeout(() => setOpenIncidentId(null), AGENT_PANEL_NO_DECISION_DISMISS_MS);
+    return () => clearTimeout(t);
+  }, [openIncidentId, openDecisionArrived, openIncidentStatus]);
+
+  /**
+   * Forget rail dismissals when a fresh runtime boots.
+   *
+   * The engine's incident ids are a per-runtime counter (`INC-1001`,
+   * `INC-1002`, …), so a reset restarts them. Without this, dismissing the rail
+   * for `INC-1001`, resetting the plant and raising a new first incident would
+   * leave the new run's rail suppressed because it happens to share the old id.
+   */
+  const bootSeq = useRef<number | null>(null);
+  useEffect(() => {
+    const boot = [...sim.events].reverse().find((e) => e.type === "simulation.started");
+    if (!boot || bootSeq.current === boot.seq) return;
+    bootSeq.current = boot.seq;
+    setDismissedDocks(new Set());
+  }, [sim.events]);
 
   /**
    * Run the agents' decision once the evidence pack is in.
@@ -344,6 +558,26 @@ export default function PlantTwinPage() {
    * model. Guarded per incident so it fires exactly once.
    */
   const decidedRef = useRef<Set<string>>(new Set());
+  /** How many times a decision request has been retried for an incident. */
+  const decideAttempts = useRef<Map<string, number>>(new Map());
+
+  /**
+   * Re-run the three agents for an incident whose decision was unusable.
+   *
+   * The local model sometimes returns a route the validator rejects (or JSON it
+   * cannot parse). The plant is left untouched, which is correct — but the
+   * incident would otherwise sit open with no way forward. This asks the same
+   * three agents again; nothing is fabricated and the decision is still the
+   * model's.
+   */
+  const retryDecision = useCallback(
+    (incidentId: string) => {
+      decidedRef.current.delete(incidentId);
+      decideAttempts.current.set(incidentId, 0);
+      void simAdapter.decide(plantId, incidentId, true).catch(() => undefined);
+    },
+    [plantId],
+  );
   useEffect(() => {
     const inc = sim.activeIncident;
     if (!inc || sim.tasks.length === 0) return;
@@ -354,7 +588,14 @@ export default function PlantTwinPage() {
       return String(p.incident_id ?? p.job_id ?? "") === inc.id;
     })) return;
     decidedRef.current.add(inc.id);
-    void simAdapter.decide(plantId, inc.id, true);
+    // A rejected decision request (e.g. a 5xx) must not strand the incident in
+    // awaiting_approval with no console feedback. Retry a bounded number of
+    // times, then leave it to the operator.
+    void simAdapter.decide(plantId, inc.id, true).catch(() => {
+      const attempts = (decideAttempts.current.get(inc.id) ?? 0) + 1;
+      decideAttempts.current.set(inc.id, attempts);
+      if (attempts < 3) decidedRef.current.delete(inc.id);
+    });
   }, [sim.activeIncident, sim.tasks.length, sim.events, plantId]);
 
   // load dataset + boot engine
@@ -408,14 +649,27 @@ export default function PlantTwinPage() {
     };
   }, []);
 
-  // refresh canvas runtime at the store's 4 Hz cadence
+  /**
+   * The engine's own tick, not the store's refresh cadence.
+   *
+   * `sim.tick` bumps at the store's 4 Hz projection rate, but the engine only
+   * advances `sim.t` once per simulation tick (1 Hz by default). Depending on
+   * `sim.tick` therefore fetched the plant state four times per engine tick and
+   * three of those four replies were byte-identical — 507 KB/s of traffic, 90%
+   * of it the static plant definition, for data that could not have changed.
+   *
+   * Depending on the engine's clock fetches exactly when the state can differ.
+   */
+  const engineTick = Math.floor(sim.t);
   useEffect(() => {
     if (!plant) return;
     let live = true;
     if (embedded) {
       setRuntime(runtimeFromEngine(plant, embedded.engine(plantId)));
     } else {
-      simAdapter.snapshot(plantId).then(s => {
+      // `frame`, not `snapshot`: the definition is already in `plant`, so only
+      // the changing state is fetched (~26 KB rather than ~127 KB).
+      simAdapter.frame(plantId).then(s => {
         if (!live) return;
         setSnap(s);
         const base = emptyRuntime(plant);
@@ -439,7 +693,7 @@ export default function PlantTwinPage() {
       }).catch(() => undefined);
     }
     return () => { live = false; };
-  }, [plant, plantId, embedded, sim.tick]);
+  }, [plant, plantId, embedded, engineTick]);
 
   const onSelect = useCallback((eq: EquipmentDef) => setSelected(eq), []);
   const onHover = useCallback((eq: EquipmentDef | null) => setHovered(eq), []);
@@ -484,48 +738,41 @@ export default function PlantTwinPage() {
     action: "disable" | "remove",
   ) => {
     setActionError(null);
-    // Computed against the CURRENT overlay so a sensor already out of service
+    // 1. Update sensor visual state immediately — no waiting
+    setSensorState((m) => ({ ...m, [sensor.id]: action === "disable" ? "disabled" : "removed" }));
+
+    // 2. Computed against the CURRENT overlay so a sensor already out of service
     // cannot be offered as its own fallback.
     const circuit = plant
       ? recoveryCircuit(plant, sensor.id, (id) => Boolean(sensorState[id]))
       : null;
+
+    // 3. Set recovery panel immediately so UI responds instantly
+    setRecovery({
+      sensorId: sensor.id,
+      sensorTag: sensor.tag,
+      measurement: sensor.measurement,
+      unit: sensor.unit,
+      equipmentTag: eq.tag,
+      action,
+      circuit,
+      tasks: [],
+      planSteps: [],
+    });
+
     try {
       const res =
         action === "disable"
           ? await simAdapter.disableSensor(plantId, sensor.id)
           : await simAdapter.removeSensor(plantId, sensor.id);
-      setSensorState((m) => ({ ...m, [sensor.id]: action === "disable" ? "disabled" : "removed" }));
 
-      let tasks: AgentTask[] = [];
-      let planSteps: string[] = [];
-      if (res.incidentId) {
-        // The pipeline is raised just after the incident; poll briefly for it
-        // rather than rendering an empty panel for a run that is about to exist.
-        for (let attempt = 0; attempt < 8; attempt++) {
-          await new Promise((r) => setTimeout(r, 400));
-          try {
-            const t = await simAdapter.tasks(plantId, res.incidentId);
-            if (t.tasks.length) {
-              tasks = t.tasks;
-              planSteps = t.plan?.steps ?? [];
-              break;
-            }
-          } catch {
-            /* not ready yet */
-          }
-        }
-      }
-      setRecovery({
-        sensorId: sensor.id,
-        sensorTag: sensor.tag,
-        measurement: sensor.measurement,
-        unit: sensor.unit,
-        equipmentTag: eq.tag,
-        action,
-        circuit,
-        tasks,
-        planSteps,
-      });
+      // The full-screen three-agent experience is NOT opened here. The backend
+      // has only just begun dispatching; opening now would cover the plant with
+      // agent panels before the operator has seen which chamber isolated. It
+      // opens from the `agent.started` event instead (see the effect above).
+      // The isolation overlay needs nothing from this response either — it is
+      // derived from the `sensor.disabled` event the backend emitted.
+      void res;
     } catch (e) {
       setActionError(`${action === "disable" ? "Disable" : "Delete"} failed: ${String(e)}`);
     }
@@ -694,19 +941,32 @@ export default function PlantTwinPage() {
         <RecoveryExperience
           events={sim.events}
           incident={recoveryIncident}
-          decision={recoveryDecision}
+          decision={openDecision}
           plantName={plant.name}
           onClose={() => setOpenIncidentId(null)}
+          onRetry={() => retryDecision(recoveryIncident.id)}
         />
       )}
 
-      {/* The decision stays on the plant after the full view closes. */}
-      {!recoveryIncident && recoveryDecision && (
-        <RecoverySummary decision={recoveryDecision} events={sim.events} />
-      )}
+      {/* After the full view closes, the three agents' results stay docked on
+          the right as one compact card per agent, so the operator keeps the
+          outcome in view while watching the plant. Dismissible per incident. */}
+      {!recoveryIncident &&
+        plantDecision &&
+        !(plantDecision.incidentId && dismissedDocks.has(plantDecision.incidentId)) && (
+          <RecoveryDock
+            decision={plantDecision}
+            events={sim.events}
+            onDismiss={() => {
+              const id = plantDecision.incidentId;
+              if (!id) return;
+              setDismissedDocks((prev) => new Set(prev).add(id));
+            }}
+          />
+        )}
 
       {/* TOP BAR */}
-      <div className="cs-pagehead pt-pagehead">
+      <div className="cs-pagehead pt-pagehead" data-plant-state={plantState}>
         <div>
           <span className="cs-pagehead__kicker">
             Simulation / {plant.industry} · <span className="cs-text-ember">SYNTHETIC DEMONSTRATION PLANT</span>
@@ -714,7 +974,7 @@ export default function PlantTwinPage() {
           <h1 style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             {plant.name}
             <Tag tone={sim.activeIncident ? (sim.activeIncident.severity === "critical" ? "crit" : "warn") : "ok"}>
-              {sim.activeIncident ? sim.activeIncident.status.replace(/_/g, " ") : "running"}
+              {sim.activeIncident ? sim.activeIncident.status.replace(/_/g, " ") : recovered ? "recovered" : "running"}
             </Tag>
           </h1>
         </div>
@@ -784,6 +1044,11 @@ export default function PlantTwinPage() {
                 <div className="sm-kv"><span className="cs-dim">Criticality</span><b>{"●".repeat(selected.criticality)}{"○".repeat(3 - selected.criticality)}</b></div>
               </div>
 
+              <p className="cs-dim" style={{ margin: "0 0 10px", fontSize: 10.5, lineHeight: 1.5 }}>
+                Take a sensor <b>out of service</b> — or inject a failure below — to raise a real
+                incident and engage the Diagnostic, Operations and Safety agents.
+              </p>
+
               <p className="cs-mono cs-dim" style={{ margin: "0 0 8px", fontSize: 9, letterSpacing: "0.26em", textTransform: "uppercase" }}>
                 Live sensors · {visibleSensors(selected).length}
               </p>
@@ -845,7 +1110,7 @@ export default function PlantTwinPage() {
               )}
 
               <p className="cs-mono cs-dim" style={{ margin: "14px 0 8px", fontSize: 9, letterSpacing: "0.26em", textTransform: "uppercase" }}>
-                Inject failure
+                Inject failure · engages agents
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {selected.failure_modes.map((fm) => {
@@ -858,16 +1123,24 @@ export default function PlantTwinPage() {
                 })}
               </div>
 
-              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+              <p className="cs-mono cs-dim" style={{ margin: "14px 0 6px", fontSize: 8.5, letterSpacing: "0.2em", textTransform: "uppercase" }}>
+                Plant state · no agent response
+              </p>
+              <div style={{ display: "flex", gap: 8 }}>
                 <Button
                   variant="ghost"
                   style={{ flex: 1, justifyContent: "center" }}
                   onClick={() => {
+                    // Plant-state action only. A disabled unit is not something
+                    // the agents can auto-recover (the action policy requires
+                    // manual intervention), so this deliberately does not raise
+                    // an incident — the hint above the controls says which
+                    // actions do.
                     void simAdapter.disable(plantId, selected.id);
                     setEquipmentChanges((n) => n + 1);
                   }}
                 >
-                  <Icon name="pause" size={12} /> Disable
+                  <Icon name="pause" size={12} /> Disable unit
                 </Button>
                 <Button
                   variant="reject"
@@ -1042,7 +1315,10 @@ export default function PlantTwinPage() {
                 activeIncident={sim.activeIncident}
                 tasks={sim.tasks}
                 models={modelRoles}
-                recoveryDecision={recoveryDecision ?? lastVerifiedDecision}
+                recoveryDecision={plantDecision}
+                isolatedLines={isolation?.connectionIds ?? []}
+                isolatedEquipment={isolation?.equipmentIds ?? []}
+                fixedCamera={liveFixedCamera}
               />
               {/* The three agent panels float over every drawing. They were only
                   mounted on the P&ID branch, so disabling a transmitter in the
@@ -1094,7 +1370,10 @@ export default function PlantTwinPage() {
                       }
                     : null
                 }
-                recoveryDecision={recoveryDecision ?? lastVerifiedDecision}
+                recoveryDecision={plantDecision}
+                isolatedLines={isolation?.connectionIds ?? []}
+                isolatedEquipment={isolation?.equipmentIds ?? []}
+                fixedCamera={liveFixedCamera}
               />
               {/* The three agent panels float over whichever drawing is shown,
                   so the P&ID is not a lesser view. */}
@@ -1342,12 +1621,19 @@ export default function PlantTwinPage() {
           {actionError}
         </div>
       )}
-      <SensorRecoveryPanel
-        focus={recovery}
-        onClose={() => setRecovery(null)}
-        onRestore={() => recovery && void restoreSensor(recovery.sensorId)}
-        onReset={() => void resetPlant()}
-      />
+      {/* AGENT RECOVERY — the legacy right-side popup. It is only shown when
+          neither the full-screen experience nor a decision summary is on
+          screen, so it can never cover the three persistent summaries that
+          item 8 requires. Once a verified decision exists, the summary is the
+          record. */}
+      {!recoveryIncident && !plantDecision && (
+        <SensorRecoveryPanel
+          focus={recovery}
+          onClose={() => setRecovery(null)}
+          onRestore={() => recovery && void restoreSensor(recovery.sensorId)}
+          onReset={() => void resetPlant()}
+        />
+      )}
 
       {/* AGENT RESPONSE CONSOLE — docks right, canvas stays live on the left.
           Everything it shows comes from the response.* events on the same SSE

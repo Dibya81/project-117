@@ -85,11 +85,15 @@ export function ArtifactPreview({ artifact, onClose }: { artifact: ArtifactRecor
               >
                 Provenance
               </p>
+              {/* The record carries no source count — it has id/kind/filename/
+                  sha256/verified/job_id/created_at and nothing else. The old
+                  "Generated from 3 sources" was a fabricated number, so the
+                  absence is stated instead. */}
               <span>
-                Generated from <b>3 sources</b>
+                Created <b>{timeAgo(artifact.created_at)}</b>
               </span>
-              <span>
-                Verified against <b>3 sources</b>
+              <span className="cs-mono cs-dim" style={{ fontSize: 10 }}>
+                source count not reported by the artifact record
               </span>
               <span className="cs-mono cs-dim" style={{ fontSize: 10 }}>
                 sha256 {artifact.sha256}

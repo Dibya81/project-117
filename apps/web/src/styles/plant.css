@@ -1381,6 +1381,48 @@
 .pmap:active { cursor: grabbing; }
 .pmap__svg { width: 100%; height: 100%; display: block; }
 
+/* --- fixed control-room framing (the LIVE refinery) ----------------------
+   One locked camera on the whole plant. No grab cursor, no scroll chaining,
+   and no browser zoom from a pinch inside the drawing. Lettering is sized for
+   the full-plant overview instead of for close inspection, because the camera
+   never closes in. Equipment geometry, sizes and proportions are untouched:
+   only the camera lock and the annotations change. */
+.pmap.is-fixed {
+  cursor: default;
+  overscroll-behavior: contain;
+  /* The live camera is framed to the plant's own aspect ratio (set inline from
+     the real topology extent), so the whole circuit fills the panel instead of
+     floating in a tall gridded box. The floor keeps the drawing tall enough for
+     the floating agent panels that appear during an incident. */
+  height: auto;
+  min-height: 500px;
+}
+
+/* Only when the locked map is on screen: let the drawing's own aspect decide
+   the panel height, all the way up the wrapper chain, and let the panel wrap it
+   rather than stretch to the rail's height. The spatial "Areas" view has no
+   fixed map, so it keeps its pannable height. */
+.pt-mapwrap:has(.pmap.is-fixed) { height: auto; align-self: start; }
+.pt-mapwrap:has(.pmap.is-fixed) .pt-mapbody { flex: none; }
+.pt-mapwrap:has(.pmap.is-fixed) .mr-canvas-stage {
+  aspect-ratio: auto;
+  min-height: 0;
+  height: auto;
+}
+.pt-mapwrap:has(.pmap.is-fixed) .mr-topology-canvas {
+  min-height: 0;
+  height: auto;
+}
+.pmap.is-fixed .pmap__eq-tag { font-size: 16px; }
+.pmap.is-fixed .pmap__eq-name { font-size: 12px; }
+.pmap.is-fixed .pmap__area-name { font-size: 15px; }
+.pmap.is-fixed .pmap__area-count { font-size: 13px; }
+.pmap.is-fixed .pmap__pipe-label { font-size: 11px; }
+.pmap.is-fixed .pmap__inst-code { font-size: 11px; }
+.pmap.is-fixed .pmap__inst-tag { font-size: 10.5px; }
+.pmap.is-fixed .pmap__inst-value { font-size: 12px; }
+.pmap.is-fixed .pmap__inst-state { font-size: 9.5px; }
+
 /* --- controls --- */
 .pmap__tools {
   position: absolute;
@@ -1485,12 +1527,20 @@
   stroke-dasharray: 10 18;
   opacity: 0.82;
   marker-end: url(#pmap-arrow);
-  animation: pmap-route-flow 1.05s linear infinite;
+  /* Reveal along the route's own order, then keep the particles flowing. The
+     delay is the line's index in the real decision, not a timer. */
+  animation:
+    pmap-route-in 460ms ease-out var(--route-delay, 0ms) both,
+    pmap-route-flow 1.05s linear infinite;
   filter: drop-shadow(0 0 5px rgba(22, 163, 74, 0.35));
   pointer-events: none;
 }
 @keyframes pmap-block-pulse {
   50% { opacity: 0.45; }
+}
+@keyframes pmap-route-in {
+  from { opacity: 0; stroke-dashoffset: 240; }
+  to { opacity: 0.82; stroke-dashoffset: 0; }
 }
 @keyframes pmap-route-flow {
   to { stroke-dashoffset: -56; }
@@ -1513,13 +1563,28 @@
 
 /* --- equipment --- */
 .pmap__eq { cursor: pointer; }
+/* Builder edit mode: units can be dragged, and carry wire ports. */
+.pmap__eq.is-editable { cursor: move; }
+.pmap__ports { pointer-events: none; }
+.pmap__port {
+  pointer-events: auto;
+  cursor: crosshair;
+  fill: #ffffff;
+  stroke: #2563eb;
+  stroke-width: 2;
+}
+.pmap__port--in { fill: #e3edff; }
+.pmap__port--out { fill: #2563eb; }
+.pmap__eq[data-connect-from="true"] .pmap__port--out { fill: #16a34a; stroke: #16a34a; }
+/* Recovering wins over flagged: once the decision is executing, the unit is
+   coming back, and its delay is its real distance from the restored line. */
 .pmap__eq.is-recovering {
   animation: pmap-node-recover 1.5s ease-in-out infinite;
 }
 @keyframes pmap-node-recover {
   50% { filter: drop-shadow(0 0 8px rgba(22, 163, 74, 0.48)); }
 }
-.pmap__eq.is-flagged {
+.pmap__eq.is-flagged:not(.is-recovering) {
   animation: pmap-node-fault 1s ease-in-out infinite;
 }
 @keyframes pmap-node-fault {
@@ -3181,6 +3246,31 @@
   flex: 1 1 auto;
 }
 
+/* No asset picked. Deliberately an instruction, not a fabricated asset: the
+   deck used to substitute a hardcoded FCC unit with made-up instruments and
+   failure modes, which both misrepresented the plant and let the console
+   inject a fault against equipment the engine does not contain. */
+.mr-sel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 22px 18px;
+  color: var(--ink-2);
+}
+.mr-sel-empty b {
+  font-size: 13px;
+  color: var(--ink-1);
+}
+.mr-sel-empty p {
+  margin: 0;
+  max-width: 420px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+.mr-sel-empty svg { color: var(--cyan); }
+
 @media (max-width: 600px) {
   .mr-sel-layout {
     grid-template-columns: 1fr;
@@ -3652,13 +3742,24 @@
    than any animation of its own. */
 .rcx {
   position: fixed;
-  inset: 0;
+  /* Clear the navigation rail. The rail is a sticky 64px column and the console
+     content forms its own stacking context, so a full-bleed overlay sits UNDER
+     the rail and loses its left edge — the first agent panel was clipped behind
+     it. The overlay covers the content area, not the rail. */
+  inset: 0 0 0 64px;
   z-index: 400;
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, #f7f9fc 0%, #eef2f8 100%);
   animation: rcx-in 220ms ease both;
 }
+/* Below 860px the rail becomes a bottom bar, so the overlay stops above it. */
+@media (max-width: 860px) {
+  .rcx { inset: 0 0 56px 0; }
+}
+/* The rail expands to 232px while the pointer is over it; the overlay follows
+   the content edge so the first panel stays fully visible either way. */
+.cs-shell--expanded .rcx { left: 232px; }
 @keyframes rcx-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .rcx__bar {
   display: flex; align-items: center; gap: 16px;
@@ -3695,6 +3796,14 @@
 }
 .rcx__alert b { color: var(--crit); font-size: 12.5px; letter-spacing: 0.06em; }
 .rcx__alert span { font-size: 12px; color: var(--ink-2); }
+.rcx__retry {
+  align-self: flex-start; margin-top: 8px;
+  padding: 6px 12px; border-radius: 7px; cursor: pointer;
+  border: 1px solid var(--line-2); background: #fff;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-1);
+}
+.rcx__retry:hover { border-color: var(--cyan); color: var(--cyan); }
 
 .rcx__grid {
   flex: 1; min-height: 0;
@@ -3785,39 +3894,205 @@
   .rcx__grid { grid-template-columns: 1fr; overflow: auto; }
 }
 
-/* Compact agent summaries, kept on the plant after the full view closes. */
-.rcx-sum {
+/* Docked three-agent rail, kept on the plant after the full view closes.
+   One compact card per agent — a rail, not a second panel. */
+.rcx-dock {
   position: fixed; right: 16px; top: 92px; z-index: 60;
-  width: 300px; display: flex; flex-direction: column; gap: 8px;
-  padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 12px;
+  width: 264px; display: flex; flex-direction: column; gap: 7px;
+  padding: 10px 11px; border: 1px solid var(--line-2); border-radius: 12px;
   background: rgba(255,255,255,0.96); backdrop-filter: blur(8px);
   box-shadow: 0 14px 34px rgba(15,23,42,0.12);
 }
-.rcx-sum > header { display: flex; align-items: center; justify-content: space-between; }
-.rcx-sum > header > span {
+/* The response console docks over the right 40vw at z-index 90. The rail sits
+   below it (z-index 60), so it steps left of the console instead of hiding
+   underneath the operator's other right-hand panel. */
+.pt-page--console-open .rcx-dock { right: calc(40vw + 16px); }
+.rcx-dock__head { display: flex; align-items: center; gap: 8px; }
+.rcx-dock__head > span {
   font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em;
-  text-transform: uppercase; color: var(--ink-3);
+  text-transform: uppercase; color: var(--ink-3); margin-right: auto;
 }
-.rcx-sum > header em {
-  font-style: normal; font-family: var(--mono); font-size: 8.5px;
-  letter-spacing: 0.1em; text-transform: uppercase;
-  padding: 2px 7px; border-radius: 5px;
+.rcx-dock__close {
+  border: 1px solid var(--line-2); background: none; color: var(--ink-3);
+  width: 20px; height: 20px; border-radius: 5px; line-height: 1; cursor: pointer;
+  font-size: 13px; display: inline-flex; align-items: center; justify-content: center;
+  padding: 0;
 }
-.rcx-sum > header em.is-ok { background: rgba(16,185,129,0.14); color: var(--ok); }
-.rcx-sum > header em.is-crit { background: rgba(220,38,38,0.12); color: var(--crit); }
-.rcx-sum__alert { margin: 0; font-size: 11px; color: var(--crit); }
-.rcx-sum__row { display: flex; flex-direction: column; gap: 2px; }
-.rcx-sum__row b { font-size: 11px; color: var(--ink-1); }
-.rcx-sum__row span { font-size: 11px; line-height: 1.5; color: var(--ink-2); }
-.rcx-sum__row code {
-  font-family: var(--mono); font-size: 10px; background: var(--line);
-  padding: 1px 4px; border-radius: 3px;
+.rcx-dock__close:hover { border-color: var(--cyan); color: var(--blue); }
+.rcx-dock__alert { margin: 0; font-size: 10.5px; color: var(--crit); }
+.rcx-dock__card {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 7px 9px; border: 1px solid var(--line);
+  /* set inline as a CSS variable by the component (see RecoveryDock) */
+  border-left: 3px solid var(--tone, var(--line));
+  border-radius: 9px; background: rgba(248,250,252,0.92);
 }
-.rcx-sum__verdict {
-  border-top: 1px dashed var(--line); padding-top: 7px;
-  font-size: 11px; font-weight: 600; display: flex; flex-direction: column; gap: 2px;
+.rcx-dock__top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.rcx-dock__top b { font-size: 11px; color: var(--ink-1); }
+.rcx-dock__top .rcx__state { margin-left: auto; }
+.rcx-dock__model {
+  font-family: var(--mono); font-size: 9.5px; color: var(--ink-3);
+  background: rgba(0,0,0,0.05); padding: 1px 5px; border-radius: 4px;
+  align-self: flex-start;
 }
-.rcx-sum__verdict[data-ok="true"] { color: var(--ok); }
-.rcx-sum__verdict[data-ok="false"] { color: var(--crit); }
-.rcx-sum__verdict span { font-weight: 400; color: var(--ink-2); font-size: 10.5px; }
-@media (max-width: 900px) { .rcx-sum { display: none; } }
+.rcx-dock__finding {
+  margin: 1px 0 0; font-size: 10.5px; line-height: 1.45; color: var(--ink-2);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (max-width: 900px) { .rcx-dock { display: none; } }
+
+/* ==========================================================================
+   P&ID — precision pass
+   --------------------------------------------------------------------------
+   High-precision strokes, marching direction chevrons, and a live alert beacon
+   on any asset the engine reports as warning/critical. Colour is data here:
+   `data-thermal="hot|cold|warm"` is written from real thermocouple readings in
+   ProcessMap.tsx, never chosen per line.
+   ========================================================================== */
+
+/* Crisp hairlines: a P&ID is a technical drawing, so the line is thin and the
+   joins are mitred. `vector-effect` keeps the weight constant under the camera
+   scale — otherwise the strokes thicken as the operator zooms, which looks like
+   a rendering fault on a drawing. */
+.pmap__pipe-line {
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  fill: none;
+}
+.pmap__pipe-line.is-signal {
+  stroke-width: 1.1;
+  stroke-dasharray: 5 4;
+}
+
+/* The marching direction chevrons. Dashes on a second pass over the same path,
+   offset so the gaps read as arrow segments travelling with the flow. */
+.pmap__pipe-chevrons {
+  fill: none;
+  stroke-width: 2.6;
+  stroke-linecap: butt;
+  stroke-dasharray: 1.5 16;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.9;
+  pointer-events: none;
+  animation-name: pmap-chevron-march;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes pmap-chevron-march {
+  to { stroke-dashoffset: -35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pmap__pipe-chevrons { animation: none; opacity: 0.5; }
+}
+
+/* Thermal band: a wider halo under a hot line so it reads as a hazard at a
+   glance, without touching the other media. */
+.pmap__pipe[data-thermal="hot"] .pmap__pipe-line { stroke-width: 2.6; }
+.pmap__pipe[data-thermal="cold"] .pmap__pipe-line { stroke-width: 2.1; }
+
+/* ---- live alert beacon ---- */
+.pmap__alert-ring {
+  fill: none;
+  stroke: #ef4444;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pmap-alert-pulse 2.1s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+.pmap__alert-ring.is-delayed { animation-delay: 1.05s; }
+.pmap__alert[data-alert-state="warning"] .pmap__alert-ring { stroke: #f59e0b; }
+@keyframes pmap-alert-pulse {
+  0% { transform: scale(0.9); opacity: 0.85; }
+  70% { transform: scale(1.35); opacity: 0.12; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pmap__alert-ring { animation: none; opacity: 0.55; }
+}
+
+/* ---- telemetry + event spine: glass rows, monospace figures ---------------
+   Every measured value on the deck is tabular monospace so digits line up
+   column-wise and a changing number does not reflow its neighbours. */
+.mr-streams-table td,
+.mr-kv-val,
+.mr-streams-table th {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.mr-deck-card {
+  background: rgba(255, 255, 255, 0.66);
+  backdrop-filter: blur(14px) saturate(1.5);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 10px 26px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.mr-streams-table tr { transition: background 130ms ease; }
+.mr-streams-table tr:hover td { background: rgba(241, 245, 249, 0.72); }
+.mr-event-row {
+  border-radius: 8px;
+  transition: background 130ms ease;
+}
+.mr-event-row:hover { background: rgba(241, 245, 249, 0.72); }
+.mr-event-time { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* Per-agent outcome states on the recovery panels.
+   Each is a distinct outcome the backend can report, so each gets its own
+   treatment: a failed agent, a declined route and an agent that never ran must
+   not be visually interchangeable with "completed". */
+.rcx__state.is-rejected { background: rgba(245, 158, 11, 0.16); color: var(--warn); }
+.rcx__state.is-failed { background: rgba(239, 68, 68, 0.14); color: var(--crit); }
+.rcx__state.is-skipped {
+  background: rgba(100, 116, 139, 0.14);
+  color: var(--ink-3);
+  font-style: italic;
+}
+.rcx__state.is-waiting { background: rgba(100, 116, 139, 0.12); color: var(--ink-3); }
+
+/* ==========================================================================
+   FAULT ISOLATION — the section the failure took out, drawn before any agent
+   has spoken. Distinct from a decision's `block` (an operator-closed line, grey
+   and solid): an isolated section is red and dashed, which is how a real P&ID
+   marks plant that is cut and out of service.
+   ========================================================================== */
+.pmap__pipe[data-isolated="true"] .pmap__pipe-line {
+  stroke: #dc2626 !important;
+  stroke-width: 2.6;
+  stroke-dasharray: 9 5;
+  opacity: 1;
+}
+/* The flow animation must stop, not merely change colour: a section that is
+   isolated has no process moving through it. */
+.pmap__pipe[data-isolated="true"] .pmap__pipe-flow,
+.pmap__pipe[data-isolated="true"] .pmap__pipe-chevrons {
+  display: none;
+}
+.pmap__pipe[data-isolated="true"] .pmap__pipe-hit { cursor: not-allowed; }
+
+/* A slowing pulse on the isolated run, so the eye finds the section. */
+.pmap__pipe[data-isolated="true"] .pmap__pipe-line {
+  animation: pmap-isolated-pulse 2.4s ease-in-out infinite;
+}
+@keyframes pmap-isolated-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pmap__pipe[data-isolated="true"] .pmap__pipe-line { animation: none; }
+}
+
+/* The assets inside the isolated section wear a red fault ring. */
+.pmap__eq[data-isolated="true"] .pmap__eq-mark {
+  fill: rgba(220, 38, 38, 0.16);
+  stroke: rgba(220, 38, 38, 0.55);
+  stroke-width: 1;
+}
+.pmap__eq[data-isolated="true"] {
+  filter: drop-shadow(0 0 6px rgba(220, 38, 38, 0.45));
+}

@@ -72,6 +72,11 @@ async def run_agent(
             "agent": payload.agent,
             "document_ids": payload.document_ids or [],
             "roles": list(principal.roles),
+            # The caller's clearance badge, when the deployment has given them
+            # one. Carried on the request the orchestrator reads for the same
+            # reason `roles` is: the tool path must be filtered by the clearance
+            # the RBAC gate approved, not by a fresh guess derived from roles.
+            "clearance": (principal.extra or {}).get("clearance"),
         },
     )
     orchestrator.spawn(job["id"])

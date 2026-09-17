@@ -17,9 +17,10 @@ deployment does not get plant data by default.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from backend.api.src.deps import get_operations, get_principal
+from backend.api.src.qr_codes import equipment_tag, qr_payload, qr_svg
 from backend.security.rbac import AuthorizationError, Principal, require
 from backend.storage.operations import (
     EQUIPMENT_SOURCE,
@@ -100,6 +101,44 @@ def get_equipment(
         "history": history,
         "source": EQUIPMENT_SOURCE,
     }
+
+
+@router.get("/{equipment_id}/qr.svg")
+def get_equipment_qr(
+    equipment_id: str,
+    principal: Principal = Depends(get_principal),
+    operations: OperationsStore = Depends(get_operations),
+) -> Response:
+    """The printable QR label for one asset, as an SVG document.
+
+    The payload is the namespaced ``P117:EQUIP:<tag>`` string (see
+    ``api.qr_codes``): the Project 117 Android client strips the prefix and
+    resolves the tag, while a generic camera app sees opaque text. Rendering is
+    local — ``segno`` is pure-Python, so no image library, no QR web service and
+    no egress. The document is returned rather than an image because vector
+    prints crisply at label size, and it is cacheable because a tag's symbol
+    never changes.
+    """
+    authorize(principal, Permission.CONNECTORS_READ)
+    try:
+        row = operations.equipment_item(equipment_id)
+    except OperationsDataUnavailable as exc:
+        raise unavailable(exc) from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"equipment {equipment_id} not found") from exc
+    tag = equipment_tag(row)
+    if not tag:
+        # A tagless asset cannot have a resolvable label; say so rather than
+        # printing a symbol that decodes to nothing the store can find.
+        raise HTTPException(status_code=404, detail=f"equipment {equipment_id} has no tag to encode")
+    return Response(
+        content=qr_svg(qr_payload(tag)),
+        media_type="image/svg+xml",
+        headers={
+            "Cache-Control": "public, max-age=86400",
+            "Content-Disposition": f'inline; filename="{tag}-qr.svg"',
+        },
+    )
 
 
 @router.get("/{equipment_id}/telemetry")

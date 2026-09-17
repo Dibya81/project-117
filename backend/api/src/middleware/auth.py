@@ -32,13 +32,44 @@ logger = logging.getLogger(__name__)
 
 #: Paths that must stay reachable without any credential: liveness checks and
 #: the API description a client needs before it can authenticate at all.
+#:
+#: The four ``/api/v1`` entries are the mobile client's pre-authentication
+#: surface. A phone cannot present a token before it has logged in, so
+#: enrolment, login and refresh must be reachable, and the mobile health probe
+#: is a liveness check like ``/health``. Everything else under ``/api/v1``
+#: requires a verified bearer token (see ``requires_mobile_token``).
 PUBLIC_PATHS: frozenset[str] = frozenset(
-    {"/", "/health", "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"}
+    {
+        "/",
+        "/health",
+        "/docs",
+        "/redoc",
+        "/openapi.json",
+        "/docs/oauth2-redirect",
+        "/api/v1/health",
+        "/api/v1/auth/enroll",
+        "/api/v1/auth/login",
+        "/api/v1/auth/refresh",
+    }
 )
+
+#: Prefix of the person-authenticated mobile surface.
+MOBILE_API_PREFIX = "/api/v1/"
 
 
 def is_public(path: str) -> bool:
     return path in PUBLIC_PATHS
+
+
+def requires_mobile_token(path: str) -> bool:
+    """True for a ``/api/v1`` path that is not in ``PUBLIC_PATHS``.
+
+    The console may run with ``P117_AUTH_REQUIRED=false``, where an anonymous
+    caller is a valid ``operator``. That local-trust mode must not leak onto the
+    mobile surface: it is reachable from a handset, so an unauthenticated call
+    there is always refused, independently of the deployment-wide setting.
+    """
+    return path.startswith(MOBILE_API_PREFIX)
 
 
 class PrincipalMiddleware(BaseHTTPMiddleware):
@@ -60,6 +91,18 @@ class PrincipalMiddleware(BaseHTTPMiddleware):
         # Cached for the handlers and for the audit/permission middleware, so
         # identity is resolved exactly once per request.
         request.state.principal = principal
+        if not principal.authenticated and requires_mobile_token(request.url.path):
+            # 401 *before* the permission layer, so a missing token reads as
+            # "authenticate" rather than "forbidden". Raised here rather than
+            # in a handler so it applies uniformly to every /api/v1 route,
+            # including ones added later.
+            exc = AuthenticationError("a valid mobile bearer token is required")
+            self._record_rejection(request, exc)
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={"error": {"code": exc.reason, "message": exc.message}},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         return await call_next(request)
 
     @staticmethod
@@ -88,4 +131,4 @@ class PrincipalMiddleware(BaseHTTPMiddleware):
             logger.warning("audit write failed for rejected request", exc_info=True)
 
 
-__all__ = ["PUBLIC_PATHS", "PrincipalMiddleware", "is_public"]
+__all__ = ["MOBILE_API_PREFIX", "PUBLIC_PATHS", "PrincipalMiddleware", "is_public", "requires_mobile_token"]

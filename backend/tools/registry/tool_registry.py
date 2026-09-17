@@ -37,6 +37,7 @@ from typing import Any
 from pydantic import BaseModel, ValidationError
 
 from backend.security.approvals import ApprovalDecision, ApprovalPolicy
+from backend.security.network.sentinel_stream import network_identity
 from backend.security.rbac import AuthorizationError, require
 from backend.tools.base import (
     Tool,
@@ -247,9 +248,17 @@ class ToolRegistry:
         # Gate 5: limits.
         started = time.perf_counter()
         try:
-            outcome = await asyncio.wait_for(
-                tool.run(parsed, context), timeout=spec.limits.timeout_seconds
-            )
+            # Every outbound request this tool makes is attributed to the agent
+            # and step that made it. The egress monitor reads this context
+            # (``sentinel_stream.current_identity``), so the Network Sentinel can
+            # say WHICH agent reached a destination — and, for a refusal, which
+            # agent tried. Contextvars copy into the task, so this holds across
+            # the awaits inside the handler. Outside a task the values are None
+            # and travel as null rather than as a guessed name.
+            with network_identity(agent=agent, task_id=step_id):
+                outcome = await asyncio.wait_for(
+                    tool.run(parsed, context), timeout=spec.limits.timeout_seconds
+                )
         except asyncio.TimeoutError as exc:
             duration = (time.perf_counter() - started) * 1000
             message = (
