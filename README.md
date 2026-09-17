@@ -4,8 +4,6 @@
 
 > Sovereign on-premise agentic AI workbench for confidential industrial work.
 
-![Simulation pipeline](docs/assets/simulation-pipeline.gif)
-
 *From confidential information → intelligence → verified industrial action.*
 
 ---
