@@ -69,6 +69,39 @@ local sandbox client are the whole dependency set.
 
 ## Architecture
 
+Project 117 includes two complementary architecture diagrams:
+1. **High-Level System & Enterprise Architecture**: The operational blueprint illustrating user personas (Web Dashboard & Field Mobile), enterprise data sources, the on-prem AI engine, and zero-egress security boundaries.
+2. **Technical Subsystem & Implementation Architecture**: The concrete code-level subsystem wiring, showing exact ports, API routes, agent DAGs, verification checkers, and deterministic simulation layers.
+
+---
+
+### 1. System & Enterprise Architecture (High-Level)
+
+![Project 117 System Architecture](./system-architecture.png)
+
+This operational blueprint illustrates the complete industrial loop:
+* **Client Touchpoints**: On-prem Web Dashboard (`apps/web`, Next.js 14) for plant engineers/operators and Native Android Field App (`apps/mobile`, Kotlin + Compose + Room) for field technicians with QR/barcode scanning, CameraX evidence capture, and offline background sync.
+* **Enterprise Data Sources**: Air-gapped connectors to ERP (SAP), CMMS (Maximo), DCS/SCADA Historians, SOP/manual document stores, and real-time IoT sensor telemetry.
+* **On-Premise AI Engine**: An Orchestrator supervising specialized agents (Maintenance, Operations, Documentation, Data Analysis, Safety & Compliance), backed by an organizational memory layer (Graph, Vector, Episodic), tool execution sandboxes, and local model routers.
+* **Sovereign Boundary**: Complete zero-egress air-gapping, encrypted local storage, role-based access control (RBAC), and immutable audit logs.
+
+---
+
+### 2. Technical Subsystem & Implementation Architecture (Code-Level)
+
+![Project 117 Implementation Architecture](./architecture.svg)
+
+This technical architecture maps every implemented component, port, and subsystem:
+* **Client Layer**: Next.js 14 Console (`:3017`, 26 routes), Android Field App (Kotlin, Room, WorkManager, Live/Demo backends), and legacy Vite Workbench (`:5173`).
+* **Application Layer**: FastAPI backend (`:8000`, REST + SSE), security middleware chain (CORS, Principal identity, RBAC permission map, rate limiting, request audit), and 20 route modules.
+* **Security & Governance**: Default-deny network egress policy, Network Sentinel (live ALLOW/BLOCK streaming), tamper-evident SHA-256 audit chain (`sha256(prev || row)`), Ed25519 artifact cryptographic signatures, and human-in-the-loop approval queues.
+* **AI & Agent Processing**: 7-task incident DAG orchestrator, 3-model simulation recovery agents (`qwen3:1.7b`, `llama3.2:3b`, `gemma3:1b`), Model Gateway, 19 registered tools, and 5 independent verification checkers (artifact, calculation, citation, evidence, hallucination).
+* **Data & Simulation Layers**: Deterministic digital twin tick engine (58 equipment, 60 lines, 224 sensors, 18 areas) with plant-backed topology validation; SQLite stores for simulation, operations, and materials; and LanceDB hybrid vector retrieval.
+
+---
+
+### 3. Subsystem Communication Map
+
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ Browser — apps/web (Next.js 14 App Router, :3017)                        │
