@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 980" width="1500" height="980" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<rect width="1500" height="980" fill="#0A0F16"/>
+<text x="40" y="48" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="24" font-weight="700" fill="#FFFFFF">PROJECT 117</text>
+<text x="228" y="48" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#5B9BD8">Repository Structure</text>
+<text x="40" y="70" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#7C8CA1">monorepo — pnpm workspace (apps/*, packages/*) + standalone Gradle Android build</text>
+<text x="60" y="94" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" font-weight="700" fill="#46B8E8" letter-spacing="1.4">SURFACES</text>
+<text x="470" y="94" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" font-weight="700" fill="#8B7BD8" letter-spacing="1.4">ENGINE</text>
+<text x="900" y="94" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" font-weight="700" fill="#3FB27F" letter-spacing="1.4">DATA · TESTS · DOCS</text>
+<rect x="60" y="108" width="370" height="48" rx="6" fill="#141E29" stroke="#5B9BD8" stroke-opacity="0.5"/>
+<text x="72" y="128" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">apps/web/</text>
+<text x="72" y="144" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">Next.js 14 console + landing · 26 routes</text>
+<rect x="60" y="170" width="370" height="48" rx="6" fill="#141E29" stroke="#5B9BD8" stroke-opacity="0.5"/>
+<text x="72" y="190" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">apps/mobile/</text>
+<text x="72" y="206" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">Kotlin · Compose · Room · CameraX</text>
+<rect x="60" y="232" width="370" height="48" rx="6" fill="#141E29" stroke="#6B7A8D" stroke-opacity="0.5"/>
+<text x="72" y="252" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">frontend/</text>
+<text x="72" y="268" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">legacy Vite workbench (not in workspace)</text>
+<rect x="60" y="294" width="370" height="48" rx="6" fill="#141E29" stroke="#6B7A8D" stroke-opacity="0.5"/>
+<text x="72" y="314" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">packages/</text>
+<text x="72" y="330" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">shared workspace packages</text>
+<rect x="470" y="108" width="370" height="48" rx="6" fill="#141E29" stroke="#8B7BD8" stroke-opacity="0.5"/>
+<text x="482" y="128" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">backend/</text>
+<text x="482" y="144" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">FastAPI · 20 route modules · REST + SSE</text>
+<rect x="470" y="170" width="370" height="48" rx="6" fill="#141E29" stroke="#8B7BD8" stroke-opacity="0.5"/>
+<text x="482" y="190" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">  api/src/routes/</text>
+<text x="482" y="206" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">agents · audit · equipment · materials · mobile</text>
+<rect x="470" y="232" width="370" height="48" rx="6" fill="#141E29" stroke="#3FB27F" stroke-opacity="0.5"/>
+<text x="482" y="252" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">  simulation/</text>
+<text x="482" y="268" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">engine · service · decision · persistence</text>
+<rect x="470" y="294" width="370" height="48" rx="6" fill="#141E29" stroke="#D9A036" stroke-opacity="0.5"/>
+<text x="482" y="314" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">  security/</text>
+<text x="482" y="330" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">rbac · egress · audit chain · signing · clearance</text>
+<rect x="470" y="356" width="370" height="48" rx="6" fill="#141E29" stroke="#8B7BD8" stroke-opacity="0.5"/>
+<text x="482" y="376" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">  agents/  tools/</text>
+<text x="482" y="392" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">specialists + 19-tool registry</text>
+<rect x="470" y="418" width="370" height="48" rx="6" fill="#141E29" stroke="#8B7BD8" stroke-opacity="0.5"/>
+<text x="482" y="438" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">  orchestrator/  rag/</text>
+<text x="482" y="454" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">execution manager · retrieval</text>
+<rect x="470" y="480" width="370" height="48" rx="6" fill="#141E29" stroke="#5FA8D3" stroke-opacity="0.5"/>
+<text x="482" y="500" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">  verification/  storage/</text>
+<text x="482" y="516" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">checkers · SQLite + LanceDB</text>
+<rect x="900" y="108" width="370" height="48" rx="6" fill="#141E29" stroke="#5FA8D3" stroke-opacity="0.5"/>
+<text x="912" y="128" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">data/</text>
+<text x="912" y="144" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">corpus · fixtures · runtime DBs · vectors</text>
+<rect x="900" y="170" width="370" height="48" rx="6" fill="#141E29" stroke="#3FB27F" stroke-opacity="0.5"/>
+<text x="912" y="190" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">tests/</text>
+<text x="912" y="206" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">465 passing — unit · simulation · materials</text>
+<rect x="900" y="232" width="370" height="48" rx="6" fill="#141E29" stroke="#5B9BD8" stroke-opacity="0.5"/>
+<text x="912" y="252" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">docs/</text>
+<text x="912" y="268" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">architecture · design · decisions · mobile</text>
+<rect x="900" y="294" width="370" height="48" rx="6" fill="#141E29" stroke="#6B7A8D" stroke-opacity="0.5"/>
+<text x="912" y="314" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">infrastructure/</text>
+<text x="912" y="330" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">docker · deployment</text>
+<rect x="900" y="356" width="370" height="48" rx="6" fill="#141E29" stroke="#6B7A8D" stroke-opacity="0.5"/>
+<text x="912" y="376" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">scripts/</text>
+<text x="912" y="392" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">ingest · plant export · smoke · verify_artifact</text>
+<rect x="900" y="418" width="370" height="48" rx="6" fill="#141E29" stroke="#3FB27F" stroke-opacity="0.5"/>
+<text x="912" y="438" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" font-weight="700" fill="#EAF0F7">project-117-simulation/</text>
+<text x="912" y="454" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">plant data source of truth (SQL + JSON)</text>
+<rect x="60" y="372" width="1210" height="1" fill="#2A3447"/>
+<text x="60" y="400" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#7C8CA1">ROOT:  Makefile · docker-compose.yml · pyproject.toml · requirements.txt · pnpm-workspace.yaml</text>
+<text x="60" y="418" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#7C8CA1">               .env.example · uv.lock · pnpm-lock.yaml · architecture.svg · system-architecture.png</text>
+<rect x="456" y="78" width="400" height="450" rx="10" fill="none" stroke="#8B7BD8" stroke-opacity="0.3" stroke-dasharray="7 5"/>
+<rect x="886" y="78" width="410" height="388" rx="10" fill="none" stroke="#3FB27F" stroke-opacity="0.3" stroke-dasharray="7 5"/>
+<text x="60" y="462" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="10.5" fill="#94A3B8">apps/ = deployable surfaces &#183; backend/ = the engine (API, simulation, security, agents) &#183; data/ + project-117-simulation/ = stores and plant truth</text>
+</svg>

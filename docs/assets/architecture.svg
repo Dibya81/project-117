@@ -1,0 +1,257 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1780 1180" width="1780" height="1180" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#5B9BD8"/></marker>
+<marker id="arG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#3FB27F"/></marker>
+<marker id="arR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#E05252"/></marker>
+<marker id="arA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#D9A036"/></marker>
+<marker id="arM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#8B7BD8"/></marker>
+</defs>
+<rect width="1780" height="1180" fill="#0A0F16"/>
+<text x="40" y="46" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="26" font-weight="700" fill="#FFFFFF">PROJECT 117</text>
+<text x="242" y="46" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="15" font-weight="500" fill="#5B9BD8">Sovereign Industrial AI Workbench</text>
+<text x="40" y="68" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#7C8CA1">End-to-end architecture — every component below exists in the implementation</text>
+<rect x="40" y="86" width="1230" height="118" rx="10" fill="#0F1620" stroke="#5B9BD8" stroke-opacity="0.35"/>
+<rect x="40" y="86" width="4" height="118" rx="2" fill="#5B9BD8"/>
+<text x="58" y="108" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#5B9BD8" letter-spacing="1.6">CLIENT LAYER</text>
+<text x="58" y="124" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#7C8CA1">browser · android · legacy workbench</text>
+<rect x="58" y="116" width="470" height="74" rx="7" fill="#16202C" stroke="#5B9BD8" stroke-opacity="0.55"/>
+<text x="69" y="135" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Next.js 14 Console  ·  :3017</text>
+<text x="69" y="150" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8FB8E8">React 18 · App Router · Tailwind · Framer Motion</text>
+<text x="69" y="164" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">26 routes: simulation · equipment · work-orders · materials</text>
+<text x="69" y="178" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">knowledge · sovereignty · confidentiality · approvals</text>
+<rect x="542" y="116" width="350" height="74" rx="7" fill="#16202C" stroke="#3FB27F" stroke-opacity="0.55"/>
+<text x="553" y="135" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Android Field App  ·  Kotlin</text>
+<text x="553" y="150" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8FB8E8">Jetpack Compose · Room · CameraX · ML Kit</text>
+<text x="553" y="164" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">FieldBackend → DemoBackend | LiveBackend</text>
+<text x="553" y="178" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">offline queue + WorkManager sync</text>
+<rect x="906" y="116" width="346" height="74" rx="7" fill="#16202C" stroke="#6B7A8D" stroke-opacity="0.55"/>
+<text x="917" y="135" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Vite Workbench  ·  :5173  (legacy)</text>
+<text x="917" y="150" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8FB8E8">standalone · not in pnpm workspace</text>
+<text x="917" y="164" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">static JSON datasource</text>
+<text x="917" y="178" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">outside the canonical console</text>
+<rect x="40" y="226" width="1230" height="176" rx="10" fill="#0F1620" stroke="#46B8E8" stroke-opacity="0.35"/>
+<rect x="40" y="226" width="4" height="176" rx="2" fill="#46B8E8"/>
+<text x="58" y="248" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#46B8E8" letter-spacing="1.6">APPLICATION LAYER — API</text>
+<text x="58" y="264" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#7C8CA1">FastAPI · :8000 · REST + SSE</text>
+<rect x="58" y="256" width="386" height="130" rx="7" fill="#16202C" stroke="#46B8E8" stroke-opacity="0.55"/>
+<text x="69" y="275" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">API entry &amp; middleware chain</text>
+<text x="69" y="290" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">CORS  →  Principal identity</text>
+<text x="69" y="304" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">RBAC route-permission map</text>
+<text x="69" y="318" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">rate limit  →  request audit</text>
+<text x="69" y="332" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">request-ID + metrics</text>
+<rect x="456" y="256" width="796" height="130" rx="7" fill="#16202C" stroke="#46B8E8" stroke-opacity="0.55"/>
+<text x="467" y="275" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">20 route modules</text>
+<text x="467" y="290" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">agents · analytics · approvals · artifacts · audit · auth</text>
+<text x="467" y="304" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">chat · documents · equipment · health · jobs · knowledge</text>
+<text x="467" y="318" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">materials · models · network · sovereignty · tools</text>
+<text x="467" y="332" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">work_orders · workflows   +   /api/v1 mobile field API</text>
+<rect x="40" y="424" width="1230" height="138" rx="10" fill="#0F1620" stroke="#D9A036" stroke-opacity="0.35"/>
+<rect x="40" y="424" width="4" height="138" rx="2" fill="#D9A036"/>
+<text x="58" y="446" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#D9A036" letter-spacing="1.6">SECURITY &amp; GOVERNANCE</text>
+<text x="58" y="462" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#7C8CA1">enforced controls — not decorative</text>
+<rect x="58" y="454" width="196" height="92" rx="7" fill="#16202C" stroke="#D9A036" stroke-opacity="0.55"/>
+<text x="69" y="473" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">RBAC</text>
+<text x="69" y="488" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">role → permission</text>
+<text x="69" y="502" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">5 clearance levels</text>
+<text x="69" y="516" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">route-prefix map</text>
+<rect x="266" y="454" width="196" height="92" rx="7" fill="#16202C" stroke="#D9A036" stroke-opacity="0.55"/>
+<text x="277" y="473" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Egress policy</text>
+<text x="277" y="488" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">default-deny</text>
+<text x="277" y="502" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">exact-host allowlist</text>
+<text x="277" y="516" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">loopback only</text>
+<rect x="474" y="454" width="196" height="92" rx="7" fill="#16202C" stroke="#D9A036" stroke-opacity="0.55"/>
+<text x="485" y="473" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Network Sentinel</text>
+<text x="485" y="488" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">real ALLOW / BLOCK</text>
+<text x="485" y="502" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">SSE stream</text>
+<text x="485" y="516" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">audit sink</text>
+<rect x="682" y="454" width="196" height="92" rx="7" fill="#16202C" stroke="#D9A036" stroke-opacity="0.55"/>
+<text x="693" y="473" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Audit chain</text>
+<text x="693" y="488" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">sha256(prev‖row)</text>
+<text x="693" y="502" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">tamper-evident</text>
+<text x="693" y="516" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">integrity endpoint</text>
+<rect x="890" y="454" width="196" height="92" rx="7" fill="#16202C" stroke="#D9A036" stroke-opacity="0.55"/>
+<text x="901" y="473" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Ed25519 signing</text>
+<text x="901" y="488" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">sign / verify</text>
+<text x="901" y="502" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">artifact digests</text>
+<rect x="1098" y="454" width="154" height="92" rx="7" fill="#16202C" stroke="#D9A036" stroke-opacity="0.55"/>
+<text x="1109" y="473" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Approvals</text>
+<text x="1109" y="488" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">human gate</text>
+<text x="1109" y="502" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">pending queue</text>
+<rect x="40" y="584" width="1230" height="240" rx="10" fill="#0F1620" stroke="#8B7BD8" stroke-opacity="0.35"/>
+<rect x="40" y="584" width="4" height="240" rx="2" fill="#8B7BD8"/>
+<text x="58" y="606" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#8B7BD8" letter-spacing="1.6">AI · AGENTS · PROCESSING</text>
+<text x="58" y="622" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#7C8CA1">local inference only — no external model calls</text>
+<rect x="58" y="614" width="230" height="90" rx="7" fill="#16202C" stroke="#8B7BD8" stroke-opacity="0.55"/>
+<text x="69" y="633" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Orchestrator</text>
+<text x="69" y="648" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">task router → planner</text>
+<text x="69" y="662" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">execution manager</text>
+<text x="69" y="676" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">context / evidence</text>
+<rect x="300" y="614" width="300" height="90" rx="7" fill="#16202C" stroke="#8B7BD8" stroke-opacity="0.55"/>
+<text x="311" y="633" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Specialist agents (7-task DAG)</text>
+<text x="311" y="648" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">data_analysis · maintenance · operations</text>
+<text x="311" y="662" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">safety · documentation · orchestrator</text>
+<rect x="612" y="614" width="300" height="90" rx="7" fill="#16202C" stroke="#8B7BD8" stroke-opacity="0.55"/>
+<text x="623" y="633" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Decision agents (3 models)</text>
+<text x="623" y="648" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8FB8E8">Diagnostic → qwen3:1.7b</text>
+<text x="623" y="662" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">Operations → llama3.2:3b</text>
+<text x="623" y="676" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">Safety → gemma3:1b</text>
+<rect x="924" y="614" width="328" height="90" rx="7" fill="#16202C" stroke="#8B7BD8" stroke-opacity="0.55"/>
+<text x="935" y="633" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Model gateway</text>
+<text x="935" y="648" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">role router: reasoning · coding · domain</text>
+<text x="935" y="662" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">embedding · vision (unset) · reranker (unset)</text>
+<text x="935" y="676" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">OpenAI-compatible client → Ollama</text>
+<rect x="58" y="716" width="300" height="92" rx="7" fill="#16202C" stroke="#8B7BD8" stroke-opacity="0.55"/>
+<text x="69" y="735" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Tool registry  ·  19 tools</text>
+<text x="69" y="750" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">search · read/write file · python · office</text>
+<text x="69" y="764" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">equipment · telemetry · materials</text>
+<text x="69" y="778" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">query_knowledge_graph · gated</text>
+<rect x="370" y="716" width="268" height="92" rx="7" fill="#16202C" stroke="#8B7BD8" stroke-opacity="0.55"/>
+<text x="381" y="735" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Ingestion · RAG</text>
+<text x="381" y="750" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">document · multimodal · indexing</text>
+<text x="381" y="764" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">LanceDB vector store + BM25</text>
+<text x="381" y="778" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">clearance filter BEFORE context</text>
+<rect x="650" y="716" width="262" height="92" rx="7" fill="#16202C" stroke="#8B7BD8" stroke-opacity="0.55"/>
+<text x="661" y="735" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Verification</text>
+<text x="661" y="750" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">envelope · policy · evidence</text>
+<text x="661" y="764" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">citation · audit-chain checker</text>
+<text x="661" y="778" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">failed route → re-plan</text>
+<rect x="924" y="716" width="328" height="92" rx="7" fill="#16202C" stroke="#8B7BD8" stroke-opacity="0.55"/>
+<text x="935" y="735" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Retrieval &amp; memory</text>
+<text x="935" y="750" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">LanceDB index (p117_chunks) · 12 docs</text>
+<text x="935" y="764" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">knowledge graph · operational memory</text>
+<text x="935" y="778" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">graph query wired to agent tool path</text>
+<rect x="40" y="842" width="1230" height="128" rx="10" fill="#0F1620" stroke="#3FB27F" stroke-opacity="0.35"/>
+<rect x="40" y="842" width="4" height="128" rx="2" fill="#3FB27F"/>
+<text x="58" y="864" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#3FB27F" letter-spacing="1.6">SIMULATION — digital twin</text>
+<text x="58" y="880" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#7C8CA1">protected baseline · observe &amp; audit only</text>
+<rect x="58" y="872" width="386" height="82" rx="7" fill="#16202C" stroke="#3FB27F" stroke-opacity="0.55"/>
+<text x="69" y="891" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Refinery engine</text>
+<text x="69" y="906" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">58 equipment · 60 connections · 224 sensors</text>
+<text x="69" y="920" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">1 Hz tick · flow propagation · alarms</text>
+<text x="69" y="934" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">fault injection · sensor disable · line block</text>
+<rect x="456" y="872" width="386" height="82" rx="7" fill="#16202C" stroke="#3FB27F" stroke-opacity="0.55"/>
+<text x="467" y="891" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Service &amp; event bus</text>
+<text x="467" y="906" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">incident lifecycle · durable event log</text>
+<text x="467" y="920" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">SSE fan-out (replayable by seq)</text>
+<text x="467" y="934" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">recovery loop: 2 bounded attempts</text>
+<rect x="854" y="872" width="398" height="82" rx="7" fill="#16202C" stroke="#3FB27F" stroke-opacity="0.55"/>
+<text x="865" y="891" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">RecoveryDecision</text>
+<text x="865" y="906" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">route[] · block[] · restore[]</text>
+<text x="865" y="920" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">per-agent agent_status</text>
+<text x="865" y="934" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">validated against live topology</text>
+<rect x="40" y="988" width="1230" height="152" rx="10" fill="#0F1620" stroke="#5FA8D3" stroke-opacity="0.35"/>
+<rect x="40" y="988" width="4" height="152" rx="2" fill="#5FA8D3"/>
+<text x="58" y="1010" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#5FA8D3" letter-spacing="1.6">DATA &amp; STORAGE</text>
+<text x="58" y="1026" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#7C8CA1">SQLite + LanceDB · all local</text>
+<rect x="58" y="1018" width="194" height="106" rx="7" fill="#16202C" stroke="#5FA8D3" stroke-opacity="0.55"/>
+<text x="69" y="1037" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">project117.db</text>
+<text x="69" y="1052" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8FB8E8">7 tables</text>
+<text x="69" y="1066" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">audit_events · jobs</text>
+<text x="69" y="1080" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">artifacts · documents</text>
+<rect x="260" y="1018" width="194" height="106" rx="7" fill="#16202C" stroke="#5FA8D3" stroke-opacity="0.55"/>
+<text x="271" y="1037" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">simulation.db</text>
+<text x="271" y="1052" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8FB8E8">19 tables</text>
+<text x="271" y="1066" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">plants · equipment</text>
+<text x="271" y="1080" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">incidents · telemetry</text>
+<rect x="462" y="1018" width="194" height="106" rx="7" fill="#16202C" stroke="#5FA8D3" stroke-opacity="0.55"/>
+<text x="473" y="1037" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">materials.db</text>
+<text x="473" y="1052" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8FB8E8">8 tables</text>
+<text x="473" y="1066" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">materials · prices</text>
+<text x="473" y="1080" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">movements · suppliers</text>
+<rect x="664" y="1018" width="194" height="106" rx="7" fill="#16202C" stroke="#5FA8D3" stroke-opacity="0.55"/>
+<text x="675" y="1037" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">operations.db</text>
+<text x="675" y="1052" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8FB8E8">2 tables</text>
+<text x="675" y="1066" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">work_orders</text>
+<text x="675" y="1080" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">approvals</text>
+<rect x="866" y="1018" width="194" height="106" rx="7" fill="#16202C" stroke="#5FA8D3" stroke-opacity="0.55"/>
+<text x="877" y="1037" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">identity.db</text>
+<text x="877" y="1052" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8FB8E8">5 tables</text>
+<text x="877" y="1066" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">users · sessions</text>
+<text x="877" y="1080" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">devices · secrets</text>
+<rect x="1068" y="1018" width="194" height="106" rx="7" fill="#16202C" stroke="#5FA8D3" stroke-opacity="0.55"/>
+<text x="1079" y="1037" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">mobile.db</text>
+<text x="1079" y="1052" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8FB8E8">4 tables</text>
+<text x="1079" y="1066" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">agent tasks</text>
+<text x="1079" y="1080" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">issues · notifications</text>
+<rect x="1276" y="1018" width="0" height="0" rx="7" fill="#16202C" stroke="#5B9BD8" stroke-opacity="0.55"/>
+<text x="1287" y="1037" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7"></text>
+<rect x="1300" y="86" width="440" height="1054" rx="10" fill="#120E14" stroke="#E05252" stroke-opacity="0.5" stroke-dasharray="7 5"/>
+<text x="1320" y="112" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#E05252" letter-spacing="1.6">EXTERNAL / UNTRUSTED</text>
+<text x="1320" y="129" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8A6A6A">outside the sovereignty boundary</text>
+<rect x="1320" y="150" width="400" height="96" rx="7" fill="#16202C" stroke="#3FB27F" stroke-opacity="0.55"/>
+<text x="1331" y="169" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Ollama runtime  ·  127.0.0.1:11434</text>
+<text x="1331" y="184" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8FB8E8">local inference — loopback only</text>
+<text x="1331" y="198" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">qwen3:1.7b · llama3.2:3b · gemma3:1b</text>
+<text x="1331" y="212" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">llama3 · mistral · deepseek-coder · nomic-embed</text>
+<text x="1520" y="262" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#3FB27F" text-anchor="middle" font-weight="400">ALLOWED via loopback-only allowlist</text>
+<line x1="1520" y1="248" x2="1520" y2="232" stroke="#3FB27F" stroke-width="1.6" marker-end="url(#arG)"/>
+<rect x="1320" y="292" width="400" height="84" rx="7" fill="#16202C" stroke="#D9A036" stroke-opacity="0.55"/>
+<text x="1331" y="311" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">OpenSandbox  ·  localhost:8080</text>
+<text x="1331" y="326" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8FB8E8">sandboxed code execution</text>
+<text x="1331" y="340" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">network: deny · fs: /workspace</text>
+<text x="1331" y="354" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">NOT RUNNING on this host</text>
+<text x="1520" y="392" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#D9A036" text-anchor="middle" font-weight="400">UNAVAILABLE — every sandbox_command returns ACTION BLOCKED</text>
+<rect x="1320" y="420" width="400" height="96" rx="7" fill="#16202C" stroke="#E05252" stroke-opacity="0.55"/>
+<text x="1331" y="439" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Public internet</text>
+<text x="1331" y="454" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8FB8E8">public AI APIs · unknown destinations</text>
+<text x="1331" y="468" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">unapproved services</text>
+<text x="1520" y="532" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#E05252" text-anchor="middle" font-weight="400">BLOCKED — default-deny egress (external_allowed: 0)</text>
+<line x1="1520" y1="518" x2="1520" y2="502" stroke="#E05252" stroke-width="1.6" marker-end="url(#arR)"/>
+<rect x="1320" y="560" width="400" height="120" rx="7" fill="#16202C" stroke="#D9A036" stroke-opacity="0.55"/>
+<text x="1331" y="579" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Egress decisions observed</text>
+<text x="1331" y="594" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8FB8E8">ALLOW  localhost:11434   (loopback)</text>
+<text x="1331" y="608" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">ALLOW  127.0.0.1                (internal)</text>
+<text x="1331" y="622" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">BLOCK  198.51.100.9   denied by policy</text>
+<text x="1331" y="636" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">BLOCK  203.0.113.77   socket_opened:false</text>
+<rect x="1320" y="700" width="400" height="118" rx="7" fill="#16202C" stroke="#6B7A8D" stroke-opacity="0.55"/>
+<text x="1331" y="719" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">Deployment</text>
+<text x="1331" y="734" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">docker-compose.yml · infrastructure/docker</text>
+<text x="1331" y="748" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">make: install · run · web · test · check</text>
+<text x="1331" y="762" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">backend + console + Ollama, one host</text>
+<text x="1331" y="776" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#94A3B8">nftables egress: PLANNED (Linux only)</text>
+<rect x="1320" y="838" width="400" height="286" rx="10" fill="#0F1620" stroke="#2A3447"/>
+<text x="1340" y="864" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#EAF0F7">LEGEND</text>
+<rect x="1340" y="879" width="12" height="12" rx="3" fill="#5B9BD8"/>
+<text x="1362" y="889" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="10.5" fill="#94A3B8">Client / API surface</text>
+<rect x="1340" y="903" width="12" height="12" rx="3" fill="#46B8E8"/>
+<text x="1362" y="913" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="10.5" fill="#94A3B8">HTTP REST + Server-Sent Events</text>
+<rect x="1340" y="927" width="12" height="12" rx="3" fill="#D9A036"/>
+<text x="1362" y="937" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="10.5" fill="#94A3B8">Enforced security control</text>
+<rect x="1340" y="951" width="12" height="12" rx="3" fill="#8B7BD8"/>
+<text x="1362" y="961" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="10.5" fill="#94A3B8">Local AI inference &amp; agents</text>
+<rect x="1340" y="975" width="12" height="12" rx="3" fill="#3FB27F"/>
+<text x="1362" y="985" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="10.5" fill="#94A3B8">Simulation twin / local runtime</text>
+<rect x="1340" y="999" width="12" height="12" rx="3" fill="#5FA8D3"/>
+<text x="1362" y="1009" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="10.5" fill="#94A3B8">Persistent store (SQLite / LanceDB)</text>
+<rect x="1340" y="1023" width="12" height="12" rx="3" fill="#E05252"/>
+<text x="1362" y="1033" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="10.5" fill="#94A3B8">Blocked / unavailable</text>
+<line x1="1340" y1="1062" x2="1700" y2="1062" stroke="#2A3447"/>
+<text x="1340" y="1082" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#7C8CA1">STATUS KEY</text>
+<circle cx="1346" cy="1097" r="4.5" fill="#3FB27F"/>
+<text x="1362" y="1100" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#94A3B8">VERIFIED</text>
+<circle cx="1346" cy="1117" r="4.5" fill="#5B9BD8"/>
+<text x="1362" y="1120" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#94A3B8">IMPLEMENTED</text>
+<circle cx="1346" cy="1137" r="4.5" fill="#D9A036"/>
+<text x="1362" y="1140" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#94A3B8">PARTIAL / PLANNED</text>
+<circle cx="1346" cy="1157" r="4.5" fill="#E05252"/>
+<text x="1362" y="1160" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#94A3B8">UNAVAILABLE</text>
+<rect x="28" y="78" width="1254" height="1070" rx="12" fill="none" stroke="#46B8E8" stroke-opacity="0.55" stroke-dasharray="10 6" stroke-width="1.6"/>
+<rect x="28" y="78" width="230" height="22" rx="6" fill="#0A0F16"/>
+<text x="40" y="94" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" font-weight="700" fill="#46B8E8" letter-spacing="1.2">SOVEREIGNTY BOUNDARY</text>
+<text x="655" y="1168" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#7C8CA1" text-anchor="middle" font-weight="400">All processing, storage and inference occur inside this boundary.  No external model provider is called.</text>
+<line x1="660" y1="204" x2="660" y2="254" stroke="#46B8E8" stroke-width="1.6" marker-end="url(#ar)"/>
+<text x="722" y="232" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#46B8E8" text-anchor="middle" font-weight="400">REST + SSE</text>
+<line x1="660" y1="402" x2="660" y2="452" stroke="#D9A036" stroke-width="1.6" marker-end="url(#ar)"/>
+<text x="742" y="430" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#D9A036" text-anchor="middle" font-weight="400">identity → role → clearance</text>
+<line x1="660" y1="562" x2="660" y2="612" stroke="#8B7BD8" stroke-width="1.6" marker-end="url(#ar)"/>
+<text x="760" y="590" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#8B7BD8" text-anchor="middle" font-weight="400">authorised context only</text>
+<line x1="660" y1="824" x2="660" y2="870" stroke="#3FB27F" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+<text x="784" y="850" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#3FB27F" text-anchor="middle" font-weight="400">observe + audit (never control)</text>
+<line x1="660" y1="954" x2="660" y2="1016" stroke="#5FA8D3" stroke-width="1.6" marker-end="url(#ar)"/>
+<line x1="1248" y1="660" x2="1318" y2="198" stroke="#3FB27F" stroke-width="1.6" marker-end="url(#ar)"/>
+<text x="1300" y="430" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#3FB27F" text-anchor="middle" font-weight="400">loopback</text>
+<line x1="1248" y1="760" x2="1318" y2="468" stroke="#E05252" stroke-width="1.6" stroke-dasharray="5 4"/>
+<circle cx="1290" cy="600" r="9" fill="#0A0F16" stroke="#E05252" stroke-width="1.8"/>
+<line x1="1285" y1="595" x2="1295" y2="605" stroke="#E05252" stroke-width="1.8"/>
+<line x1="1295" y1="595" x2="1285" y2="605" stroke="#E05252" stroke-width="1.8"/>
+</svg>
