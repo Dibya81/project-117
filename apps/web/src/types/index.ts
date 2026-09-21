@@ -346,3 +346,70 @@ export interface WorkflowDefinition {
     requires_approval?: boolean;
   }[];
 }
+
+export interface WorkspaceRecord {
+  id: string;
+  name: string;
+  description: string | null;
+  knowledge_version: string;
+  created_at: ISODate;
+  updated_at: ISODate;
+}
+
+export interface WorkspaceHealthRecord {
+  workspace_id: string;
+  documents: number;
+  indexed: number;
+  processing: number;
+  failed: number;
+  chunks: number;
+  entities: number;
+  relationships: number;
+  last_updated: ISODate | null;
+  status: "READY" | "UPDATING" | "DEGRADED" | "FAILED" | "EMPTY";
+  knowledge_version: string;
+}
+
+export interface KnowledgeEntityRecord {
+  id: string;
+  name: string;
+  type: string;
+  aliases: string[];
+  relationships_count?: number;
+  relationships?: {
+    rel: string;
+    target: string;
+    source_chunk?: string | null;
+    confidence?: number | null;
+  }[];
+  sources?: {
+    document_id: string;
+    filename: string;
+  }[];
+  confidence: number;
+  created_at: ISODate;
+}
+
+export interface KnowledgeGraphResponse {
+  workspace_id: string;
+  nodes: {
+    id: string;
+    label: string;
+    type: string;
+    confidence: number;
+    document_ids: string[];
+  }[];
+  edges: {
+    id: string;
+    source: string;
+    target: string;
+    label: string;
+    confidence: number;
+  }[];
+  stats: {
+    total_nodes: number;
+    total_edges: number;
+    by_type: Record<string, number>;
+  };
+}
+

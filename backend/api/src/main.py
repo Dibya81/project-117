@@ -35,6 +35,7 @@ from backend.api.src.routes import (
     health,
     jobs,
     knowledge,
+    knowledge_hub,
     materials,
     mobile,
     models,
@@ -43,6 +44,7 @@ from backend.api.src.routes import (
     tools,
     work_orders,
     workflows,
+    workspaces,
 )
 from backend.chat.service import ChatService
 from backend.chat.sessions import ChatSessionStore
@@ -461,6 +463,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         uploads_dir=settings.uploads_dir,
     )
 
+    # Phase KW: workspace management + knowledge-graph entity extraction.
+    from backend.knowledge.workspace_service import WorkspaceService
+    from backend.knowledge.graph_extractor import GraphExtractor
+
+    workspace_service = WorkspaceService(session_factory=session_factory)
+    graph_extractor = GraphExtractor(
+        session_factory=session_factory,
+        model_gateway=gateway,
+        extraction_model=getattr(settings, "extraction_model", "llama3"),
+    )
+    app.state.workspaces = workspace_service
+    app.state.graph_extractor = graph_extractor
+
     # Browser workbench access. The CORSMiddleware answers preflight (OPTIONS)
     # requests and stamps real responses — without it the browser blocks every
     # cross-origin fetch/SSE stream with a CORS error, even though curl works.
@@ -513,6 +528,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(materials.router)
     # The Android field client's surface: base URL http://<host>:8000/api/v1/.
     app.include_router(mobile.router)
+    # Phase KW: workspace + knowledge-hub
+    app.include_router(workspaces.router)
+    app.include_router(knowledge_hub.router)
 
     @app.get("/api/metrics")
     def api_metrics(request: Request) -> dict:

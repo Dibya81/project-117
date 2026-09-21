@@ -15,7 +15,7 @@
  * scripts/graphify-obsidian.sh.
  */
 
-export type Namespace = "plant" | "system";
+export type Namespace = "plant" | "system" | "company";
 
 /** How an edge came to exist. Never inferred by the UI — always from data. */
 export type Provenance =

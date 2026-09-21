@@ -15,6 +15,7 @@
  * a day-grouped session timeline.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { Panel, SkeletonRows, StatusDot } from "@/components/ui/primitives";
@@ -26,9 +27,11 @@ import { InspectTabs, type InspectTab } from "@/components/workspace/InspectTabs
 import { SessionList } from "@/components/workspace/SessionList";
 import { Lucide } from "@/components/ui/LucideIcon";
 import { SPRING, TAB_PANEL } from "@/lib/ui/motion";
+import { api } from "@/lib/api";
 import { consoleData } from "@/lib/data/console";
 import { useJourney } from "@/lib/journey";
 import { runInvestigation, type InvestigationHandle } from "@/lib/workspace/investigate";
+import type { WorkspaceHealthRecord } from "@/types";
 import type { WorkspaceSession, WorkspaceTask } from "@/types/console";
 
 const SUGGESTIONS = [
@@ -90,14 +93,31 @@ export default function WorkspacePage() {
   const [docScope, setDocScope] = useState<{ id: string; filename: string } | null>(null);
   const [tab, setTab] = useState("evidence");
   const [composerFocused, setComposerFocused] = useState(false);
+  const [health, setHealth] = useState<WorkspaceHealthRecord | null>(null);
   const { visit } = useJourney();
   const cancelRef = useRef<InvestigationHandle | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const fetchHealth = useCallback(async () => {
+    try {
+      const h = await api.workspaces.defaultHealth();
+      setHealth(h);
+    } catch {
+      // Best effort
+    }
+  }, []);
+
   useEffect(() => {
     consoleData.workspace.sessions().then(setSessions);
-    return () => cancelRef.current?.cancel();
-  }, []);
+    void fetchHealth();
+    const interval = setInterval(() => {
+      void fetchHealth();
+    }, 6000);
+    return () => {
+      clearInterval(interval);
+      cancelRef.current?.cancel();
+    };
+  }, [fetchHealth]);
 
   // Deep links pre-load the prompt so the arrival carries its context:
   //   ?entity=<label>  from a Knowledge Universe node
@@ -173,6 +193,34 @@ export default function WorkspacePage() {
           <h1>Ask. Execute. Verify.</h1>
         </div>
         <span className="cs-pagehead__meta">grounded in your documents · sandboxed execution · verified output</span>
+      </div>
+
+      {/* Knowledge Base Status Banner */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "8px 16px",
+          marginBottom: 16,
+          borderRadius: 8,
+          background: "rgba(124, 58, 237, 0.08)",
+          border: "1px solid rgba(124, 58, 237, 0.2)",
+          fontSize: "0.8125rem",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <StatusDot state={health?.status === "READY" ? "ok" : health?.status === "UPDATING" ? "ai" : "warning"} pulse={health?.status === "UPDATING"} />
+          <span style={{ fontWeight: 600, color: "var(--text)" }}>KNOWLEDGE BASE</span>
+          <span style={{ color: "var(--text-dim)" }}>
+            {health
+              ? `${health.documents} documents · ${health.indexed} indexed · ${health.entities.toLocaleString()} entities · ${health.status === "UPDATING" ? "Updating…" : "Up to date"}`
+              : "Connecting to local knowledge base…"}
+          </span>
+        </div>
+        <Link href="/console/knowledge/documents" style={{ color: "var(--accent)", fontSize: "0.75rem", textDecoration: "none" }}>
+          Manage Knowledge →
+        </Link>
       </div>
 
       <div className="cs-workspace">

@@ -89,7 +89,8 @@ export function Rail({
     {
       label: "Knowledge",
       items: [
-        { id: "documents", label: "Documents", href: "/console/documents", icon: "doc" },
+        { id: "knowledge-hub", label: "Knowledge Hub", href: "/console/knowledge/hub", icon: "database" },
+        { id: "knowledge-docs", label: "Documents & Ingest", href: "/console/knowledge/documents", icon: "upload" },
         { id: "knowledge", label: "Industrial Memory", href: "/console/knowledge", icon: "graph" },
         { id: "history", label: "Operational History", href: "/console/history", icon: "history" },
       ],

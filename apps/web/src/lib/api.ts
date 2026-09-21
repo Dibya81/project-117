@@ -13,8 +13,12 @@ import type {
   DocumentRecord,
   HealthResponse,
   JobRecord,
+  KnowledgeEntityRecord,
+  KnowledgeGraphResponse,
   ToolDescriptor,
   WorkflowDefinition,
+  WorkspaceHealthRecord,
+  WorkspaceRecord,
 } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8000";
@@ -1046,27 +1050,57 @@ export const api = {
       request<WorkflowDefinition>(`/api/workflows/${encodeURIComponent(name)}`),
   },
 
+  workspaces: {
+    list: () => request<{ total: number; workspaces: WorkspaceRecord[] }>("/api/workspaces"),
+    get: (id: string) => request<WorkspaceRecord>(`/api/workspaces/${encodeURIComponent(id)}`),
+    create: (payload: { name: string; description?: string }) =>
+      request<WorkspaceRecord>("/api/workspaces", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    delete: (id: string) =>
+      request<{ deleted: boolean; id: string }>(`/api/workspaces/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
+    health: (id: string) =>
+      request<WorkspaceHealthRecord>(`/api/workspaces/${encodeURIComponent(id)}/health`),
+    default: () => request<WorkspaceRecord>("/api/workspaces/default"),
+    defaultHealth: () => request<WorkspaceHealthRecord>("/api/workspaces/default/health"),
+  },
+
   documents: {
-    list: () => request<{ total: number; documents: DocumentRecord[] }>("/api/documents"),
+    list: (params: { workspaceId?: string; status?: string; limit?: number; offset?: number } = {}) =>
+      request<{ total: number; limit: number; offset: number; documents: DocumentRecord[] }>(
+        `/api/documents${query({ workspace_id: params.workspaceId, status: params.status, limit: params.limit, offset: params.offset })}`,
+      ),
     get: (id: string) => request<DocumentRecord>(`/api/documents/${id}`),
     /**
-     * Real multipart upload to POST /api/documents/upload. The file is read by
-     * the server and stored; the response carries the registered rows.
+     * Real multipart upload to POST /api/documents/upload. Supports single or multiple files.
      */
-    upload: (file: File) => {
+    upload: (file: File, workspaceId?: string) => {
       const form = new FormData();
       form.append("files", file);
+      const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
       return request<{ uploaded: number; documents: DocumentRecord[] }>(
-        "/api/documents/upload",
+        `/api/documents/upload${qs}`,
+        { method: "POST", body: form },
+      );
+    },
+    uploadMulti: (files: File[], workspaceId?: string) => {
+      const form = new FormData();
+      for (const f of files) {
+        form.append("files", f);
+      }
+      const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
+      return request<{ uploaded: number; documents: DocumentRecord[] }>(
+        `/api/documents/upload${qs}`,
         { method: "POST", body: form },
       );
     },
     delete: (id: string) =>
       request<{ deleted: boolean; id: string }>(`/api/documents/${id}`, { method: "DELETE" }),
     /**
-     * The parsed text of one document, in reading order. This is the only place
-     * a document's content exists after parsing — the source file is not
-     * re-parsed on read, so anything that displays document text reads it here.
+     * The parsed text of one document, in reading order.
      */
     chunks: (id: string, limit = 200) =>
       request<{
@@ -1086,6 +1120,33 @@ export const api = {
       }>(`/api/documents/${encodeURIComponent(id)}/chunks?limit=${limit}`),
     reindex: (id: string) =>
       request<Record<string, unknown>>(`/api/documents/${id}/reindex`, { method: "POST" }),
+    reprocess: (id: string) =>
+      request<Record<string, unknown>>(`/api/documents/${id}/reindex`, { method: "POST" }),
+    progressUrl: (id: string) => `${API_BASE}/api/documents/${encodeURIComponent(id)}/progress`,
+  },
+
+  knowledgeHub: {
+    entities: (params: { workspaceId?: string; entityType?: string; search?: string; limit?: number; offset?: number } = {}) =>
+      request<{ total: number; workspace_id: string; entities: KnowledgeEntityRecord[] }>(
+        `/api/knowledge-hub/entities${query({
+          workspace_id: params.workspaceId,
+          entity_type: params.entityType,
+          search: params.search,
+          limit: params.limit,
+          offset: params.offset,
+        })}`,
+      ),
+    entity: (id: string) =>
+      request<KnowledgeEntityRecord>(`/api/knowledge-hub/entities/${encodeURIComponent(id)}`),
+    graph: (workspaceId?: string) =>
+      request<KnowledgeGraphResponse>(
+        `/api/knowledge-hub/graph${query({ workspace_id: workspaceId })}`,
+      ),
+    rebuild: (workspaceId?: string) =>
+      request<{ queued: boolean; message: string }>("/api/knowledge-hub/rebuild", {
+        method: "POST",
+        body: JSON.stringify({ workspace_id: workspaceId }),
+      }),
   },
 
   search: {

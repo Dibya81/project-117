@@ -810,19 +810,19 @@ export const consoleData = {
  * there is no privileged action to withhold here.
  */
 export const ROLE_NAV: Record<ConsoleRole, string[]> = {
-  operator: ["home", "workspace", "equipment", "work-orders", "simulation", "sovereignty", "confidentiality", "mat-overview", "mat-spares"],
+  operator: ["home", "workspace", "equipment", "work-orders", "knowledge-hub", "knowledge-docs", "simulation", "sovereignty", "confidentiality", "mat-overview", "mat-spares"],
   engineer: [
-    "home", "workspace", "documents", "knowledge", "history", "equipment", "work-orders", "insights", "simulation", "sovereignty", "confidentiality",
+    "home", "workspace", "knowledge-hub", "knowledge-docs", "documents", "knowledge", "history", "equipment", "work-orders", "insights", "simulation", "sovereignty", "confidentiality",
     "mat-overview", "mat-materials", "mat-inventory", "mat-production", "mat-prices", "mat-spares", "mat-suppliers",
   ],
-  maintenance: ["home", "workspace", "equipment", "work-orders", "documents", "simulation", "sovereignty", "confidentiality", "mat-overview", "mat-spares", "mat-inventory"],
-  safety: ["home", "documents", "history", "approvals", "insights", "simulation", "sovereignty", "confidentiality", "mat-overview", "mat-prices", "mat-suppliers"],
+  maintenance: ["home", "workspace", "equipment", "work-orders", "knowledge-hub", "knowledge-docs", "documents", "simulation", "sovereignty", "confidentiality", "mat-overview", "mat-spares", "mat-inventory"],
+  safety: ["home", "knowledge-hub", "knowledge-docs", "documents", "history", "approvals", "insights", "simulation", "sovereignty", "confidentiality", "mat-overview", "mat-prices", "mat-suppliers"],
   manager: [
-    "home", "workspace", "approvals", "insights", "equipment", "work-orders", "simulation", "sovereignty", "confidentiality",
+    "home", "workspace", "knowledge-hub", "knowledge-docs", "approvals", "insights", "equipment", "work-orders", "simulation", "sovereignty", "confidentiality",
     "mat-overview", "mat-inventory", "mat-production", "mat-prices", "mat-suppliers",
   ],
   admin: [
-    "home", "workspace", "documents", "knowledge", "history", "equipment", "work-orders",
+    "home", "workspace", "knowledge-hub", "knowledge-docs", "documents", "knowledge", "history", "equipment", "work-orders",
     "insights", "approvals", "admin", "sovereignty", "confidentiality", "simulation",
     "mat-overview", "mat-materials", "mat-inventory", "mat-production", "mat-prices", "mat-spares", "mat-suppliers",
   ],

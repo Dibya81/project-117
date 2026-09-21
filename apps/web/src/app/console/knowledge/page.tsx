@@ -37,7 +37,8 @@ import {
   type SystemFull,
   type SystemIndex,
 } from "@/lib/knowledge/system";
-import { layoutCommunityMembers, layoutPlant, layoutSystemOverview, type Pt } from "@/lib/knowledge/layout";
+import { forceLayout, layoutCommunityMembers, layoutPlant, layoutSystemOverview, type Pt } from "@/lib/knowledge/layout";
+import { api } from "@/lib/api";
 import {
   colorOf,
   indexGraph,
@@ -114,6 +115,7 @@ export default function KnowledgeUniverse() {
   const [ns, setNs] = useState<Namespace>("plant");
   const [lens, setLens] = useState<Lens>("all");
   const [plant, setPlant] = useState<KGraph | null>(null);
+  const [companyGraph, setCompanyGraph] = useState<KGraph | null>(null);
   const [sysIndex, setSysIndex] = useState<SystemIndex | null>(null);
   const [sysFull, setSysFull] = useState<SystemFull | null>(null);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
@@ -126,6 +128,50 @@ export default function KnowledgeUniverse() {
   const [loadingFull, setLoadingFull] = useState(false);
 
   /* ---------------- load ---------------- */
+  const loadCompanyGraph = useCallback(async () => {
+    try {
+      const res = await api.knowledgeHub.graph();
+      const nodes: KNode[] = res.nodes.map((n) => ({
+        id: n.id,
+        label: n.label,
+        type: n.type.toLowerCase(),
+        group: n.type,
+        status: "verified",
+        source: `docs: ${n.document_ids?.length || 0}`,
+        facts: {
+          "Entity Type": n.type,
+          Confidence: `${Math.round((n.confidence ?? 0.8) * 100)}%`,
+          "Linked Docs": n.document_ids?.length ? `${n.document_ids.length} documents` : "1 document",
+        },
+        href: n.document_ids?.[0] ? `/console/knowledge/documents` : undefined,
+      }));
+      const edges: KEdge[] = res.edges.map((e) => ({
+        id: e.id,
+        from: e.source,
+        to: e.target,
+        relation: (e.label || "RELATES_TO").toUpperCase(),
+        provenance: "EXTRACTED",
+        confidence: e.confidence ?? 0.85,
+      }));
+      const g: KGraph = {
+        namespace: "company",
+        nodes,
+        edges,
+        communities: [],
+        stats: summarize(nodes, edges, []),
+      };
+      setCompanyGraph(g);
+    } catch (e) {
+      console.error("Failed to load company graph", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (ns === "company") {
+      void loadCompanyGraph();
+    }
+  }, [ns, loadCompanyGraph]);
+
   useEffect(() => {
     buildPlantGraph()
       .then((g) => {
@@ -143,8 +189,6 @@ export default function KnowledgeUniverse() {
           return;
         }
         // Open on the discovered anchor rather than the whole refinery at once.
-        // This used to focus C-3, an asset from the retired demo data, so the
-        // guard above was always false and the page opened with nothing selected.
         const anchor = chooseTraceAnchor(g);
         if (anchor) setSelected(anchor);
       })
@@ -183,7 +227,7 @@ export default function KnowledgeUniverse() {
     return { ...base, nodes, edges, stats: summarize(nodes, edges, base.communities) };
   }, [sysIndex, sysFull, expanded]);
 
-  const full = ns === "plant" ? plant : sysGraph;
+  const full = ns === "plant" ? plant : ns === "company" ? companyGraph : sysGraph;
 
   /** Lens filter — keeps the lens nodes plus their direct neighbours so the
    *  result stays a connected picture rather than a scatter of orphans. */
@@ -205,6 +249,7 @@ export default function KnowledgeUniverse() {
   const positions = useMemo<Map<string, Pt>>(() => {
     if (!graph) return new Map();
     if (ns === "plant") return layoutPlant(graph);
+    if (ns === "company") return forceLayout(graph);
     const base = layoutSystemOverview(graph);
     if (sysFull && expanded.size) {
       for (const cid of expanded) {
@@ -447,6 +492,7 @@ export default function KnowledgeUniverse() {
           }}
           options={[
             { id: "plant", label: "Plant Knowledge" },
+            { id: "company", label: "Company Docs" },
             { id: "system", label: "System Knowledge" },
           ]}
         />

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from sqlalchemy.orm import sessionmaker
 from starlette.requests import Request
 
 from backend.config import Settings
@@ -9,6 +10,8 @@ from backend.deliverables.service import ArtifactService
 from backend.ingestion.service import IngestionService
 from backend.jobs.bus import JobEventBus
 from backend.jobs.service import JobService
+from backend.knowledge.graph_extractor import GraphExtractor
+from backend.knowledge.workspace_service import WorkspaceService
 from backend.memory import MemoryService
 from backend.observability.metrics import MetricsRegistry
 from backend.orchestrator import Orchestrator
@@ -176,3 +179,18 @@ def get_mobile(request: Request) -> MobileStore:
         )
         request.app.state.mobile = store
     return store
+
+
+def get_workspaces(request: Request) -> WorkspaceService:
+    """Workspace CRUD + health statistics service."""
+    return request.app.state.workspaces
+
+
+def get_graph_extractor(request: Request) -> GraphExtractor:
+    """Knowledge-graph entity extractor (post-ingestion)."""
+    return request.app.state.graph_extractor
+
+
+def get_session_factory(request: Request) -> sessionmaker:
+    """The SQLAlchemy session factory — for routers that need direct DB access."""
+    return request.app.state.session_factory
