@@ -77,3 +77,31 @@ def test_oversize_upload_rejected(tmp_path):
 def test_missing_document_returns_404(client):
     assert client.get("/api/documents/does-not-exist").status_code == 404
     assert client.delete("/api/documents/does-not-exist").status_code == 404
+
+
+def test_list_documents_pagination_and_clamping(client):
+    # Upload 5 files
+    for i in range(5):
+        client.post(
+            "/api/documents/upload",
+            files={"files": (f"doc_{i}.txt", f"procedure {i}".encode(), "text/plain")},
+        )
+
+    # Default pagination
+    res = client.get("/api/documents").json()
+    assert res["total"] == 5
+    assert res["limit"] == 50
+    assert res["offset"] == 0
+    assert len(res["documents"]) == 5
+
+    # Explicit limit + offset
+    res_paged = client.get("/api/documents?limit=2&offset=1").json()
+    assert res_paged["total"] == 5
+    assert res_paged["limit"] == 2
+    assert res_paged["offset"] == 1
+    assert len(res_paged["documents"]) == 2
+
+    # Hard-cap clamping: limit > 500 clamped to 500, limit < 1 clamped to 1, offset < 0 clamped to 0
+    res_clamped = client.get("/api/documents?limit=1000&offset=-5").json()
+    assert res_clamped["limit"] == 500
+    assert res_clamped["offset"] == 0

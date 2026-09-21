@@ -155,6 +155,7 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     implementation(libs.security.crypto)
+    implementation("net.zetetic:sqlcipher-android:4.5.4")
 
     // --- background sync --------------------------------------------------
     implementation(libs.work.runtime.ktx)

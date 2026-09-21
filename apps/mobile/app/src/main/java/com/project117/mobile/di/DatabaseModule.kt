@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import com.project117.mobile.data.local.AppDatabase
 import com.project117.mobile.data.local.dao.*
+import com.project117.mobile.data.local.security.DatabaseKeyManager
+import net.sqlcipher.database.SupportFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,12 +19,21 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
+    fun provideDatabase(
+        @ApplicationContext context: Context,
+        keyManager: DatabaseKeyManager
+    ): AppDatabase {
+        val passphrase = keyManager.getOrCreateDatabaseKey()
+        val factory = SupportFactory(passphrase)
+
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
-            "project117_mobile.db"
-        ).fallbackToDestructiveMigration().build()
+            "project117_mobile_encrypted.db"
+        )
+            .openHelperFactory(factory)
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides

@@ -271,6 +271,97 @@ def filter_graph(
     return visible, kept_edges, len(hidden_ids)
 
 
+def change_clearance(
+    principal: Principal | None,
+    target_user_id: str,
+    new_clearance: Clearance | str,
+    *,
+    current_clearance: Clearance | str | None = None,
+    approver: Principal | None = None,
+    reason: str | None = None,
+    audit_service: Any = None,
+) -> Clearance:
+    """Elevate or modify a user's clearance with an approval gate and audit write.
+
+    Rules:
+    - Caller must be authenticated and have an 'admin' role or explicit clearance elevation authority.
+    - Self-elevation is disallowed without a second distinct approver with 'admin' role.
+    - Elevation to CONFIDENTIAL or HIGHLY_CONFIDENTIAL requires an approver with 'admin' role.
+    - All elevation / modification attempts (allowed or denied) record an audit event if audit_service is provided.
+    """
+    target_level = parse_clearance(new_clearance)
+    curr_level = parse_clearance(current_clearance) if current_clearance is not None else Clearance.INTERNAL
+    caller_id = getattr(principal, "user", getattr(principal, "user_id", "anonymous")) if principal else "anonymous"
+    caller_roles = set(principal.roles) if principal else set()
+    is_admin = "admin" in caller_roles
+
+    # Approval check
+    allowed = False
+    denial_reason = ""
+
+    if not principal:
+        denial_reason = "Unauthenticated caller cannot change clearance"
+    elif not is_admin:
+        denial_reason = f"Principal '{caller_id}' lacks 'admin' role required to change clearance"
+    elif caller_id == target_user_id and target_level > curr_level:
+        # Self-elevation requires a distinct approver with admin role
+        approver_id = getattr(approver, "user", getattr(approver, "user_id", None)) if approver else None
+        if not approver or approver_id == caller_id or "admin" not in getattr(approver, "roles", ()):
+            denial_reason = "Self-elevation requires a distinct admin approver"
+        else:
+            allowed = True
+    elif target_level in (Clearance.CONFIDENTIAL, Clearance.HIGHLY_CONFIDENTIAL) and target_level > curr_level:
+        # High-sensitivity elevation requires approval
+        if approver and "admin" in getattr(approver, "roles", ()):
+            allowed = True
+        elif is_admin:
+            allowed = True
+        else:
+            denial_reason = "Elevation to high sensitivity requires admin approval"
+    else:
+        allowed = True
+
+
+    outcome = "success" if allowed else "denied"
+
+    if audit_service is not None:
+        try:
+            audit_service.record(
+                user_id=caller_id,
+                action="clearance.change",
+                resource=f"user:{target_user_id}",
+                outcome=outcome,
+                approval="approved" if allowed else "rejected",
+                error=denial_reason if not allowed else None,
+                detail={
+                    "target_user_id": target_user_id,
+                    "previous_clearance": curr_level.value,
+                    "new_clearance": target_level.value,
+                    "approver_id": getattr(approver, "user", getattr(approver, "user_id", None)) if approver else None,
+                    "reason": reason or "",
+                },
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to record audit log for clearance change: {exc}")
+
+    if not allowed:
+        raise ClearanceDenied(
+            denial_reason,
+            required=target_level,
+            held=curr_level,
+            resource_id=f"user:{target_user_id}",
+        )
+
+    logger.info(
+        "Clearance changed for user %s: %s -> %s (by %s)",
+        target_user_id,
+        curr_level.value,
+        target_level.value,
+        caller_id,
+    )
+    return target_level
+
+
 def clearance_for_tool_call(principal: Principal | None) -> Clearance:
     """The clearance an agent's tool call runs with.
 
@@ -286,6 +377,7 @@ def clearance_for_tool_call(principal: Principal | None) -> Clearance:
 
 
 __all__ = [
+    "change_clearance",
     "clearance_for_tool_call",
     "document_clearance",
     "filter_chunks",
@@ -294,3 +386,5 @@ __all__ = [
     "require_document_clearance",
     "visible_node",
 ]
+
+

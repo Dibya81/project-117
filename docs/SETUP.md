@@ -259,3 +259,51 @@ No path in this table produces a fake success.
 | `P117_LLM_BASE_URL` | `http://localhost:11434/v1` | local model endpoint |
 | `NEXT_PUBLIC_DATA_MODE` | `live` | `mock` = in-browser engine, development only |
 | `NEXT_PUBLIC_API_BASE` | `http://127.0.0.1:8000` | backend origin used by the console |
+
+---
+
+## 11. Disaster Recovery & Storage Operations
+
+Project 117 stores all operational, metadata, simulation, and audit state in sovereign SQLite database files under the `/data` directory (or the `project117-data` Docker volume).
+
+### Backup Cadence & Procedures
+
+| Database File | Purpose | Recommended Cadence | Hot Backup Command |
+|---|---|---|---|
+| `project117.db` | Application entities, work orders, audit log, document metadata | Daily / Hourly | `sqlite3 /data/project117.db ".backup /backups/project117_$(date +%s).db"` |
+| `simulation.db` | Industrial plant simulation state, incident records, scenarios | Daily | `sqlite3 /data/simulation.db ".backup /backups/simulation_$(date +%s).db"` |
+| `uploads/` | Raw document bytes (PDF, DOCX, TXT) | Daily snapshot | `rsync -av /data/uploads/ /backups/uploads/` |
+
+> **Note on Hot Backups:** Using SQLite's built-in `.backup` online backup API guarantees consistency without taking the database offline or blocking concurrent reads/writes.
+
+### Restore Procedure
+
+To restore the system from a backup:
+1. **Stop the container / service:**
+   ```bash
+   docker compose down
+   # Or for local process: kill the running uvicorn process
+   ```
+2. **Replace the database / upload files:**
+   ```bash
+   cp /backups/project117_backup.db /data/project117.db
+   cp /backups/simulation_backup.db /data/simulation.db
+   rsync -av /backups/uploads/ /data/uploads/
+   ```
+3. **Restart the container / service:**
+   ```bash
+   docker compose up -d backend
+   ```
+4. **Verify audit chain integrity:**
+   ```bash
+   # Audit log verification endpoint:
+   curl -s http://127.0.0.1:8000/api/audit/verify
+   ```
+
+### What Is NOT Covered (Vector Store Recovery)
+
+- **LanceDB Vector Store (`data/lancedb/`):**
+  The LanceDB embedding table stores indexed document chunks. If `data/lancedb/` is corrupted or predates recent uploads, it has two recovery paths:
+  1. **Corpus Rebuild:** Run `python scripts/ingest_corpus.py` to re-ingest and re-embed all knowledge corpus documents.
+  2. **Per-Document Reindexing:** Call `POST /api/documents/{document_id}/reindex` for any individual document whose status needs re-synchronization with the vector index.
+

@@ -310,7 +310,7 @@ async def chat(
 
 # ─── Evidence upload ──────────────────────────────────────────────────────────
 @router.post("/documents/upload", status_code=201)
-async def upload_evidence(
+def upload_evidence(
     file: UploadFile = File(...),
     equipment_id: str | None = Form(default=None),
     work_order_id: str | None = Form(default=None),
@@ -324,6 +324,10 @@ async def upload_evidence(
     Delegates the bytes and the row to ``DocumentStorage`` (the same service the
     console uses). The equipment/work-order/caption parts of the multipart body
     are persisted by ``MobileStore`` so the field context is not discarded.
+
+    Declared as plain ``def`` so FastAPI offloads it to a worker thread; both
+    ``save_upload`` (disk I/O + DB commit) and ``record_evidence_upload`` are
+    synchronous and must not run on the async event loop.
     """
     require_mobile_permission(principal, EVIDENCE_CAPTURE)
     document = documents.save_upload(

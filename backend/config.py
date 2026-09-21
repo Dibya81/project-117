@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     api_host: str = "127.0.0.1"
     api_port: int = 8000
     log_level: str = "INFO"
+    workers: int = 1
+    rate_limit_per_minute: int = 0
+    rate_limit_burst: int | None = None
 
     # --- persistence -----------------------------------------------------
     # SQLite is the Phase-1 default (zero infrastructure). Postgres arrives
@@ -316,6 +319,17 @@ class Settings(BaseSettings):
     # reachable from more than one workstation.
     auth_required: bool = False
     auth_api_key: str = ""
+    # Roles granted to any request that presents a valid X-P117-Api-Key.
+    # The client-supplied X-P117-Roles header is IGNORED for authenticated
+    # callers — roles are bound to the credential server-side, not declared by
+    # the request. Comma-separated. Defaults to a single 'operator' role.
+    # Set P117_AUTH_ROLES=admin to grant full admin access to the API key holder.
+    #
+    # SECURITY NOTE: this is what prevents authenticated callers from self-
+    # escalating by setting X-P117-Roles: admin. Anonymous callers are already
+    # capped by ANONYMOUS_MAX_ROLES; this setting closes the same gap for
+    # authenticated callers.
+    auth_roles: tuple[str, ...] = ("operator",)
 
     # --- mobile field API (Phase 12 extension) ----------------------------
     # The Android client authenticates people, not machines, so it needs its
@@ -344,6 +358,15 @@ class Settings(BaseSettings):
     # JSON logs are always written to stdout; set json_logs=false for
     # human-readable console output.
     json_logs: bool = False
+
+    @field_validator("auth_roles", mode="before")
+    @classmethod
+    def _parse_auth_roles(cls, value: object) -> object:
+        if isinstance(value, str):
+            return tuple(r.strip().lower() for r in value.split(",") if r.strip())
+        if isinstance(value, (list, tuple, set, frozenset)):
+            return tuple(str(r).strip().lower() for r in value if str(r).strip())
+        return value
 
     @field_validator(
         "allowed_extensions",
@@ -395,6 +418,17 @@ class Settings(BaseSettings):
                 + ". Use a locally served tag (e.g. 'qwen3:8b'), or set "
                 "P117_ALLOW_REMOTE_MODEL_REPOS=true if this machine is "
                 "deliberately not air-gapped."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_rate_limiting_workers(self) -> "Settings":
+        if self.workers > 1 and self.rate_limit_per_minute > 0:
+            raise ValueError(
+                f"Multi-worker configuration (P117_WORKERS={self.workers}) with "
+                f"in-process rate limiting (P117_RATE_LIMIT_PER_MINUTE={self.rate_limit_per_minute}) "
+                "is unsupported. In-process token buckets do not share state across workers. "
+                "Either set P117_RATE_LIMIT_PER_MINUTE=0 or deploy with a single worker (P117_WORKERS=1)."
             )
         return self
 

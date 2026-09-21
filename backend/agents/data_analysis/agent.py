@@ -126,6 +126,15 @@ class DataAnalysisAgent(BaseAgent):
         context: Any = None,
         arguments: dict[str, Any] | None = None,
     ) -> AgentResult:
+        from backend.agents.data_analysis.hedging import hedge_causal_claims
+
+        # Hedge any overconfident causal assertions in the prose
+        if result.answer:
+            hedged_text, modifications = hedge_causal_claims(result.answer)
+            result.answer = hedged_text
+            if modifications:
+                result.notes.extend(modifications)
+
         code = self.extract_fenced(result.answer, "python")
         if code is None:
             # No fenced block means no analysis to run. Saying so beats sending

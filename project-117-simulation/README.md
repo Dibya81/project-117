@@ -1,5 +1,7 @@
 # Project 117 — simulation data package
 
+> **Notice:** This is a secondary, optional, backend-decoupled workbench dataset package. The canonical console is `apps/web`; this package is not covered by CI.
+
 This is the data layer for the simulation demo: the committed SQL seed for
 both prebuilt plants, plus JSON copies for the optional Vite workbench.
 

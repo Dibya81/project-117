@@ -481,7 +481,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     #   principal -> audit -> rate limit -> permissions -> metrics -> route
     app.add_middleware(RequestMetricsMiddleware, metrics=metrics)
     app.add_middleware(RoutePermissionMiddleware)
-    app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(
+        RateLimitMiddleware,
+        per_minute=settings.rate_limit_per_minute,
+        burst=settings.rate_limit_burst,
+        workers=settings.workers,
+    )
     app.add_middleware(RequestAuditMiddleware)
     app.add_middleware(PrincipalMiddleware)
 

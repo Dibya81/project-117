@@ -195,6 +195,16 @@ export function AssessmentPanel({
             <Icon name="workorder" size={12} /> Create work order
           </button>
         )}
+        {incident.status === "resolved" && (
+          <a
+            href={`/api/simulation/plants/${incident.plant_id ?? "plant-refinery-01"}/incidents/${incident.id}/report.pdf`}
+            download={`incident_${incident.id.toLowerCase()}.pdf`}
+            className="btn btn--primary"
+            style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            <Icon name="doc" size={12} /> Download Final Report (PDF)
+          </a>
+        )}
         {onDismiss && (
           <button className="btn btn--ghost" onClick={onDismiss}>
             Dismiss

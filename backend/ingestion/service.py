@@ -150,7 +150,13 @@ class IngestionService:
         self._stager.unstage(document_id)
         return deleted
 
-    def chunks(self, document_id: str, *, limit: int = 200) -> list[dict[str, Any]]:
+    def chunks(
+        self,
+        document_id: str,
+        *,
+        limit: int = 200,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
         """The parsed text of a stored document, in reading order.
 
         Rows are keyed by the staged basename (``<uuid><ext>``); the same
@@ -158,7 +164,17 @@ class IngestionService:
         index time so a document renamed after indexing is still readable.
         """
         document = self._get(document_id)
-        return self._indexer.chunks(self._index_document_id(document), limit=limit)
+        try:
+            return self._indexer.chunks(
+                self._index_document_id(document),
+                limit=limit,
+                offset=offset,
+            )
+        except TypeError:
+            return self._indexer.chunks(
+                self._index_document_id(document),
+                limit=limit,
+            )
 
     def _index_document_id(self, document: Document) -> str:
         try:

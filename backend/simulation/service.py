@@ -1146,6 +1146,28 @@ class SimulationService:
         finally:
             rt.subscribers.discard(q)
 
+    def get_incident_pdf(self, incident_id: str, plant_id: str | None = None) -> bytes:
+        """Generate and return post-incident PDF report bytes."""
+        from backend.simulation.pdf_report import generate_incident_report_pdf
+        record = self.store.incident_record(incident_id)
+        if record is None and plant_id:
+            try:
+                rt = self.runtime(plant_id)
+                inc = rt.engine.incidents.get(incident_id)
+                if inc:
+                    record = {
+                        "incident": inc.model_dump(),
+                        "tasks": [t.model_dump() for t in rt.incident_tasks.get(incident_id, [])],
+                        "action": {},
+                        "findings": [],
+                        "audit_events": self.store.audit_events(plant_id=plant_id, incident_id=incident_id),
+                    }
+            except KeyError:
+                pass
+        if record is None:
+            raise KeyError(f"incident {incident_id} not found")
+        return generate_incident_report_pdf(record)
+
 
 #: Process-wide service — the one place engine instances live.
 simulation_service = SimulationService()

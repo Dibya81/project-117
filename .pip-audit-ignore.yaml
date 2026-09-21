@@ -1,0 +1,12 @@
+# pip-audit vulnerability configuration & exemptions
+# Project 117 — Air-Gapped Industrial AI System
+
+# Document any ignored vulnerabilities with CVE ID, package, and justification
+ignore:
+  # Example:
+  # - id: CVE-2023-XXXXX
+  #   reason: "Only exploitable in server mode; we use pure offline client"
+
+format: json
+strict: false
+desc: true

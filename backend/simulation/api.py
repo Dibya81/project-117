@@ -7,7 +7,7 @@ connectors:write (an operator cannot trip a pump by guessing a URL).
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -415,3 +415,44 @@ def audit(
         "source": "database",
         "events": svc.store.audit_events(plant_id=plant_id, incident_id=incident_id, limit=limit),
     }
+
+
+@router.get("/plants/{plant_id}/incidents/{incident_id}/report.pdf")
+def plant_incident_pdf(
+    plant_id: str,
+    incident_id: str,
+    principal: Principal = Depends(get_principal),
+) -> Response:
+    """Download post-incident PDF report."""
+    svc = _svc()
+    try:
+        pdf_bytes = svc.get_incident_pdf(incident_id, plant_id=plant_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="incident_{incident_id.lower()}.pdf"',
+        },
+    )
+
+
+@router.get("/incidents/{incident_id}/report.pdf")
+def incident_pdf(
+    incident_id: str,
+    principal: Principal = Depends(get_principal),
+) -> Response:
+    """Download post-incident PDF report by incident ID."""
+    svc = _svc()
+    try:
+        pdf_bytes = svc.get_incident_pdf(incident_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="incident_{incident_id.lower()}.pdf"',
+        },
+    )

@@ -95,3 +95,24 @@ def test_plant_scenarios_unknown_plant(client: TestClient):
     assert resp.status_code == 404
 
 
+def test_incident_pdf_download(client: TestClient):
+    resp_inc = client.get("/api/simulation/plants/refinery/incidents")
+    assert resp_inc.status_code == 200
+    incidents = resp_inc.json()["incidents"]
+    assert len(incidents) > 0
+    inc_id = incidents[-1]["id"]
+
+    # Test plant-scoped endpoint
+    resp_pdf = client.get(f"/api/simulation/plants/refinery/incidents/{inc_id}/report.pdf")
+    assert resp_pdf.status_code == 200
+    assert resp_pdf.headers["content-type"] == "application/pdf"
+    assert resp_pdf.content.startswith(b"%PDF-")
+    assert b"%%EOF" in resp_pdf.content[-2048:]
+
+    # Test global incident-scoped endpoint
+    resp_pdf2 = client.get(f"/api/simulation/incidents/{inc_id}/report.pdf")
+    assert resp_pdf2.status_code == 200
+    assert resp_pdf2.headers["content-type"] == "application/pdf"
+    assert resp_pdf2.content.startswith(b"%PDF-")
+
+

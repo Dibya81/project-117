@@ -1,0 +1,71 @@
+# ==============================================================================
+# Project 117 — Encrypted At-Rest Storage Production Stack
+#
+# Mounts host-level LUKS2 encrypted filesystem for all persistent state.
+# Default-deny network posture across all containers.
+# ==============================================================================
+name: project117-encrypted
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend.Dockerfile
+    command: uvicorn backend.api.src.main:create_app --factory --host 0.0.0.0 --port 8000
+    environment:
+      P117_API_HOST: 0.0.0.0
+      P117_API_PORT: 8000
+      P117_DATABASE_URL: sqlite:////data/project117.db
+      P117_UPLOADS_DIR: /data/uploads
+      P117_LLM_BASE_URL: http://ollama:11434/v1
+      P117_OPEN_SANDBOX_BASE_URL: http://opensandbox:8080
+      P117_SANDBOX_API_KEY: ${P117_SANDBOX_API_KEY:-prod-secret-sandbox-key}
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      # Host-level encrypted mount point
+      - /mnt/encrypted_data/project117/data:/data
+    depends_on:
+      ollama:
+        condition: service_healthy
+        required: false
+      opensandbox:
+        condition: service_started
+        required: false
+    restart: unless-stopped
+    networks:
+      - internal_p117
+
+  ollama:
+    image: ollama/ollama:0.5.11
+    profiles: ["ollama"]
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - /mnt/encrypted_data/project117/ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - internal_p117
+
+  opensandbox:
+    image: opensandbox/server:0.1.0
+    profiles: ["sandbox"]
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      OPEN_SANDBOX_DEFAULT_NETWORK_POLICY: deny
+      OPEN_SANDBOX_API_KEY: ${P117_SANDBOX_API_KEY:-prod-secret-sandbox-key}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    networks:
+      - internal_p117
+
+networks:
+  internal_p117:
+    internal: true

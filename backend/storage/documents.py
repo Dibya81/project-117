@@ -83,6 +83,12 @@ class DocumentStorage:
             stmt = select(Document).order_by(Document.created_at.desc()).limit(limit).offset(offset)
             return list(session.scalars(stmt))
 
+    def count(self) -> int:
+        from sqlalchemy import func
+
+        with self._session_factory() as session:
+            return session.scalar(select(func.count()).select_from(Document)) or 0
+
     def get(self, document_id: str) -> Document:
         with self._session_factory() as session:
             document = session.get(Document, document_id)

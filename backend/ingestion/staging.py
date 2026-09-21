@@ -47,6 +47,20 @@ class DocumentStager:
             raise StagingError(f"could not stage document {document_id}: {exc}") from exc
         return link
 
+    def staged_context(self, document_id: str, uploads_dir: Path, stored_name: str):
+        """Context manager guaranteeing unstage / tempfile cleanup on normal exit or exception."""
+        from contextlib import contextmanager
+
+        @contextmanager
+        def _ctx():
+            staged = self.stage(document_id, uploads_dir, stored_name)
+            try:
+                yield staged
+            finally:
+                self.unstage(document_id, staged.suffix)
+
+        return _ctx()
+
     def unstage(self, document_id: str, extension: str | None = None) -> None:
         """Remove the staging link(s) for a document (best-effort)."""
         if extension:

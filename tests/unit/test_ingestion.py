@@ -51,10 +51,16 @@ class FakeIndexer:
     def chunk_count(self, document_id: str | None = None) -> int:
         return 3 if not self.fail else 0
 
-    def chunks(self, document_id: str | None = None, *, limit: int = 200) -> list[dict]:
+    def chunks(
+        self,
+        document_id: str | None = None,
+        *,
+        limit: int = 200,
+        offset: int = 0,
+    ) -> list[dict]:
         if self.fail:
             return []
-        return [
+        rows = [
             {
                 "chunk_id": f"{document_id}_{i}",
                 "document_id": document_id,
@@ -65,8 +71,9 @@ class FakeIndexer:
                 "page": 1,
                 "source": None,
             }
-            for i in range(min(3, limit))
+            for i in range(3)
         ]
+        return rows[offset : offset + limit]
 
 
 def make_app(settings: Settings, indexer: FakeIndexer):

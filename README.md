@@ -155,8 +155,9 @@ DOWNSTREAM EQUIPMENT RECOVERS → INCIDENT VERIFIED → INCIDENT RESOLVED
 
 ```
 project-117/
-├── apps/           deployable surfaces — web console, Android app
+├── apps/           canonical deployable surfaces — web console (Next.js 14), Android app
 ├── backend/        the engine — API, simulation, security, agents, tools
+├── frontend/       (optional) secondary Vite/React standalone simulation workbench
 ├── packages/       shared workspace packages
 ├── database/       schema and migrations
 ├── infrastructure/ deployment

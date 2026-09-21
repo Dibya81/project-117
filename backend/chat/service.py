@@ -119,6 +119,7 @@ class ChatService:
         system_prompt: str | None = None,
         user: str | None = None,
         use_rag: bool | None = None,
+        require_grounding: bool = False,
         document_ids: list[str] | None = None,
         principal: Principal | None = None,
     ) -> ChatTurnResult:
@@ -129,8 +130,39 @@ class ChatService:
             user=user,
             principal=principal,
         )
-        system_prompt = system_prompt or self._grounded_prompt(evidence)
+
         resolved = await self._router.resolve(role, model_override=model_override)
+
+        # Insufficient evidence abstention: if caller requires grounding and no evidence was retrieved
+        if require_grounding and not evidence:
+            abstention_msg = (
+                "Insufficient evidence in indexed documents to answer the question factually. "
+                "No matching chunks met the relevance threshold."
+            )
+            self._persist_turn(session_id, message, abstention_msg)
+            self._audit.record(
+                action="chat.abstained",
+                resource_type="chat",
+                resource_id=session_id,
+                user=user,
+                detail={
+                    "model": resolved.model,
+                    "provider": resolved.provider_name,
+                    "reason": "insufficient_evidence",
+                    "grounded": False,
+                    "evidence_count": 0,
+                },
+            )
+            return ChatTurnResult(
+                response=abstention_msg,
+                model=resolved.model,
+                provider=resolved.provider_name,
+                latency_ms=0.0,
+                session_id=session_id,
+                evidence=[],
+            )
+
+        system_prompt = system_prompt or self._grounded_prompt(evidence)
         messages = self._messages_for(session_id, message, system_prompt)
 
         started = time.perf_counter()

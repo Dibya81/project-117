@@ -43,10 +43,9 @@ interface NavGroup {
 
 /** Accent per group, so the rail reads as themed bands rather than one list. */
 const GROUP_ACCENT: Record<string, string> = {
-  Operate: "#0891b2",
+  Work: "#0891b2",
+  Industrial: "#0d9488",
   Knowledge: "#7c3aed",
-  Plant: "#0d9488",
-  Materials: "#b45309",
   Security: "#0e7490",
   System: "#475569",
 };
@@ -70,62 +69,42 @@ export function Rail({
 
   const groups: NavGroup[] = [
     {
-      label: "Operate",
+      label: "Work",
       items: [
-        { id: "home", label: "Home", href: "/console/home", icon: "home" },
         { id: "workspace", label: "AI Workspace", href: "/console/workspace", icon: "chat", badge: runningTasks || undefined },
+        { id: "home", label: "Home / Overview", href: "/console/home", icon: "home" },
         { id: "approvals", label: "Approvals", href: "/console/approvals", icon: "check", badge: approvalsPending || undefined, badgeTone: "warn" },
+      ],
+    },
+    {
+      label: "Industrial",
+      items: [
+        { id: "equipment", label: "Equipment", href: "/console/equipment", icon: "equipment" },
         { id: "simulation", label: "Simulation", href: "/console/simulation", icon: "gauge" },
+        { id: "work-orders", label: "Work Orders", href: "/console/work-orders", icon: "workorder" },
+        { id: "mat-overview", label: "Materials & Spares", href: "/console/materials", icon: "layers" },
+        { id: "insights", label: "Economics & Insights", href: "/console/insights", icon: "insights" },
       ],
     },
     {
       label: "Knowledge",
       items: [
         { id: "documents", label: "Documents", href: "/console/documents", icon: "doc" },
-        { id: "knowledge", label: "Knowledge Graph", href: "/console/knowledge", icon: "graph" },
+        { id: "knowledge", label: "Industrial Memory", href: "/console/knowledge", icon: "graph" },
         { id: "history", label: "Operational History", href: "/console/history", icon: "history" },
       ],
     },
     {
-      label: "Plant",
-      items: [
-        { id: "equipment", label: "Equipment", href: "/console/equipment", icon: "equipment" },
-        { id: "work-orders", label: "Work Orders", href: "/console/work-orders", icon: "workorder" },
-        { id: "insights", label: "Insights", href: "/console/insights", icon: "insights" },
-      ],
-    },
-    {
-      label: "Materials",
-      items: [
-        { id: "mat-overview", label: "Materials Overview", href: "/console/materials", icon: "layers" },
-        { id: "mat-inventory", label: "Inventory", href: "/console/materials/inventory", icon: "database" },
-        { id: "mat-spares", label: "Maintenance Spares", href: "/console/materials/spares", icon: "wrench" },
-        { id: "mat-production", label: "Production", href: "/console/materials/production", icon: "insights" },
-        { id: "mat-prices", label: "Price History", href: "/console/materials/price-history", icon: "pulse" },
-        { id: "mat-suppliers", label: "Suppliers", href: "/console/materials/suppliers", icon: "globe" },
-        { id: "mat-materials", label: "Materials Register", href: "/console/materials/register", icon: "file" },
-      ],
-    },
-    {
-      // The security surface, its own group rather than one flat row in
-      // "System". Both children read from the same backend security routes and
-      // both stay visible to every console role: a posture an operator cannot
-      // open is a posture that is not being watched.
       label: "Security",
       items: [
-        { id: "sovereignty", label: "Sovereignty", href: "/console/sovereignty", icon: "shield" },
-        {
-          id: "confidentiality",
-          label: "Confidentiality",
-          href: "/console/security/confidentiality",
-          icon: "lock",
-        },
+        { id: "sovereignty", label: "Sovereignty Control", href: "/console/sovereignty", icon: "shield" },
+        { id: "confidentiality", label: "Confidentiality Architecture", href: "/console/security/confidentiality", icon: "lock" },
       ],
     },
     {
       label: "System",
       items: [
-        { id: "admin", label: "Admin", href: "/console/admin", icon: "admin" },
+        { id: "admin", label: "Admin & Settings", href: "/console/admin", icon: "admin" },
       ],
     },
   ];

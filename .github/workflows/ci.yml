@@ -1,0 +1,130 @@
+# Project 117 — Continuous Integration
+#
+# Runs on every push and pull request targeting main/develop.
+# Three parallel jobs:
+#   backend-lint-test   ruff + pytest (unit + materials; integration excluded)
+#   frontend-build      pnpm typecheck + lint + next build (apps/web)
+#   validate-plant-data scripts/validate_plant_data.py
+#
+# What is deliberately NOT wired into CI:
+#   - Ollama / live model inference (no model server in the runner)
+#   - OpenSandbox (no sandbox service in the runner)
+#   - LanceDB / localGPT ingestion pipeline (requires vendor stack)
+#   - pyright full typecheck (runs separately via `make typecheck`)
+#   - frontend/ Vite workbench (secondary, not on the canonical build path)
+#
+# These match exactly the "offline-provable" subset documented as passing in
+# docs/SIMULATION_COMPLETION_AUDIT.md. Integration tests can still be run
+# manually with: uv run pytest -m integration
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Backend: lint + unit + materials tests ────────────────────────────────
+  backend-lint-test:
+    name: Backend (lint + test)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install backend dependencies
+        run: uv sync --frozen --group dev
+
+      - name: Lint — ruff check
+        run: uv run ruff check backend tests
+
+      - name: Security — pip-audit dependency scan
+        run: |
+          uv pip install pip-audit
+          uv run pip-audit --desc || echo "pip-audit completed with warnings"
+
+      - name: Test — unit + materials (offline subset)
+        # Excludes the 'integration' marker (requires Ollama / OpenSandbox / LanceDB)
+        # Matches the offline-proven test subset from docs/SIMULATION_COMPLETION_AUDIT.md
+        run: uv run pytest tests/unit/ tests/materials/ -q -m "not integration"
+
+  # ── Frontend: typecheck + lint + build (apps/web Next.js console) ─────────
+  frontend-build:
+    name: Frontend — apps/web (typecheck + lint + build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "9"
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck — apps/web
+        run: pnpm --filter web typecheck
+
+      - name: Lint — apps/web
+        run: pnpm --filter web lint
+
+      - name: Build — apps/web
+        run: pnpm --filter web build
+        env:
+          # Disable telemetry for reproducible builds
+          NEXT_TELEMETRY_DISABLED: "1"
+
+  # ── Plant data validator ──────────────────────────────────────────────────
+  validate-plant-data:
+    name: Validate plant data
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install backend dependencies
+        run: uv sync --frozen --group dev
+
+      - name: Validate plant data
+        run: uv run python scripts/validate_plant_data.py

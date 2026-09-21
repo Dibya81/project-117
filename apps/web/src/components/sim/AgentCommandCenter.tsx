@@ -259,9 +259,34 @@ export function AgentCommandCenter({
             <StatusDot state="ok" />
             <strong style={{ fontSize: 12.5, color: "var(--ok)" }}>Incident resolved — verified</strong>
           </div>
-          <p className="cs-mono cs-dim" style={{ fontSize: 10, margin: "8px 0 0" }}>
-            artifact incident_{incident.id.toLowerCase()}.pdf · audit recorded · {elapsed(incident.created_at, incident.resolved_at ?? now)} total
+          <div style={{ margin: "8px 0 6px", display: "flex", alignItems: "center", gap: 6 }}>
+            <Tag tone="ok">Incident Report Ready</Tag>
+            <span className="cs-mono cs-dim" style={{ fontSize: 9.5 }}>
+              incident_{incident.id.toLowerCase()}.pdf
+            </span>
+          </div>
+          <p className="cs-mono cs-dim" style={{ fontSize: 10, margin: "0 0 10px" }}>
+            audit recorded · {elapsed(incident.created_at, incident.resolved_at ?? now)} total response time
           </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <a
+              href={`/api/simulation/plants/${incident.plant_id ?? "plant-refinery-01"}/incidents/${incident.id}/report.pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn--ghost"
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none", fontSize: 11, padding: "6px 12px" }}
+            >
+              <Icon name="eye" size={12} /> View Report
+            </a>
+            <a
+              href={`/api/simulation/plants/${incident.plant_id ?? "plant-refinery-01"}/incidents/${incident.id}/report.pdf`}
+              download={`incident_${incident.id.toLowerCase()}.pdf`}
+              className="btn btn--primary"
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none", fontSize: 11, padding: "6px 12px" }}
+            >
+              <Icon name="doc" size={12} /> Download PDF
+            </a>
+          </div>
         </div>
       )}
     </div>

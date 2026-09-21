@@ -74,19 +74,35 @@ class TokenBucket:
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Token-bucket limiter keyed by authenticated user, else client address."""
 
-    def __init__(self, app, *, per_minute: int | None = None, burst: int | None = None) -> None:
+    def __init__(
+        self,
+        app,
+        *,
+        per_minute: int | None = None,
+        burst: int | None = None,
+        workers: int | None = None,
+    ) -> None:
         super().__init__(app)
         self.per_minute = (
             per_minute if per_minute is not None else _int_env("P117_RATE_LIMIT_PER_MINUTE", 0)
         )
         self.burst = burst if burst is not None else _int_env("P117_RATE_LIMIT_BURST", self.per_minute)
+        self.workers = workers if workers is not None else _int_env("P117_WORKERS", 1)
+        if self.enabled and self.workers > 1:
+            raise RuntimeError(
+                f"Multi-worker configuration (workers={self.workers}) with in-process rate "
+                f"limiting (per_minute={self.per_minute}) is unsupported. In-process token "
+                "buckets do not share state across workers. Either set P117_RATE_LIMIT_PER_MINUTE=0 "
+                "or deploy with a single worker."
+            )
         self._buckets: dict[str, TokenBucket] = {}
         self._lock = threading.Lock()
         if self.enabled:
             logger.info(
-                "rate limiting enabled: %d req/min per caller (burst %d, per process)",
+                "rate limiting enabled: %d req/min per caller (burst %d, per process, %d worker(s))",
                 self.per_minute,
                 self.burst or self.per_minute,
+                self.workers,
             )
 
     @property

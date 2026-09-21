@@ -20,13 +20,21 @@ Header               Meaning
 ===================  ===============================================
 X-P117-Api-Key       Shared secret. Required when auth is required.
 X-P117-User          Caller identity to attribute audit rows to.
-X-P117-Roles         Comma-separated roles from ``rbac.ROLE_PERMISSIONS``.
+X-P117-Roles         Comma-separated roles (ANONYMOUS PATH ONLY).
+                     Ignored for authenticated API-key callers;
+                     use P117_AUTH_ROLES to control their roles.
 ===================  ===============================================
 
 The API key is compared with :func:`hmac.compare_digest` so a timing attack
 cannot narrow it down one byte at a time. A wrong key is always rejected, even
 when auth is not required — "optional auth" means anonymous is allowed, not
 that a bad credential is quietly ignored.
+
+Security: authenticated callers receive exactly the roles configured in
+``P117_AUTH_ROLES`` (default: operator). The client-supplied ``X-P117-Roles``
+header is *ignored* for the authenticated path so no key holder can self-
+escalate to admin. Anonymous callers are separately capped by
+``ANONYMOUS_MAX_ROLES``. Both gates are independent; both are always active.
 """
 
 from __future__ import annotations
@@ -88,9 +96,14 @@ def principal_from_request(request: Request, *, settings: Any = None) -> Princip
        which is the failure mode a missing key would otherwise produce.
     2. A caller-supplied key is *always* checked if a key is configured, even
        when auth is not required — a wrong key is refused, not ignored.
-    3. No key supplied and auth is not required: anonymous, capped at
+    3. Valid key supplied: the caller is authenticated and receives exactly the
+       roles from ``P117_AUTH_ROLES`` (server-side config). The
+       ``X-P117-Roles`` header is IGNORED for authenticated callers — roles
+       are bound to the credential, not declared by the request. This prevents
+       any key holder from self-escalating to admin by setting a header.
+    4. No key supplied and auth is not required: anonymous, capped at
        ``ANONYMOUS_MAX_ROLES`` (admin is never reachable anonymously).
-    4. No key supplied and auth is required: refused.
+    5. No key supplied and auth is required: refused.
     """
     settings = _settings_of(request, settings)
     auth_required = bool(getattr(settings, "auth_required", False))
@@ -104,7 +117,10 @@ def principal_from_request(request: Request, *, settings: Any = None) -> Princip
 
     supplied = _bearer(request.headers.get(API_KEY_HEADER) or request.headers.get("Authorization"))
     user = request.headers.get(USER_HEADER)
-    roles = split_roles(request.headers.get(ROLES_HEADER))
+    # Only read from the roles header on the anonymous path. For authenticated
+    # callers the header is read purely for audit purposes (DEBUG log below)
+    # but never used to set permissions.
+    header_roles = split_roles(request.headers.get(ROLES_HEADER))
 
     if supplied:
         # A mobile access token is a *person's* credential and is verified by
@@ -118,9 +134,20 @@ def principal_from_request(request: Request, *, settings: Any = None) -> Princip
             return resolve_mobile_principal(supplied, settings=settings)
         if not configured_key or not hmac.compare_digest(supplied, configured_key):
             raise AuthenticationError("the supplied API key is not valid")
+
+        # SECURITY: roles come from server-side config, never from the request
+        # header. Any X-P117-Roles value the caller sends is ignored here.
+        configured_roles: tuple[str, ...] = getattr(settings, "auth_roles", None) or (DEFAULT_ROLE,)
+        if header_roles and set(header_roles) != set(configured_roles):
+            logger.debug(
+                "authenticated caller supplied X-P117-Roles=%r but server config grants %r; "
+                "header-supplied value ignored (CRIT-1 mitigation)",
+                list(header_roles),
+                list(configured_roles),
+            )
         return Principal(
             user=user or "authenticated",
-            roles=roles or (DEFAULT_ROLE,),
+            roles=configured_roles,
             authenticated=True,
         )
 
@@ -129,7 +156,7 @@ def principal_from_request(request: Request, *, settings: Any = None) -> Princip
 
     # Anonymous, local-trust-boundary path. Capped so an anonymous caller can
     # never reach admin even if it claims to.
-    anonymous_roles = tuple(role for role in (roles or (DEFAULT_ROLE,)) if role in ANONYMOUS_MAX_ROLES)
+    anonymous_roles = tuple(role for role in (header_roles or (DEFAULT_ROLE,)) if role in ANONYMOUS_MAX_ROLES)
     return Principal(
         user=user or "local",
         roles=anonymous_roles or (DEFAULT_ROLE,),
@@ -164,7 +191,9 @@ def require_permission(permission: Any) -> Callable[[Request], Principal]:
 
 def describe(settings: Any) -> dict[str, Any]:
     """Diagnostics for ``GET /health``. Never includes the key itself."""
+    configured_roles: tuple[str, ...] = getattr(settings, "auth_roles", None) or (DEFAULT_ROLE,)
     return {
         "auth_required": bool(getattr(settings, "auth_required", False)),
         "api_key_configured": bool(getattr(settings, "auth_api_key", "")),
+        "authenticated_roles": list(configured_roles),
     }

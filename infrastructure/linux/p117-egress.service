@@ -1,0 +1,13 @@
+[Unit]
+Description=Project 117 Host-Level Sovereign Egress Lockdown
+After=network.target network-pre.target
+Before=docker.service containerd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/project117/infrastructure/linux/egress-rules.sh
+ExecStop=/usr/sbin/nft flush table inet project117_egress
+
+[Install]
+WantedBy=multi-user.target

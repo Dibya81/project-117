@@ -127,7 +127,13 @@ class LocalGPTIndexer:
             raise ValueError("document_id must not contain single quotes")
         return int(table.count_rows(filter=f"document_id = '{document_id}'"))
 
-    def chunks(self, document_id: str | None = None, *, limit: int = 200) -> list[dict[str, Any]]:
+    def chunks(
+        self,
+        document_id: str | None = None,
+        *,
+        limit: int = 200,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
         """Read stored chunk text back out of the index table.
 
         After parsing, this table is the only place a document's text exists —
@@ -152,7 +158,10 @@ class LocalGPTIndexer:
             if "'" in document_id:
                 raise ValueError("document_id must not contain single quotes")
             query = query.where(f"document_id = '{document_id}'")
-        rows = query.limit(max(1, limit)).to_arrow().to_pylist()
+        clamped_offset = max(0, offset)
+        clamped_limit = max(1, limit)
+        all_rows = query.limit(clamped_offset + clamped_limit).to_arrow().to_pylist()
+        rows = all_rows[clamped_offset : clamped_offset + clamped_limit]
 
         out: list[dict[str, Any]] = []
         for row in rows:

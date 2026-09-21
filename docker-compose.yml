@@ -33,7 +33,9 @@ services:
   # Local model serving for the core inference path. Optional in Phase 1
   # (the backend health check degrades gracefully without it).
   ollama:
-    image: ollama/ollama:latest
+    # Pinned to stable release tag. In sovereign air-gapped environments, pin
+    # by sha256 digest once resolved against registry (e.g. ollama/ollama:0.5.11@sha256:...).
+    image: ollama/ollama:0.5.11
     profiles: ["ollama"]
     ports:
       - "11434:11434"
@@ -45,12 +47,19 @@ services:
       timeout: 5s
       retries: 5
 
-  # NOTE(phase 9): OpenSandbox server (isolated code execution) will be added
-  # here once the sandbox adapter lands. Its control plane talks to the Docker
-  # socket and must run with a restricted user + default-deny egress policy.
-  # opensandbox:
-  #   image: ...   # pinned by digest
-  #   ports: ["8080:8080"]
+  # OpenSandbox server (isolated code execution control plane).
+  # Enforces default-deny egress and per-container resource bounds.
+  opensandbox:
+    image: opensandbox/server:0.1.0
+    profiles: ["sandbox"]
+    ports:
+      - "8080:8080"
+    environment:
+      OPEN_SANDBOX_DEFAULT_NETWORK_POLICY: deny
+      OPEN_SANDBOX_API_KEY: ${P117_SANDBOX_API_KEY:-dev-sandbox-key}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
 
 volumes:
   project117-data:

@@ -30,7 +30,14 @@ router = APIRouter(prefix="/api/documents", tags=["documents"])
 
 
 @router.post("/upload", status_code=201)
-async def upload_documents(request: Request, files: list[UploadFile] = File(...)) -> dict:
+def upload_documents(request: Request, files: list[UploadFile] = File(...)) -> dict:
+    """Accept one or more uploaded files and store them.
+
+    Declared as plain ``def`` (not ``async def``) so FastAPI offloads it to a
+    worker thread automatically, matching the other handlers in this file.
+    The body calls ``documents.save_upload`` which does synchronous disk I/O and
+    a SQLAlchemy commit — those must NOT run on the async event loop.
+    """
     documents = get_documents(request)
     saved: list[Document] = []
     for file in files:
@@ -44,10 +51,22 @@ async def upload_documents(request: Request, files: list[UploadFile] = File(...)
 
 
 @router.get("")
-def list_documents(request: Request) -> dict:
+def list_documents(
+    request: Request,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict:
+    clamped_limit = max(1, min(limit, 500))
+    clamped_offset = max(0, offset)
     documents = get_documents(request)
-    rows = documents.list()
-    return {"total": len(rows), "documents": [_out(d) for d in rows]}
+    total = documents.count()
+    rows = documents.list(limit=clamped_limit, offset=clamped_offset)
+    return {
+        "total": total,
+        "limit": clamped_limit,
+        "offset": clamped_offset,
+        "documents": [_out(d) for d in rows],
+    }
 
 
 @router.get("/{document_id}")
@@ -79,7 +98,12 @@ def delete_document(document_id: str, request: Request) -> dict:
 
 
 @router.get("/{document_id}/chunks")
-def document_chunks(document_id: str, request: Request, limit: int = 200) -> dict:
+def document_chunks(
+    document_id: str,
+    request: Request,
+    limit: int = 200,
+    offset: int = 0,
+) -> dict:
     """The parsed text of a document, in reading order.
 
     After parsing, the vector table is the only place this text exists — the
@@ -93,12 +117,16 @@ def document_chunks(document_id: str, request: Request, limit: int = 200) -> dic
     except DocumentNotFoundError:
         raise NotFound(f"document '{document_id}' does not exist") from None
 
+    clamped_limit = max(1, min(limit, 1000))
+    clamped_offset = max(0, offset)
     ingestion = get_ingestion(request)
-    chunks = ingestion.chunks(document_id, limit=max(1, min(limit, 1000)))
+    chunks = ingestion.chunks(document_id, limit=clamped_limit, offset=clamped_offset)
     return {
         "documentId": document.id,
         "filename": document.filename,
         "chunkCount": len(chunks),
+        "limit": clamped_limit,
+        "offset": clamped_offset,
         "chunks": chunks,
     }
 
