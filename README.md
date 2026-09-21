@@ -45,14 +45,11 @@ It is not a chatbot over documents, and it is not a dashboard. The unit of outpu
 
 ---
 
-## How It Works
+## System Architecture
 
-```
-Confidential Data → Local Processing → Knowledge → Model Router
-→ Agents → Tools → Verification → Industrial Action
-```
+![Project 117 System Architecture](docs/assets/system-architecture.png)
 
----
+*End-to-end sovereign architecture: Data ingestion, vector/graph indexing, multi-agent orchestration, digital twin simulation, and tamper-evident audit logging.*
 
 ---
 
