@@ -44,6 +44,7 @@ class OCRExtractor:
 
         try:
             from PIL import Image
+
             img = Image.open(path)
             return self.extract_from_image(img)
         except Exception as exc:
@@ -53,6 +54,7 @@ class OCRExtractor:
     def extract_from_bytes(self, data: bytes) -> OCRResult:
         try:
             from PIL import Image
+
             img = Image.open(io.BytesIO(data))
             return self.extract_from_image(img)
         except Exception as exc:
@@ -72,6 +74,7 @@ class OCRExtractor:
         # Strategy 1: Pytesseract if installed and tesseract executable is found
         try:
             import pytesseract
+
             # Test if tesseract is accessible
             text = pytesseract.image_to_string(
                 image,

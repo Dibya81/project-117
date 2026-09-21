@@ -37,8 +37,12 @@ class SavePlantRequest(BaseModel):
 def _svc() -> SimulationService:
     # Wired in main.py at startup via attach().
     from backend.simulation import api as _self
+
     if _self.service is None:
-        raise HTTPException(status_code=503, detail={"code": "simulation_unavailable", "message": "no simulation service attached"})
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "simulation_unavailable", "message": "no simulation service attached"},
+        )
     return _self.service
 
 
@@ -202,7 +206,9 @@ def frame(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
 
 
 @router.get("/plants/{plant_id}/stream")
-async def stream(plant_id: str, after: int = 0, principal: Principal = Depends(get_principal)) -> StreamingResponse:
+async def stream(
+    plant_id: str, after: int = 0, principal: Principal = Depends(get_principal)
+) -> StreamingResponse:
     svc = _svc()
     try:
         svc.runtime(plant_id)
@@ -229,7 +235,9 @@ def incidents(plant_id: str, principal: Principal = Depends(get_principal)) -> d
 
 
 @router.get("/plants/{plant_id}/incidents/{incident_id}/tasks")
-def incident_tasks(plant_id: str, incident_id: str, principal: Principal = Depends(get_principal)) -> dict:
+def incident_tasks(
+    plant_id: str, incident_id: str, principal: Principal = Depends(get_principal)
+) -> dict:
     """The incident's task DAG, or an empty one while it is still being built.
 
     ``incident.created`` is emitted before the pipeline finishes assembling the
@@ -252,7 +260,12 @@ def incident_tasks(plant_id: str, incident_id: str, principal: Principal = Depen
 
 
 @router.post("/plants/{plant_id}/equipment/{equipment_id}/failure")
-def inject(plant_id: str, equipment_id: str, body: InjectRequest, principal: Principal = Depends(get_principal)) -> dict:
+def inject(
+    plant_id: str,
+    equipment_id: str,
+    body: InjectRequest,
+    principal: Principal = Depends(get_principal),
+) -> dict:
     svc = _svc()
     try:
         return svc.inject_failure(plant_id, equipment_id, body.mode_id)
@@ -261,7 +274,9 @@ def inject(plant_id: str, equipment_id: str, body: InjectRequest, principal: Pri
 
 
 @router.post("/plants/{plant_id}/equipment/{equipment_id}/disable")
-def disable(plant_id: str, equipment_id: str, principal: Principal = Depends(get_principal)) -> dict:
+def disable(
+    plant_id: str, equipment_id: str, principal: Principal = Depends(get_principal)
+) -> dict:
     svc = _svc()
     svc.disable_equipment(plant_id, equipment_id)
     return {"equipment_id": equipment_id, "state": "disabled"}
@@ -275,7 +290,9 @@ def remove(plant_id: str, equipment_id: str, principal: Principal = Depends(get_
 
 
 @router.post("/plants/{plant_id}/sensors/{sensor_id}/disable")
-def disable_sensor(plant_id: str, sensor_id: str, principal: Principal = Depends(get_principal)) -> dict:
+def disable_sensor(
+    plant_id: str, sensor_id: str, principal: Principal = Depends(get_principal)
+) -> dict:
     svc = _svc()
     try:
         return svc.disable_sensor(plant_id, sensor_id)
@@ -284,7 +301,9 @@ def disable_sensor(plant_id: str, sensor_id: str, principal: Principal = Depends
 
 
 @router.post("/plants/{plant_id}/sensors/{sensor_id}/remove")
-def remove_sensor(plant_id: str, sensor_id: str, principal: Principal = Depends(get_principal)) -> dict:
+def remove_sensor(
+    plant_id: str, sensor_id: str, principal: Principal = Depends(get_principal)
+) -> dict:
     svc = _svc()
     try:
         return svc.remove_sensor(plant_id, sensor_id)
@@ -293,7 +312,9 @@ def remove_sensor(plant_id: str, sensor_id: str, principal: Principal = Depends(
 
 
 @router.post("/plants/{plant_id}/sensors/{sensor_id}/restore")
-def restore_sensor(plant_id: str, sensor_id: str, principal: Principal = Depends(get_principal)) -> dict:
+def restore_sensor(
+    plant_id: str, sensor_id: str, principal: Principal = Depends(get_principal)
+) -> dict:
     svc = _svc()
     try:
         svc.restore_sensor(plant_id, sensor_id)
@@ -303,7 +324,9 @@ def restore_sensor(plant_id: str, sensor_id: str, principal: Principal = Depends
 
 
 @router.post("/plants/{plant_id}/lines/{connection_id}/block")
-def block_line(plant_id: str, connection_id: str, principal: Principal = Depends(get_principal)) -> dict:
+def block_line(
+    plant_id: str, connection_id: str, principal: Principal = Depends(get_principal)
+) -> dict:
     """Block a process line. Starves everything downstream on the next tick."""
     svc = _svc()
     try:
@@ -313,7 +336,9 @@ def block_line(plant_id: str, connection_id: str, principal: Principal = Depends
 
 
 @router.post("/plants/{plant_id}/lines/{connection_id}/restore")
-def restore_line(plant_id: str, connection_id: str, principal: Principal = Depends(get_principal)) -> dict:
+def restore_line(
+    plant_id: str, connection_id: str, principal: Principal = Depends(get_principal)
+) -> dict:
     svc = _svc()
     try:
         return svc.restore_line(plant_id, connection_id)
@@ -358,13 +383,17 @@ def reset(plant_id: str, principal: Principal = Depends(get_principal)) -> dict:
 
 
 @router.post("/plants/{plant_id}/incidents/{incident_id}/decision")
-async def decide(plant_id: str, incident_id: str, body: DecisionRequest, principal: Principal = Depends(get_principal)) -> dict:
+async def decide(
+    plant_id: str,
+    incident_id: str,
+    body: DecisionRequest,
+    principal: Principal = Depends(get_principal),
+) -> dict:
     svc = _svc()
     try:
         return await svc.decide_async(plant_id, incident_id, body.approved)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-
 
 
 @router.get("/plants/{plant_id}/alarms")

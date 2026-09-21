@@ -174,16 +174,12 @@ class GraphBuilder:
             if not number:
                 continue
             self.graph.add_entity(
-                ent.work_order(
-                    str(number), status=row.get("status"), priority=row.get("priority")
-                )
+                ent.work_order(str(number), status=row.get("status"), priority=row.get("priority"))
             )
             if tag:
                 target = ent.node_id("equipment", str(tag))
                 if target in self.graph.nodes:
-                    self.graph.link(
-                        ent.node_id("work_order", str(number)), "raised_for", target
-                    )
+                    self.graph.link(ent.node_id("work_order", str(number)), "raised_for", target)
         return self
 
     def add_telemetry(self, series: Iterable[dict[str, Any]]) -> "GraphBuilder":

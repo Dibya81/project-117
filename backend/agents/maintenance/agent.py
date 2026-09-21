@@ -79,10 +79,7 @@ class MaintenanceAgent(BaseAgent):
         arguments = dict(arguments or {})
         equipment = str(arguments.get("equipment") or "").strip()
         focus = f"Equipment under investigation: {equipment}\n\n" if equipment else ""
-        user = (
-            f"{focus}Evidence:\n{self.evidence_text(context)}\n\n"
-            f"Maintenance request: {task}"
-        )
+        user = f"{focus}Evidence:\n{self.evidence_text(context)}\n\nMaintenance request: {task}"
         return [
             ChatMessage(role="system", content=self.system_prompt),
             ChatMessage(role="user", content=user[:60_000]),

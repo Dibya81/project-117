@@ -141,9 +141,7 @@ class OpenAICompatibleProvider:
                 ) as response:
                     if response.status_code != 200:
                         await response.aread()
-                        raise ProviderHttpError(
-                            f"chat stream failed: http {response.status_code}"
-                        )
+                        raise ProviderHttpError(f"chat stream failed: http {response.status_code}")
                     async for line in response.aiter_lines():
                         line = line.strip()
                         if not line.startswith("data:"):
@@ -272,7 +270,5 @@ class OpenAICompatibleProvider:
                 f"cannot reach {self._client.base_url}: {exc.__class__.__name__}"
             ) from exc
         if response.status_code != 200:
-            raise ProviderHttpError(
-                f"POST {path} failed: http {response.status_code}"
-            )
+            raise ProviderHttpError(f"POST {path} failed: http {response.status_code}")
         return response.json()

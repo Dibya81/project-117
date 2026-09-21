@@ -119,9 +119,7 @@ def require_mobile_permission(principal: Principal, permission: str) -> None:
     if permission in granted:
         return
     role = principal.extra.get("mobile_role") or "unknown"
-    raise AuthorizationError(
-        f"mobile role '{role}' lacks permission '{permission}'"
-    )
+    raise AuthorizationError(f"mobile role '{role}' lacks permission '{permission}'")
 
 
 # ─── Auth payloads ────────────────────────────────────────────────────────────

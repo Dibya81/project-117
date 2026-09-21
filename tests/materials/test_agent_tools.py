@@ -74,7 +74,11 @@ class TestMissingStore:
     def test_a_deployment_without_the_domain_refuses_clearly(self):
         ctx = ToolContext(user="t", roles=["operator"], materials=None)
         with pytest.raises(ToolUnavailable) as exc:
-            run(tool_for("get_material").run(tool_for("get_material").arguments_model(material_id="X"), ctx))
+            run(
+                tool_for("get_material").run(
+                    tool_for("get_material").arguments_model(material_id="X"), ctx
+                )
+            )
         assert "materials domain is not available" in str(exc.value)
 
 
@@ -83,7 +87,8 @@ class TestReadsMatchTheDomain:
         expected = svc.inventory_status(store, "MECH-SEAL-P1001")
         result = run(
             tool_for("get_inventory_status").run(
-                tool_for("get_inventory_status").arguments_model(material_id="MECH-SEAL-P1001"), context
+                tool_for("get_inventory_status").arguments_model(material_id="MECH-SEAL-P1001"),
+                context,
             )
         )
         assert result.status == "ok"
@@ -117,14 +122,20 @@ class TestReadsMatchTheDomain:
 
     def test_price_tool_returns_the_stored_series(self, store, context):
         tool = tool_for("search_price_history")
-        result = run(tool.run(tool.arguments_model(item_id="MECH-SEAL-P1001", window_days=30), context))
+        result = run(
+            tool.run(tool.arguments_model(item_id="MECH-SEAL-P1001", window_days=30), context)
+        )
         assert result.output["current"]["price"] > 0
         assert result.output["points"] > 0
         assert result.output["data_status"] in {"SYNTHETIC_DEMO", "MANUAL"}
 
     def test_equipment_requirement_tool_ranks_the_matching_mode_first(self, context):
         tool = tool_for("get_equipment_material_requirements")
-        result = run(tool.run(tool.arguments_model(equipment_id="e-P-1001", failure_mode="seal_leak"), context))
+        result = run(
+            tool.run(
+                tool.arguments_model(equipment_id="e-P-1001", failure_mode="seal_leak"), context
+            )
+        )
         assert result.output["requirements"][0]["mode_match"] is True
 
     def test_forecast_tool_returns_a_limitation_rather_than_a_guess(self, empty_store):
@@ -132,13 +143,20 @@ class TestReadsMatchTheDomain:
 
         empty_store.upsert_material(
             Material(
-                id="THIN", name="thin", material_class=MaterialClass.MAINTENANCE_SPARE, unit="EA",
+                id="THIN",
+                name="thin",
+                material_class=MaterialClass.MAINTENANCE_SPARE,
+                unit="EA",
                 provenance=Provenance.synthetic("test"),
             )
         )
         empty_store.add_balance(
             InventoryBalance(
-                id="B", material_id="THIN", location="W", quantity=5, unit="EA",
+                id="B",
+                material_id="THIN",
+                location="W",
+                quantity=5,
+                unit="EA",
                 provenance=Provenance.synthetic("test"),
             )
         )
@@ -168,7 +186,12 @@ class TestRecommendationTool:
     def test_calculate_requirement_tool_quantifies_and_prices(self, context):
         tool = tool_for("calculate_material_requirement")
         result = run(
-            tool.run(tool.arguments_model(equipment_id="e-P-1001", failure_mode="seal_leak", multiplier=2.0), context)
+            tool.run(
+                tool.arguments_model(
+                    equipment_id="e-P-1001", failure_mode="seal_leak", multiplier=2.0
+                ),
+                context,
+            )
         )
         line = result.output["lines"][0]
         assert line["required_quantity"] == 4.0  # 2 required × multiplier 2
@@ -188,11 +211,20 @@ class TestKillerWorkflowEndToEnd:
     def test_the_whole_chain_runs_on_real_domain_calls(self, store, context):
         order = [
             ("get_material", {"material_id": "MECH-SEAL-P1001"}),
-            ("get_equipment_material_requirements", {"equipment_id": "e-P-1001", "failure_mode": "seal_leak"}),
+            (
+                "get_equipment_material_requirements",
+                {"equipment_id": "e-P-1001", "failure_mode": "seal_leak"},
+            ),
             ("get_inventory_status", {"material_id": "MECH-SEAL-P1001"}),
-            ("get_maintenance_requirements", {"equipment_id": "e-P-1001", "failure_mode": "seal_leak"}),
+            (
+                "get_maintenance_requirements",
+                {"equipment_id": "e-P-1001", "failure_mode": "seal_leak"},
+            ),
             ("search_price_history", {"item_id": "MECH-SEAL-P1001", "window_days": 30}),
-            ("calculate_material_requirement", {"equipment_id": "e-P-1001", "failure_mode": "seal_leak"}),
+            (
+                "calculate_material_requirement",
+                {"equipment_id": "e-P-1001", "failure_mode": "seal_leak"},
+            ),
             ("forecast_inventory", {"material_id": "MECH-SEAL-P1001"}),
             ("generate_procurement_recommendation", {"equipment_id": "e-P-1001"}),
         ]

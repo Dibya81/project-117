@@ -87,7 +87,11 @@ class TestFindingsWaitForTheAgents:
         _decide(svc, out["incident"]["id"])
         evs = svc.runtime("refinery").events
         decision_seq = next(e.seq for e in evs if e.type == "response.decision")
-        for event in ("response.failover_completed", "response.root_cause_identified", "response.prediction"):
+        for event in (
+            "response.failover_completed",
+            "response.root_cause_identified",
+            "response.prediction",
+        ):
             seq = next(e.seq for e in evs if e.type == event)
             assert seq > decision_seq, f"{event} (#{seq}) preceded the decision (#{decision_seq})"
 
@@ -217,7 +221,10 @@ class TestDepartmentResolution:
     def test_department_is_the_owning_area(self, svc):
         engine = svc.runtime("refinery").engine
         resolved = resolve_department(engine, "e-P-1042")
-        assert resolved == {"department": "Crude Distillation", "department_source": "plant_area.name"}
+        assert resolved == {
+            "department": "Crude Distillation",
+            "department_source": "plant_area.name",
+        }
 
     def test_unknown_equipment_falls_back_honestly(self, svc):
         resolved = resolve_department(svc.runtime("refinery").engine, "e-nope")

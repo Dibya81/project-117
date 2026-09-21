@@ -106,9 +106,7 @@ class AgentRoster:
                 logger.warning("cannot register %s: %s", cls, exc)
         self.registry = registry
         names = set(registry.names())
-        self.available_roles = {
-            role: name for role, name in ROLE_TO_AGENT.items() if name in names
-        }
+        self.available_roles = {role: name for role, name in ROLE_TO_AGENT.items() if name in names}
         self.reason = "registry loaded"
 
     @property
@@ -144,8 +142,12 @@ class AgentRoster:
         agent_name = ROLE_TO_AGENT.get(role, role)
         if not self.loaded or role not in self.available_roles:
             return AgentDispatchResult(
-                role=role, agent_name=agent_name, runtime="deterministic-evidence",
-                available=False, text=deterministic_result, tools_used=tools,
+                role=role,
+                agent_name=agent_name,
+                runtime="deterministic-evidence",
+                available=False,
+                text=deterministic_result,
+                tools_used=tools,
                 error=self.reason or "agent not registered",
             )
         try:
@@ -163,8 +165,12 @@ class AgentRoster:
             # Model/router/tooling unavailable, or the agent refused. Both are
             # reported; neither is disguised as a successful model run.
             return AgentDispatchResult(
-                role=role, agent_name=agent_name, runtime="deterministic-evidence",
-                available=False, text=deterministic_result, tools_used=tools,
+                role=role,
+                agent_name=agent_name,
+                runtime="deterministic-evidence",
+                available=False,
+                text=deterministic_result,
+                tools_used=tools,
                 error=f"{exc.__class__.__name__}: {exc}",
             )
         payload = result.to_dict() if hasattr(result, "to_dict") else dict(result)

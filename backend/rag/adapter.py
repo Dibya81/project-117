@@ -198,9 +198,7 @@ class LocalGPTRetriever:
         # cast: select_embedder returns the QwenEmbedder | OllamaEmbedder union;
         # MultiVectorRetriever annotates the narrower QwenEmbedder, but both
         # satisfy the same EmbeddingModel protocol upstream relies on.
-        embedder = cast(
-            "QwenEmbedder", select_embedder(self._embedding_model, self._ollama_host)
-        )
+        embedder = cast("QwenEmbedder", select_embedder(self._embedding_model, self._ollama_host))
         retriever = MultiVectorRetriever(
             LanceDBManager(db_path=self._db_path),
             embedder,

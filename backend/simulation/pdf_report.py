@@ -84,27 +84,37 @@ def generate_incident_report_pdf(incident_record: dict[str, Any]) -> bytes:
             conf = ev.get("confidence", 1.0)
             stype = ev.get("source_type", "telemetry")
             if cite:
-                text_lines.append(f"  * [{stype.upper()}] {cite} (confidence: {int(conf*100)}%)")
+                text_lines.append(f"  * [{stype.upper()}] {cite} (confidence: {int(conf * 100)}%)")
                 evidence_found = True
     if not evidence_found:
         text_lines.append("  * Real-time telemetry deviation observed at trigger timestamp.")
-        text_lines.append(f"  * Sim clock: T_start = {created_at:.1f}s, T_resolve = {resolved_at:.1f}s")
+        text_lines.append(
+            f"  * Sim clock: T_start = {created_at:.1f}s, T_resolve = {resolved_at:.1f}s"
+        )
 
-    text_lines.extend([
-        "",
-        "D. AI WORKFORCE MULTI-AGENT ANALYSIS",
-        "-" * 68,
-    ])
+    text_lines.extend(
+        [
+            "",
+            "D. AI WORKFORCE MULTI-AGENT ANALYSIS",
+            "-" * 68,
+        ]
+    )
 
     diag_task = next((t for t in tasks if t.get("agent") in ("data_analysis", "diagnostic")), None)
     ops_task = next((t for t in tasks if t.get("agent") in ("operations", "maintenance")), None)
     safety_task = next((t for t in tasks if t.get("agent") == "safety"), None)
 
     # Diagnostic
-    diag_res = diag_task.get("result", "Sensor deviation detected and isolated") if diag_task else "Telemetry anomaly analyzed."
+    diag_res = (
+        diag_task.get("result", "Sensor deviation detected and isolated")
+        if diag_task
+        else "Telemetry anomaly analyzed."
+    )
     text_lines.append(f"1. Diagnostic Agent: {diag_res}")
     if diag_task and diag_task.get("evidence"):
-        cites = [e.get("citation") or e.get("description") for e in diag_task.get("evidence", []) if e]
+        cites = [
+            e.get("citation") or e.get("description") for e in diag_task.get("evidence", []) if e
+        ]
         if cites:
             text_lines.append(f"   Evidence: {'; '.join(str(c) for c in cites[:2])}")
 
@@ -114,35 +124,51 @@ def generate_incident_report_pdf(incident_record: dict[str, Any]) -> bytes:
     block_list = reroute.get("block", [])
     restore_list = reroute.get("restore", [])
     ops_res = ops_task.get("result", "") if ops_task else ""
-    text_lines.append(f"2. Operations Agent: {ops_res or 'Formulated alternative bypass and redundant routing.'}")
-    text_lines.append(f"   Route Selection: {', '.join(route_list) if route_list else 'Redundant failover path'}")
-    text_lines.append(f"   Blocked Lines:   {', '.join(block_list) if block_list else 'Faulted segment'}")
-    text_lines.append(f"   Restored Lines:  {', '.join(restore_list) if restore_list else 'Bypass line'}")
+    text_lines.append(
+        f"2. Operations Agent: {ops_res or 'Formulated alternative bypass and redundant routing.'}"
+    )
+    text_lines.append(
+        f"   Route Selection: {', '.join(route_list) if route_list else 'Redundant failover path'}"
+    )
+    text_lines.append(
+        f"   Blocked Lines:   {', '.join(block_list) if block_list else 'Faulted segment'}"
+    )
+    text_lines.append(
+        f"   Restored Lines:  {', '.join(restore_list) if restore_list else 'Bypass line'}"
+    )
 
     # Safety
-    safety_res = safety_task.get("result", "Verification criteria satisfied") if safety_task else "Containment limits confirmed."
+    safety_res = (
+        safety_task.get("result", "Verification criteria satisfied")
+        if safety_task
+        else "Containment limits confirmed."
+    )
     text_lines.append(f"3. Safety Agent:     {safety_res}")
-    text_lines.append(f"   Verification:    {'PASSED - All thermal & pressure gates safe' if is_resolved else 'REJECTED - Constraints violated'}")
+    text_lines.append(
+        f"   Verification:    {'PASSED - All thermal & pressure gates safe' if is_resolved else 'REJECTED - Constraints violated'}"
+    )
 
-    text_lines.extend([
-        "",
-        "E. RECOVERY ACTION & PROCESS TOPOLOGY",
-        "-" * 68,
-        f"Faulted Path:     {origin_eq} -> Process Circuit [{', '.join(affected)}]",
-        f"Isolated Units:   {', '.join([origin_eq] + list(affected))}",
-        f"Bypass Activation: {', '.join(restore_list) if restore_list else 'Standard redundant bypass'}",
-        f"Flow Status:      {'Restored & normalized on alternative route' if is_resolved else 'Halted / Safe park state'}",
-        "",
-        "F. FINAL SIMULATION STATE",
-        "-" * 68,
-        f"Plant Health:     {'NORMAL (Flow stabilized)' if is_resolved else 'DEGRADED / ESCALATED'}",
-        f"Sensor {origin_sn}: {'DISABLED (Telemetry substituted via bypass)' if is_resolved else 'DISABLED'}",
-        f"Process Route:    {'ACTIVE (' + ', '.join(route_list) + ')' if route_list else 'PRIMARY WITH FAILOVER'}",
-        f"Operator Action:  {'Approved and executed' if approval.get('approved', True) else 'Pending / Rejected'}",
-        "",
-        "G. RECOMMENDATIONS",
-        "-" * 68,
-    ])
+    text_lines.extend(
+        [
+            "",
+            "E. RECOVERY ACTION & PROCESS TOPOLOGY",
+            "-" * 68,
+            f"Faulted Path:     {origin_eq} -> Process Circuit [{', '.join(affected)}]",
+            f"Isolated Units:   {', '.join([origin_eq] + list(affected))}",
+            f"Bypass Activation: {', '.join(restore_list) if restore_list else 'Standard redundant bypass'}",
+            f"Flow Status:      {'Restored & normalized on alternative route' if is_resolved else 'Halted / Safe park state'}",
+            "",
+            "F. FINAL SIMULATION STATE",
+            "-" * 68,
+            f"Plant Health:     {'NORMAL (Flow stabilized)' if is_resolved else 'DEGRADED / ESCALATED'}",
+            f"Sensor {origin_sn}: {'DISABLED (Telemetry substituted via bypass)' if is_resolved else 'DISABLED'}",
+            f"Process Route:    {'ACTIVE (' + ', '.join(route_list) + ')' if route_list else 'PRIMARY WITH FAILOVER'}",
+            f"Operator Action:  {'Approved and executed' if approval.get('approved', True) else 'Pending / Rejected'}",
+            "",
+            "G. RECOMMENDATIONS",
+            "-" * 68,
+        ]
+    )
 
     if findings:
         for f in findings:
@@ -150,18 +176,20 @@ def generate_incident_report_pdf(incident_record: dict[str, Any]) -> bytes:
     else:
         text_lines.append("  * No additional recommendation generated.")
 
-    text_lines.extend([
-        "",
-        "H. AUDIT TRAIL & CRYPTOGRAPHIC TRACEABILITY",
-        "-" * 68,
-        f"Incident ID:      {incident_id}",
-        f"Audit Events:     {len(audit_events)} cryptographically hash-linked log entries",
-        f"Execution ID:     {execution.get('id', 'EXEC-VERIFIED')}",
-        "Signing Algorithm: Ed25519 with SHA-256 Digest",
-        "Integrity Status: VERIFIED AGAINST REAL REFINERY TOPOLOGY",
-        "=" * 68,
-        "OFFICIAL PROJECT 117 AIR-GAPPED VERIFICATION DOCUMENT",
-    ])
+    text_lines.extend(
+        [
+            "",
+            "H. AUDIT TRAIL & CRYPTOGRAPHIC TRACEABILITY",
+            "-" * 68,
+            f"Incident ID:      {incident_id}",
+            f"Audit Events:     {len(audit_events)} cryptographically hash-linked log entries",
+            f"Execution ID:     {execution.get('id', 'EXEC-VERIFIED')}",
+            "Signing Algorithm: Ed25519 with SHA-256 Digest",
+            "Integrity Status: VERIFIED AGAINST REAL REFINERY TOPOLOGY",
+            "=" * 68,
+            "OFFICIAL PROJECT 117 AIR-GAPPED VERIFICATION DOCUMENT",
+        ]
+    )
 
     # Escape literal text for PDF 1.4 stream
     def escape_pdf(s: str) -> str:
@@ -208,8 +236,7 @@ def generate_incident_report_pdf(incident_record: dict[str, Any]) -> bytes:
         xref += f"{offset:010d} 00000 n \n".encode("latin1")
 
     trailer = (
-        f"trailer\n<< /Size {num_objects} /Root 1 0 R >>\n"
-        f"startxref\n{xref_offset}\n%%EOF\n"
+        f"trailer\n<< /Size {num_objects} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n"
     ).encode("latin1")
 
     return header + body + xref + trailer

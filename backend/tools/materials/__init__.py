@@ -73,13 +73,17 @@ def _envelope(result: dict[str, Any], *, note: str = "") -> dict[str, Any]:
 
 class MaterialIdArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    material_id: str = Field(description="Stable material id, e.g. RM-CRUDE-LIGHT or MECH-SEAL-P1001.")
+    material_id: str = Field(
+        description="Stable material id, e.g. RM-CRUDE-LIGHT or MECH-SEAL-P1001."
+    )
 
 
 class InventoryArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     material_id: str = Field(description="Material id to read the current position for.")
-    window_days: int = Field(default=30, ge=1, le=365, description="Consumption window used for days of cover.")
+    window_days: int = Field(
+        default=30, ge=1, le=365, description="Consumption window used for days of cover."
+    )
 
 
 class MovementsArgs(BaseModel):
@@ -96,8 +100,12 @@ class MovementsArgs(BaseModel):
 class ProductionArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     period: str = Field(default="DAILY", description="DAILY, WEEKLY or MONTHLY.")
-    product_id: str | None = Field(default=None, description="Optional finished-product material id.")
-    process_unit_id: str | None = Field(default=None, description="Optional plant asset id, e.g. e-COL-1044.")
+    product_id: str | None = Field(
+        default=None, description="Optional finished-product material id."
+    )
+    process_unit_id: str | None = Field(
+        default=None, description="Optional plant asset id, e.g. e-COL-1044."
+    )
 
 
 class EquipmentArgs(BaseModel):
@@ -113,13 +121,20 @@ class MaintenanceArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     equipment_id: str = Field(description="Real plant asset id.")
     failure_mode: str | None = Field(default=None, description="Optional diagnosed failure mode.")
-    multiplier: float = Field(default=1.0, gt=0, le=100, description="Scale the requirement, e.g. 2 for two interventions.")
+    multiplier: float = Field(
+        default=1.0,
+        gt=0,
+        le=100,
+        description="Scale the requirement, e.g. 2 for two interventions.",
+    )
 
 
 class PriceArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     item_id: str = Field(description="Material id whose price history to read.")
-    window_days: int = Field(default=30, ge=1, le=730, description="7, 30, 90 or 365 are the usual windows.")
+    window_days: int = Field(
+        default=30, ge=1, le=730, description="7, 30, 90 or 365 are the usual windows."
+    )
 
 
 class ForecastArgs(BaseModel):
@@ -251,7 +266,9 @@ class GetInventoryStatusTool(_BaseTool):
         code = (status.get("limitations") or [{}])[0].get("code")
         if code == svc.MATERIAL_NOT_FOUND:
             return ToolResult(
-                tool="get_inventory_status", status="not_found", output=status,
+                tool="get_inventory_status",
+                status="not_found",
+                output=status,
                 error=f"no material with id {arguments.material_id}",
             )
         return ToolResult(tool="get_inventory_status", output=_envelope(status))
@@ -429,7 +446,9 @@ class SearchPriceHistoryTool(_BaseTool):
 
     async def run(self, arguments: BaseModel, context: ToolContext) -> ToolResult:
         assert isinstance(arguments, PriceArgs)
-        result = svc.price_history(_store(context), arguments.item_id, window_days=arguments.window_days)
+        result = svc.price_history(
+            _store(context), arguments.item_id, window_days=arguments.window_days
+        )
         if result.get("status") == svc.PRICE_HISTORY_UNAVAILABLE:
             return ToolResult(
                 tool="search_price_history",
@@ -479,7 +498,9 @@ class CalculateMaterialRequirementTool(_BaseTool):
         lines = []
         total = 0.0
         for line in requirement["lines"]:
-            cost = svc.financial_impact(store, line["item_id"], line["required_quantity"], unit=line["unit"])
+            cost = svc.financial_impact(
+                store, line["item_id"], line["required_quantity"], unit=line["unit"]
+            )
             if cost.get("estimated_cost") is not None:
                 total += float(cost["estimated_cost"])
             lines.append({**line, "cost": cost})

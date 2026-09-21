@@ -76,19 +76,23 @@ def failover_candidates(engine: SimulationEngine, origin_sensor_id: str | None) 
         rt = engine.sensors.get(sensor.id)
         if rt is None:
             continue
-        out.append({
-            "sensor_id": sensor.id,
-            "tag": sensor.tag,
-            "equipment_id": sensor.equipment_id,
-            "measurement": sensor.measurement.value,
-            "quality": rt.quality.value,
-            "in_service": engine.sensor_out_of_service(sensor.id) is None and not rt.failed,
-            "same_asset": sensor.equipment_id == origin_equipment,
-        })
+        out.append(
+            {
+                "sensor_id": sensor.id,
+                "tag": sensor.tag,
+                "equipment_id": sensor.equipment_id,
+                "measurement": sensor.measurement.value,
+                "quality": rt.quality.value,
+                "in_service": engine.sensor_out_of_service(sensor.id) is None and not rt.failed,
+                "same_asset": sensor.equipment_id == origin_equipment,
+            }
+        )
     return out
 
 
-def maintenance_counts(engine: SimulationEngine, incident: Incident, tasks: list[AgentTask]) -> dict:
+def maintenance_counts(
+    engine: SimulationEngine, incident: Incident, tasks: list[AgentTask]
+) -> dict:
     """Counts backing the "reviewing maintenance and inspection history" beat.
 
     WHY only these counts: the store has no work-order or inspection-report

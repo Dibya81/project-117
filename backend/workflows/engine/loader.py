@@ -57,9 +57,7 @@ def load_builtin_definitions() -> list[WorkflowDefinition]:
     return load_workflows_dir(BUILTIN_DEFINITIONS_DIR)
 
 
-def load_registry(
-    directory: Path | str, *, include_builtin: bool = True
-) -> WorkflowRegistry:
+def load_registry(directory: Path | str, *, include_builtin: bool = True) -> WorkflowRegistry:
     """Build a registry from the built-in pack plus a deployment directory.
 
     Built-ins load first, then ``directory`` is overlaid. A deployment file

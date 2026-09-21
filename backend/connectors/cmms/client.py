@@ -13,7 +13,9 @@ class CMMSConnector(BaseConnector):
         response = self._request("GET", f"/api/work-orders/{work_order_id}")
         return response.json()
 
-    def list_work_orders(self, *, asset_tag: str | None = None, status: str | None = None, limit: int = 20) -> list[dict[str, Any]]:
+    def list_work_orders(
+        self, *, asset_tag: str | None = None, status: str | None = None, limit: int = 20
+    ) -> list[dict[str, Any]]:
         params: dict[str, Any] = {"limit": limit}
         if asset_tag:
             params["asset"] = asset_tag

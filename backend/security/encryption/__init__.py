@@ -81,9 +81,7 @@ def hash_api_key(key: str, *, salt: bytes | None = None) -> str:
     if not key:
         raise ValueError("refusing to hash an empty API key")
     resolved_salt = salt if salt is not None else os.urandom(_SALT_BYTES)
-    digest = hashlib.pbkdf2_hmac(
-        "sha256", key.encode("utf-8"), resolved_salt, PBKDF2_ITERATIONS
-    )
+    digest = hashlib.pbkdf2_hmac("sha256", key.encode("utf-8"), resolved_salt, PBKDF2_ITERATIONS)
     return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${resolved_salt.hex()}${digest.hex()}"
 
 

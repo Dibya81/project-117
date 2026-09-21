@@ -55,9 +55,7 @@ class MemoryRetriever:
             return []
         fetch = max(limit * 3, 10)
         try:
-            records = self._service.recall(
-                query, user=user, session_id=session_id, limit=fetch
-            )
+            records = self._service.recall(query, user=user, session_id=session_id, limit=fetch)
         except Exception:
             return []
         if kinds:
@@ -127,9 +125,7 @@ class MemoryRetriever:
         session_id: str | None = None,
         limit: int = 5,
     ) -> str:
-        return self.context_lines(
-            self.recall(query, user=user, session_id=session_id, limit=limit)
-        )
+        return self.context_lines(self.recall(query, user=user, session_id=session_id, limit=limit))
 
 
 __all__ = ["MAX_CONTEXT_CHARS", "MemoryRetriever"]

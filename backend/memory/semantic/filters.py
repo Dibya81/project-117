@@ -80,9 +80,7 @@ def apply(
     return out
 
 
-def explain(
-    record: dict[str, Any], predicates: Sequence[tuple[str, Predicate]]
-) -> list[str]:
+def explain(record: dict[str, Any], predicates: Sequence[tuple[str, Predicate]]) -> list[str]:
     """Names of the predicates this record failed - for the recall trace."""
     return [name for name, predicate in predicates if not predicate(record)]
 

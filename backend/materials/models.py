@@ -259,7 +259,10 @@ class ProductionOutput(BaseModel):
         if None in (self.opening, self.receipts, self.dispatches):
             return None
         return round(
-            (self.opening or 0) + (self.receipts or 0) - (self.dispatches or 0) + (self.adjustments or 0),
+            (self.opening or 0)
+            + (self.receipts or 0)
+            - (self.dispatches or 0)
+            + (self.adjustments or 0),
             6,
         )
 

@@ -151,9 +151,7 @@ def from_findings(
                 citations=citations,
             )
         )
-    return document_spec(
-        title=title, subtitle=subtitle, sections=sections, sources=sources
-    )
+    return document_spec(title=title, subtitle=subtitle, sections=sections, sources=sources)
 
 
 __all__ = [

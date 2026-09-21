@@ -15,7 +15,9 @@ class HistorianConnector(BaseConnector):
         response = self._request("GET", f"/api/points/{tag}/latest")
         return response.json()
 
-    def get_trend(self, tag: str, *, start: str, end: str, interval_seconds: int = 60) -> list[dict[str, Any]]:
+    def get_trend(
+        self, tag: str, *, start: str, end: str, interval_seconds: int = 60
+    ) -> list[dict[str, Any]]:
         response = self._request(
             "GET",
             f"/api/points/{tag}/trend",

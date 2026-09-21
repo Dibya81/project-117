@@ -81,7 +81,9 @@ def _b64url_decode(value: str) -> bytes:
 
 def _sign(secret: str, prefix: str, body: str) -> str:
     return _b64url_encode(
-        hmac.new(secret.encode("utf-8"), f"{prefix}.{body}".encode("utf-8"), hashlib.sha256).digest()
+        hmac.new(
+            secret.encode("utf-8"), f"{prefix}.{body}".encode("utf-8"), hashlib.sha256
+        ).digest()
     )
 
 
@@ -225,7 +227,9 @@ def codec_for_settings(settings: Any) -> TokenCodec:
     key = (secret, str(getattr(settings, "identity_db", "")), access_ttl, refresh_ttl)
     codec = _codec_cache.get(key)
     if codec is None:
-        codec = TokenCodec(secret=secret, access_ttl_seconds=access_ttl, refresh_ttl_seconds=refresh_ttl)
+        codec = TokenCodec(
+            secret=secret, access_ttl_seconds=access_ttl, refresh_ttl_seconds=refresh_ttl
+        )
         _codec_cache[key] = codec
     return codec
 

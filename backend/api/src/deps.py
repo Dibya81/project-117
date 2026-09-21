@@ -115,7 +115,9 @@ def get_materials(request: Request) -> MaterialsStore:
     store = getattr(request.app.state, "materials", None)
     if store is None:
         settings = request.app.state.settings
-        store = MaterialsStore(db_path=getattr(settings, "materials_db", None) or default_materials_db())
+        store = MaterialsStore(
+            db_path=getattr(settings, "materials_db", None) or default_materials_db()
+        )
         request.app.state.materials = store
     return store
 
@@ -170,9 +172,7 @@ def get_mobile(request: Request) -> MobileStore:
         settings = request.app.state.settings
         store = MobileStore(
             db_path=getattr(settings, "mobile_db", None) or default_mobile_db(),
-            simulation_db=(
-                getattr(settings, "simulation_db", None) or default_simulation_db()
-            ),
+            simulation_db=(getattr(settings, "simulation_db", None) or default_simulation_db()),
         )
         request.app.state.mobile = store
     return store

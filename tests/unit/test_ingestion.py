@@ -348,14 +348,17 @@ def test_real_ingestion_pipeline(tmp_path):
         chunk_size_tokens=128,
         log_level="WARNING",
     )
-    app = make_app(settings, LocalGPTIndexer(
-        db_path=settings.lancedb_dir,
-        table_name=settings.lancedb_table,
-        chunk_size=settings.chunk_size_tokens,
-        chunk_overlap=settings.chunk_overlap_sentences,
-        embedding_model=embedding_model,
-        ollama_host="http://localhost:11434",
-    ))
+    app = make_app(
+        settings,
+        LocalGPTIndexer(
+            db_path=settings.lancedb_dir,
+            table_name=settings.lancedb_table,
+            chunk_size=settings.chunk_size_tokens,
+            chunk_overlap=settings.chunk_overlap_sentences,
+            embedding_model=embedding_model,
+            ollama_host="http://localhost:11434",
+        ),
+    )
     with TestClient(app) as client:
         upload = client.post(
             "/api/documents/upload",

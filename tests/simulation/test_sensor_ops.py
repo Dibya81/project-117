@@ -103,7 +103,12 @@ class TestServiceSensorOps:
     def test_disable_raises_incident_for_the_lost_point(self, svc):
         out = svc.disable_sensor("refinery", SENSOR)
         assert set(out) == {
-            "sensor_id", "equipment_id", "measurement", "alternates", "affected", "incident_id",
+            "sensor_id",
+            "equipment_id",
+            "measurement",
+            "alternates",
+            "affected",
+            "incident_id",
         }
         assert out["incident_id"]
         inc = svc.runtime("refinery").engine.incidents[out["incident_id"]]
@@ -118,7 +123,8 @@ class TestServiceSensorOps:
         assert second["incident_id"] == first["incident_id"]
         rt = svc.runtime("refinery")
         open_for_sensor = [
-            i for i in rt.engine.incidents.values()
+            i
+            for i in rt.engine.incidents.values()
             if i.origin_sensor == SENSOR and i.status != IncidentStatus.RESOLVED
         ]
         assert len(open_for_sensor) == 1
@@ -145,7 +151,9 @@ class TestServiceSensorOps:
         assert rt.engine.sensors[SENSOR].quality == TelemetryQuality.GOOD
         assert rt.engine.sensor_out_of_service(SENSOR) is None
         assert rt.engine.session_change_counts() == {
-            "disabled_sensors": 0, "removed_sensors": 0, "disabled_equipment": 0,
+            "disabled_sensors": 0,
+            "removed_sensors": 0,
+            "disabled_equipment": 0,
         }
         # the stale runtime (and its open measurement-loss incidents) is gone,
         # and the persisted rows are closed rather than left awaiting approval
@@ -194,7 +202,12 @@ def test_http_remove_returns_verbatim_redundancy(client: TestClient):
     assert resp.status_code == 200
     data = resp.json()
     assert set(data) == {
-        "sensor_id", "equipment_id", "measurement", "alternates", "affected", "incident_id",
+        "sensor_id",
+        "equipment_id",
+        "measurement",
+        "alternates",
+        "affected",
+        "incident_id",
     }
     assert data["sensor_id"] == "s-FT-1042"
     snapshot = client.get("/api/simulation/plants/refinery/snapshot").json()

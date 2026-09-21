@@ -312,8 +312,7 @@ class OpenSandboxClient:
                     await sandbox.destroy()
                 except Exception:
                     logger.warning(
-                        "failed to destroy sandbox for job %s; it will expire after "
-                        "%ss",
+                        "failed to destroy sandbox for job %s; it will expire after %ss",
                         job_id,
                         self._policy.sandbox_timeout_seconds,
                         exc_info=True,

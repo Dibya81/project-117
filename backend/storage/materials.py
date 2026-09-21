@@ -276,11 +276,21 @@ class MaterialsStore:
             "destination_process_unit=excluded.destination_process_unit,"
             "provenance=excluded.provenance, updated_at=excluded.updated_at",
             (
-                payload["id"], payload["name"], payload["material_class"], payload["unit"],
-                payload["location"], payload["status"], payload["description"],
-                _dumps(payload["quality_attributes"]), payload["supplier_id"], payload["cost_basis"],
-                payload["source_process_unit"], payload["destination_process_unit"],
-                _dumps(payload["provenance"]), payload["created_at"], payload["updated_at"],
+                payload["id"],
+                payload["name"],
+                payload["material_class"],
+                payload["unit"],
+                payload["location"],
+                payload["status"],
+                payload["description"],
+                _dumps(payload["quality_attributes"]),
+                payload["supplier_id"],
+                payload["cost_basis"],
+                payload["source_process_unit"],
+                payload["destination_process_unit"],
+                _dumps(payload["provenance"]),
+                payload["created_at"],
+                payload["updated_at"],
             ),
         )
         return self.material(payload["id"])
@@ -376,8 +386,16 @@ class MaterialsStore:
             "INSERT INTO inventory_balances (id,material_id,location,quantity,reserved,unit,threshold,"
             "safety_stock,reorder_level,timestamp,provenance) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (
-                p["id"], p["material_id"], p["location"], p["quantity"], p["reserved"], p["unit"],
-                p["threshold"], p["safety_stock"], p["reorder_level"], p["timestamp"],
+                p["id"],
+                p["material_id"],
+                p["location"],
+                p["quantity"],
+                p["reserved"],
+                p["unit"],
+                p["threshold"],
+                p["safety_stock"],
+                p["reorder_level"],
+                p["timestamp"],
                 _dumps(p["provenance"]),
             ),
         )
@@ -391,7 +409,9 @@ class MaterialsStore:
         )
         return [self._balance(r) for r in rows]
 
-    def latest_balance(self, material_id: str, *, location: str | None = None) -> dict[str, Any] | None:
+    def latest_balance(
+        self, material_id: str, *, location: str | None = None
+    ) -> dict[str, Any] | None:
         """The newest balance row for a material — the current position."""
         if location:
             row = self._one(
@@ -438,8 +458,15 @@ class MaterialsStore:
             "INSERT INTO material_movements (id,material_id,movement_type,quantity,unit,timestamp,"
             "source_location,destination_location,reference,provenance) VALUES (?,?,?,?,?,?,?,?,?,?)",
             (
-                p["id"], p["material_id"], p["movement_type"], p["quantity"], p["unit"],
-                p["timestamp"], p["source_location"], p["destination_location"], p["reference"],
+                p["id"],
+                p["material_id"],
+                p["movement_type"],
+                p["quantity"],
+                p["unit"],
+                p["timestamp"],
+                p["source_location"],
+                p["destination_location"],
+                p["reference"],
                 _dumps(p["provenance"]),
             ),
         )
@@ -505,9 +532,21 @@ class MaterialsStore:
             "period_start,period_end,source,opening,receipts,dispatches,adjustments,closing,provenance) "
             "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
-                p["id"], p["product_id"], p["process_unit_id"], p["quantity"], p["unit"],
-                p["period_type"], p["period_start"], p["period_end"], p["source"], p["opening"],
-                p["receipts"], p["dispatches"], p["adjustments"], p["closing"], _dumps(p["provenance"]),
+                p["id"],
+                p["product_id"],
+                p["process_unit_id"],
+                p["quantity"],
+                p["unit"],
+                p["period_type"],
+                p["period_start"],
+                p["period_end"],
+                p["source"],
+                p["opening"],
+                p["receipts"],
+                p["dispatches"],
+                p["adjustments"],
+                p["closing"],
+                _dumps(p["provenance"]),
             ),
         )
         return self._production(self._one("SELECT * FROM production_output WHERE id=?", (p["id"],)))
@@ -570,8 +609,16 @@ class MaterialsStore:
             "INSERT INTO price_observations (id,item_id,price,currency,unit,observed_on,source,"
             "data_status,note,provenance) VALUES (?,?,?,?,?,?,?,?,?,?)",
             (
-                p["id"], p["item_id"], p["price"], p["currency"], p["unit"], p["observed_on"],
-                p["source"], p["data_status"], p["note"], _dumps(p["provenance"]),
+                p["id"],
+                p["item_id"],
+                p["price"],
+                p["currency"],
+                p["unit"],
+                p["observed_on"],
+                p["source"],
+                p["data_status"],
+                p["note"],
+                _dumps(p["provenance"]),
             ),
         )
         return self._price(self._one("SELECT * FROM price_observations WHERE id=?", (p["id"],)))
@@ -631,8 +678,15 @@ class MaterialsStore:
             "quantity=excluded.quantity, unit=excluded.unit, schedule=excluded.schedule,"
             "purpose=excluded.purpose, failure_mode=excluded.failure_mode, provenance=excluded.provenance",
             (
-                p["id"], p["equipment_id"], p["item_id"], p["quantity"], p["unit"], p["schedule"],
-                p["purpose"], p["failure_mode"], _dumps(p["provenance"]),
+                p["id"],
+                p["equipment_id"],
+                p["item_id"],
+                p["quantity"],
+                p["unit"],
+                p["schedule"],
+                p["purpose"],
+                p["failure_mode"],
+                _dumps(p["provenance"]),
             ),
         )
         return self._requirement(
@@ -685,7 +739,12 @@ class MaterialsStore:
             "lead_time_days=excluded.lead_time_days, status=excluded.status, contact=excluded.contact,"
             "reference=excluded.reference, provenance=excluded.provenance",
             (
-                p["id"], p["name"], p["lead_time_days"], p["status"], p["contact"], p["reference"],
+                p["id"],
+                p["name"],
+                p["lead_time_days"],
+                p["status"],
+                p["contact"],
+                p["reference"],
                 _dumps(p["provenance"]),
             ),
         )
@@ -726,8 +785,15 @@ class MaterialsStore:
             "INSERT INTO financial_events (id,event_type,amount,currency,occurred_on,reference,"
             "calculation_status,basis,provenance) VALUES (?,?,?,?,?,?,?,?,?)",
             (
-                p["id"], p["event_type"], p["amount"], p["currency"], p["occurred_on"],
-                p["reference"], p["calculation_status"], _dumps(p["basis"]), _dumps(p["provenance"]),
+                p["id"],
+                p["event_type"],
+                p["amount"],
+                p["currency"],
+                p["occurred_on"],
+                p["reference"],
+                p["calculation_status"],
+                _dumps(p["basis"]),
+                _dumps(p["provenance"]),
             ),
         )
         return self._financial(self._one("SELECT * FROM financial_events WHERE id=?", (p["id"],)))

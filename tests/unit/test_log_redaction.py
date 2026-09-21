@@ -1,4 +1,5 @@
 import logging
+
 from backend.logging_config import SensitiveDataFilter, redact_text
 
 
@@ -32,7 +33,9 @@ def test_filter_redacts_log_record():
         args=(),
         exc_info=None,
     )
-    record.exc_text = "Traceback (most recent call last):\n  File 'x.py'\nKeyError: api_key='secret123456789'"
+    record.exc_text = (
+        "Traceback (most recent call last):\n  File 'x.py'\nKeyError: api_key='secret123456789'"
+    )
 
     assert filt.filter(record) is True
     assert "SuperSecretPassword123!" not in record.msg

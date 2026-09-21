@@ -262,8 +262,6 @@ def policy_from_settings(settings: Any) -> SandboxPolicy:
         execution_timeout_seconds=int(getattr(settings, "sandbox_timeout_seconds", 120)),
         sandbox_timeout_seconds=int(getattr(settings, "sandbox_lifetime_seconds", 600)),
         max_output_bytes=int(getattr(settings, "sandbox_max_output_bytes", 256_000)),
-        max_artifact_bytes=int(
-            getattr(settings, "sandbox_max_artifact_bytes", 25 * 1024 * 1024)
-        ),
+        max_artifact_bytes=int(getattr(settings, "sandbox_max_artifact_bytes", 25 * 1024 * 1024)),
         allow_network=bool(getattr(settings, "sandbox_allow_network", False)),
     )

@@ -141,9 +141,7 @@ async def test_configured_and_served_model_resolves(fake_gateway, tmp_path):
 
 
 def test_allowed_hosts_parse_from_a_comma_separated_string(tmp_path):
-    settings = _settings(
-        tmp_path, egress_allowed_hosts=" Historian.Plant.Local , dms.internal ,"
-    )
+    settings = _settings(tmp_path, egress_allowed_hosts=" Historian.Plant.Local , dms.internal ,")
     assert settings.egress_allowed_hosts == {"historian.plant.local", "dms.internal"}
 
 

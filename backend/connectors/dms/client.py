@@ -13,7 +13,9 @@ class DMSConnector(BaseConnector):
     evidence - a connector is a source, not a shortcut around validation."""
 
     def search(self, query: str, *, limit: int = 20) -> list[dict[str, Any]]:
-        response = self._request("GET", "/api/documents/search", params={"q": query, "limit": limit})
+        response = self._request(
+            "GET", "/api/documents/search", params={"q": query, "limit": limit}
+        )
         return response.json().get("results", [])
 
     def get_document_metadata(self, document_id: str) -> dict[str, Any]:

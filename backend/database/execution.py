@@ -152,9 +152,7 @@ class Artifact(Base):
     # *nobody substituted it*, which needs a key the database owner does not
     # have. 'signed' | 'unsigned' | 'signature_failed' - 'unsigned' is a real
     # state and is reported as one, never dressed up as verified.
-    signature_status: Mapped[str] = mapped_column(
-        String(32), default="unsigned", index=True
-    )
+    signature_status: Mapped[str] = mapped_column(String(32), default="unsigned", index=True)
     signature_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     signature_key_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

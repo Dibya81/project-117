@@ -87,7 +87,9 @@ async def chat_stream(
         except ModelUnavailableError as exc:
             yield _error_event("model_unavailable", exc.message, exc.available_models)
         except ProviderUnreachable as exc:
-            yield _error_event("provider_unreachable", f"local model backend unreachable: {exc.message}")
+            yield _error_event(
+                "provider_unreachable", f"local model backend unreachable: {exc.message}"
+            )
         except Exception as exc:  # stream died mid-way; report, don't hang
             yield _error_event("stream_error", exc.__class__.__name__)
         yield "data: [DONE]\n\n"

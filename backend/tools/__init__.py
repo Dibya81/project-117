@@ -56,6 +56,7 @@ def __getattr__(name: str) -> _Any:
 def __dir__() -> list[str]:
     return sorted(set(globals()) | _LAZY)
 
+
 # pyright: reportUnsupportedDunderAll=false
 # ToolRegistry and redact_arguments are resolved through the PEP 562
 # __getattr__ below, which keeps backend.tools.base a leaf module. pyright

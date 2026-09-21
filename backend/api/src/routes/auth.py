@@ -70,9 +70,7 @@ def whoami(
 def roles(principal: Principal = Depends(get_principal)) -> dict:
     """The matrix the handlers enforce — read straight out of RBAC, not a copy."""
     return {
-        "roles": {
-            role: sorted(p.value for p in perms) for role, perms in ROLE_PERMISSIONS.items()
-        },
+        "roles": {role: sorted(p.value for p in perms) for role, perms in ROLE_PERMISSIONS.items()},
         "defaultRole": DEFAULT_ROLE,
         "anonymousMaxRoles": sorted(ANONYMOUS_MAX_ROLES),
         "callerRoles": list(principal.roles),
@@ -97,7 +95,9 @@ def check_session(
         granted = requested or tuple(principal.roles)
     else:
         # An anonymous caller cannot self-elevate past the anonymous ceiling.
-        granted = tuple(role for role in (requested or principal.roles) if role in ANONYMOUS_MAX_ROLES)
+        granted = tuple(
+            role for role in (requested or principal.roles) if role in ANONYMOUS_MAX_ROLES
+        )
     effective = tuple(role for role in granted if role in ROLE_PERMISSIONS)
     return {
         "accepted": True,

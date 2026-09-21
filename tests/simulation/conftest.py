@@ -40,14 +40,16 @@ def _fake_ask(role: str, system: str, user: str) -> tuple[str, str]:
     # `pl-001` for several different origins — which made two distinct incidents
     # look identical. The last candidate is still guaranteed to touch the scope
     # (the pack is filtered that way), and it differs with the incident.
-    ids = list(dict.fromkeys(re.findall(r'pl-\d+', user)))[-1:]
+    ids = list(dict.fromkeys(re.findall(r"pl-\d+", user)))[-1:]
     return (
-        json.dumps({
-            "route": ids,
-            "block": [],
-            "restore": ids,
-            "rationale": "restore process continuity along the affected lines",
-        }),
+        json.dumps(
+            {
+                "route": ids,
+                "block": [],
+                "restore": ids,
+                "rationale": "restore process continuity along the affected lines",
+            }
+        ),
         "test-model",
     )
 

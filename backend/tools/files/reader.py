@@ -39,9 +39,28 @@ MAX_READ_BYTES = 2_000_000
 #: Suffixes we will decode as text. Everything else is reported, not read.
 TEXT_SUFFIXES = frozenset(
     {
-        ".txt", ".md", ".markdown", ".csv", ".tsv", ".json", ".jsonl", ".ndjson",
-        ".yaml", ".yml", ".log", ".ini", ".cfg", ".conf", ".toml", ".xml",
-        ".html", ".htm", ".py", ".sql", ".sh", ".env",
+        ".txt",
+        ".md",
+        ".markdown",
+        ".csv",
+        ".tsv",
+        ".json",
+        ".jsonl",
+        ".ndjson",
+        ".yaml",
+        ".yml",
+        ".log",
+        ".ini",
+        ".cfg",
+        ".conf",
+        ".toml",
+        ".xml",
+        ".html",
+        ".htm",
+        ".py",
+        ".sql",
+        ".sh",
+        ".env",
     }
 )
 
@@ -75,7 +94,7 @@ def _configured_roots() -> tuple[Path, ...]:
             return roots
     # Default: the repository's own data directory. Uploads, the demo dataset
     # and job workspaces all live under it, and nothing else does.
-    return (( _repo_root() / "data").resolve(),)
+    return ((_repo_root() / "data").resolve(),)
 
 
 @dataclass(frozen=True)

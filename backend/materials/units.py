@@ -455,7 +455,9 @@ class Price:
         # A price per smaller unit becomes a LARGER number per bigger unit:
         # ₹/kg × 1000 = ₹/MT. That is the inverse of a quantity conversion.
         one = convert(1.0, target, self.per, basis=self.basis)
-        return Price(_round(self.amount * one.amount), self.currency, target, self.basis or one.basis_used)
+        return Price(
+            _round(self.amount * one.amount), self.currency, target, self.basis or one.basis_used
+        )
 
     def as_dict(self) -> dict[str, Any]:
         return {

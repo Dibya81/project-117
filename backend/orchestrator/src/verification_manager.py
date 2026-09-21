@@ -49,9 +49,7 @@ logger = logging.getLogger(__name__)
 
 
 class VerificationManager:
-    def __init__(
-        self, *, verifier: Any = None, sandbox: Any = None, audit: Any = None
-    ) -> None:
+    def __init__(self, *, verifier: Any = None, sandbox: Any = None, audit: Any = None) -> None:
         self._verifier = verifier
         self._sandbox = sandbox
         # Optional durable audit sink. Supplied so the audit-chain checker can
@@ -127,9 +125,7 @@ class VerificationManager:
                 CheckResult(
                     checker="verifier",
                     status=CheckStatus.FAILED,
-                    message=(
-                        f"verification could not complete: {type(exc).__name__}: {exc}"
-                    )[:400],
+                    message=(f"verification could not complete: {type(exc).__name__}: {exc}")[:400],
                     duration_ms=(time.perf_counter() - started) * 1000,
                 )
             )

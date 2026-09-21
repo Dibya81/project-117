@@ -86,7 +86,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.per_minute = (
             per_minute if per_minute is not None else _int_env("P117_RATE_LIMIT_PER_MINUTE", 0)
         )
-        self.burst = burst if burst is not None else _int_env("P117_RATE_LIMIT_BURST", self.per_minute)
+        self.burst = (
+            burst if burst is not None else _int_env("P117_RATE_LIMIT_BURST", self.per_minute)
+        )
         self.workers = workers if workers is not None else _int_env("P117_WORKERS", 1)
         if self.enabled and self.workers > 1:
             raise RuntimeError(

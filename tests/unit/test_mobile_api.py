@@ -30,36 +30,105 @@ TECHNICIAN = ("technician", "Demo-Technician-117!")
 
 # ─── Expected DTO field sets (frozen client contract) ─────────────────────────
 EQUIPMENT_KEYS = {
-    "id", "name", "type", "location", "status", "qr_code", "barcode", "manufacturer",
-    "model", "serial_number", "last_maintenance_date", "next_maintenance_date",
-    "metadata", "readings",
+    "id",
+    "name",
+    "type",
+    "location",
+    "status",
+    "qr_code",
+    "barcode",
+    "manufacturer",
+    "model",
+    "serial_number",
+    "last_maintenance_date",
+    "next_maintenance_date",
+    "metadata",
+    "readings",
 }
 WORK_ORDER_KEYS = {
-    "id", "title", "description", "status", "priority", "assigned_to", "equipment_id",
-    "equipment_name", "due_date", "created_at", "updated_at", "steps", "issue_id", "notes",
+    "id",
+    "title",
+    "description",
+    "status",
+    "priority",
+    "assigned_to",
+    "equipment_id",
+    "equipment_name",
+    "due_date",
+    "created_at",
+    "updated_at",
+    "steps",
+    "issue_id",
+    "notes",
 }
 APPROVAL_KEYS = {
-    "id", "title", "description", "work_order_id", "work_order_title", "equipment_id",
-    "equipment_name", "consequence", "requested_by", "requested_at", "deadline", "status",
+    "id",
+    "title",
+    "description",
+    "work_order_id",
+    "work_order_title",
+    "equipment_id",
+    "equipment_name",
+    "consequence",
+    "requested_by",
+    "requested_at",
+    "deadline",
+    "status",
 }
 AGENT_TASK_KEYS = {
-    "id", "title", "description", "source", "priority", "status", "equipment_id",
-    "equipment_name", "work_order_id", "instructions", "evidence_required", "due_by",
+    "id",
+    "title",
+    "description",
+    "source",
+    "priority",
+    "status",
+    "equipment_id",
+    "equipment_name",
+    "work_order_id",
+    "instructions",
+    "evidence_required",
+    "due_by",
     "created_at",
 }
 NOTIFICATION_KEYS = {
-    "id", "type", "title", "body", "timestamp", "is_read", "reference_id", "reference_type",
+    "id",
+    "type",
+    "title",
+    "body",
+    "timestamp",
+    "is_read",
+    "reference_id",
+    "reference_type",
 }
 ISSUE_KEYS = {
-    "id", "equipment_id", "equipment_name", "description", "severity", "reported_by",
-    "reported_at", "work_order_id",
+    "id",
+    "equipment_id",
+    "equipment_name",
+    "description",
+    "severity",
+    "reported_by",
+    "reported_at",
+    "work_order_id",
 }
 SOP_KEYS = {
-    "id", "title", "category", "version", "summary", "content", "equipment_types", "tags",
+    "id",
+    "title",
+    "category",
+    "version",
+    "summary",
+    "content",
+    "equipment_types",
+    "tags",
     "last_updated",
 }
 LOGIN_KEYS = {
-    "access_token", "refresh_token", "user_id", "username", "display_name", "role", "permissions",
+    "access_token",
+    "refresh_token",
+    "user_id",
+    "username",
+    "display_name",
+    "role",
+    "permissions",
 }
 ME_KEYS = {"user_id", "username", "display_name", "role", "permissions"}
 
@@ -121,7 +190,9 @@ def mobile_client(tmp_path):
     fake_gateway = ModelGateway(providers={"fake": FakeProvider()}, default_provider="fake")
     app.state.gateway = fake_gateway
     app.state.router = ModelRouter(fake_gateway, ModelRoles(settings), availability_ttl=0)
-    app.state.chat = ChatService(app.state.router, app.state.sessions, app.state.audit, retrieval=None)
+    app.state.chat = ChatService(
+        app.state.router, app.state.sessions, app.state.audit, retrieval=None
+    )
     with TestClient(app) as client:
         yield client
 
@@ -219,16 +290,22 @@ def test_enroll_login_refresh_logout(mobile_client):
     )
     assert refreshed.status_code == 200
     assert set(refreshed.json()) == {"access_token"}
-    assert mobile_client.get(
-        "/api/v1/auth/me",
-        headers={"Authorization": f"Bearer {refreshed.json()['access_token']}"},
-    ).status_code == 200
+    assert (
+        mobile_client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {refreshed.json()['access_token']}"},
+        ).status_code
+        == 200
+    )
 
     assert mobile_client.post("/api/v1/auth/logout", headers=_auth(session)).status_code == 200
     # After logout the refresh token is dead...
-    assert mobile_client.post(
-        "/api/v1/auth/refresh", json={"refresh_token": session["refresh_token"]}
-    ).status_code == 401
+    assert (
+        mobile_client.post(
+            "/api/v1/auth/refresh", json={"refresh_token": session["refresh_token"]}
+        ).status_code
+        == 401
+    )
     # ...and so is the access token: the session row is revoked.
     assert mobile_client.get("/api/v1/auth/me", headers=_auth(session)).status_code == 401
 
@@ -268,9 +345,12 @@ def test_equipment_detail_and_identify(mobile_client):
     assert identified.status_code == 200
     assert identified.json()["id"] == first["id"]
 
-    assert mobile_client.post(
-        "/api/v1/equipment/identify", json={"qr_code": "no-such-tag"}, headers=headers
-    ).status_code == 404
+    assert (
+        mobile_client.post(
+            "/api/v1/equipment/identify", json={"qr_code": "no-such-tag"}, headers=headers
+        ).status_code
+        == 404
+    )
 
 
 # ─── Work orders ──────────────────────────────────────────────────────────────
@@ -317,16 +397,22 @@ def test_work_order_list_detail_and_update(mobile_client):
     assert updated.json()["notes"] == "On site."
 
     # Terminal move still succeeds; an illegal one is a 409.
-    assert mobile_client.post(
-        f"/api/v1/work-orders/{work_order_id}/update",
-        json={"status": "COMPLETED", "notes": "Done."},
-        headers=headers,
-    ).status_code == 200
-    assert mobile_client.post(
-        f"/api/v1/work-orders/{work_order_id}/update",
-        json={"status": "IN_PROGRESS", "notes": None},
-        headers=headers,
-    ).status_code == 409
+    assert (
+        mobile_client.post(
+            f"/api/v1/work-orders/{work_order_id}/update",
+            json={"status": "COMPLETED", "notes": "Done."},
+            headers=headers,
+        ).status_code
+        == 200
+    )
+    assert (
+        mobile_client.post(
+            f"/api/v1/work-orders/{work_order_id}/update",
+            json={"status": "IN_PROGRESS", "notes": None},
+            headers=headers,
+        ).status_code
+        == 409
+    )
 
 
 def test_operator_cannot_update_work_order(mobile_client):
@@ -374,9 +460,7 @@ def test_agent_tasks_acknowledge_and_complete(mobile_client):
 
 def test_unknown_agent_task_is_404(mobile_client):
     session = _login(mobile_client, TECHNICIAN)
-    response = mobile_client.post(
-        "/api/v1/agents/tasks/NOPE/acknowledge", headers=_auth(session)
-    )
+    response = mobile_client.post("/api/v1/agents/tasks/NOPE/acknowledge", headers=_auth(session))
     assert response.status_code == 404
 
 
@@ -417,11 +501,14 @@ def test_approvals_list_and_decide(mobile_client):
     assert decided.json()["status"] == "APPROVED"
 
     # Deciding twice is a conflict, not a silent overwrite.
-    assert mobile_client.post(
-        f"/api/v1/approvals/{approval_id}/decide",
-        json={"decision": "reject", "notes": None},
-        headers=_auth(supervisor),
-    ).status_code == 409
+    assert (
+        mobile_client.post(
+            f"/api/v1/approvals/{approval_id}/decide",
+            json={"decision": "reject", "notes": None},
+            headers=_auth(supervisor),
+        ).status_code
+        == 409
+    )
 
 
 def test_technician_cannot_decide_approval(mobile_client):
@@ -432,11 +519,14 @@ def test_technician_cannot_decide_approval(mobile_client):
         json={"title": "Second approval", "type": "shutdown", "risk": "low"},
     )
     approval_id = created.json()["approval"]["id"]
-    assert mobile_client.post(
-        f"/api/v1/approvals/{approval_id}/decide",
-        json={"decision": "approve", "notes": None},
-        headers=_auth(technician),
-    ).status_code == 403
+    assert (
+        mobile_client.post(
+            f"/api/v1/approvals/{approval_id}/decide",
+            json={"decision": "approve", "notes": None},
+            headers=_auth(technician),
+        ).status_code
+        == 403
+    )
     # ...and it is still pending for the supervisor.
     rows = mobile_client.get("/api/v1/approvals", headers=_auth(supervisor)).json()["items"]
     assert all(row["status"] == "PENDING" for row in rows if row["id"] == approval_id)
@@ -472,9 +562,7 @@ def test_report_issue_notification_and_read(mobile_client):
         assert set(item) == NOTIFICATION_KEYS
     assert items[0]["is_read"] is False
 
-    marked = mobile_client.post(
-        f"/api/v1/notifications/{items[0]['id']}/read", headers=headers
-    )
+    marked = mobile_client.post(f"/api/v1/notifications/{items[0]['id']}/read", headers=headers)
     assert marked.status_code == 200
     reread = mobile_client.get("/api/v1/notifications", headers=headers).json()["items"]
     assert next(item for item in reread if item["id"] == items[0]["id"])["is_read"] is True
@@ -540,9 +628,7 @@ def test_sop_library_from_real_documents(mobile_client):
     by_id = mobile_client.get(f"/api/v1/knowledge/sop/{document_id}", headers=headers)
     assert by_id.status_code == 200
     assert set(by_id.json()) == SOP_KEYS
-    assert mobile_client.get(
-        "/api/v1/knowledge/sop/NOPE", headers=headers
-    ).status_code == 404
+    assert mobile_client.get("/api/v1/knowledge/sop/NOPE", headers=headers).status_code == 404
 
 
 # ─── Chat ─────────────────────────────────────────────────────────────────────
@@ -550,7 +636,11 @@ def test_chat_matches_dto(mobile_client):
     session = _login(mobile_client, TECHNICIAN)
     response = mobile_client.post(
         "/api/v1/chat",
-        json={"message": "What is the status of the pump?", "equipment_id": None, "work_order_id": None},
+        json={
+            "message": "What is the status of the pump?",
+            "equipment_id": None,
+            "work_order_id": None,
+        },
         headers=_auth(session),
     )
     assert response.status_code == 200, response.text

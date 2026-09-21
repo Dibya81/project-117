@@ -162,9 +162,7 @@ class MobileStore:
         if not path.exists():
             return []
         try:
-            connection = sqlite3.connect(
-                f"file:{path}?mode=ro", uri=True, check_same_thread=False
-            )
+            connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True, check_same_thread=False)
         except sqlite3.Error as exc:  # pragma: no cover - permissions/OS dependent
             logger.warning("simulation store unavailable for agent tasks: %s", exc)
             return []
@@ -343,9 +341,7 @@ class MobileStore:
 
     def issue(self, issue_id: str) -> dict[str, Any]:
         with self._lock:
-            row = self._db.execute(
-                "SELECT * FROM issues WHERE id=?", (str(issue_id),)
-            ).fetchone()
+            row = self._db.execute("SELECT * FROM issues WHERE id=?", (str(issue_id),)).fetchone()
         if row is None:
             raise KeyError(issue_id)
         return self._issue_row(row)

@@ -149,9 +149,7 @@ def complete_agent_task(
 
 
 # ─── Approvals ────────────────────────────────────────────────────────────────
-def _approval_context(
-    operations: OperationsStore, row: dict
-) -> tuple[dict | None, str | None]:
+def _approval_context(operations: OperationsStore, row: dict) -> tuple[dict | None, str | None]:
     related_id = row.get("relatedId")
     if not related_id:
         return None, None

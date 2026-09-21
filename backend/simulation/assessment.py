@@ -59,9 +59,15 @@ def predict_next_failure(engine: SimulationEngine, incident: Incident, limit: in
     by_id = {e.id: e for e in engine.plant.equipment}
     origin = by_id.get(incident.origin_equipment)
     if origin is None:
-        return {"available": False, "reason": "Origin equipment is no longer in the plant.", "candidates": []}
+        return {
+            "available": False,
+            "reason": "Origin equipment is no longer in the plant.",
+            "candidates": [],
+        }
 
-    origin_sensor = engine.sensor_model.get(incident.origin_sensor) if incident.origin_sensor else None
+    origin_sensor = (
+        engine.sensor_model.get(incident.origin_sensor) if incident.origin_sensor else None
+    )
     direct = set(engine.upstream.get(origin.id, [])) | set(engine.downstream.get(origin.id, []))
     candidates: list[dict] = []
 
@@ -99,9 +105,13 @@ def predict_next_failure(engine: SimulationEngine, incident: Incident, limit: in
                 reasons.append(f"{years:.1f} years in service")
 
         # 3. carries the same instrument family that just failed
-        if origin_sensor is not None and any(s.measurement == origin_sensor.measurement for s in eq.sensors):
+        if origin_sensor is not None and any(
+            s.measurement == origin_sensor.measurement for s in eq.sensors
+        ):
             risk += 0.12
-            reasons.append(f"same {origin_sensor.measurement.value} instrumentation family as the failed point")
+            reasons.append(
+                f"same {origin_sensor.measurement.value} instrumentation family as the failed point"
+            )
 
         # 4. proximity
         if eq_id in direct:
@@ -117,14 +127,20 @@ def predict_next_failure(engine: SimulationEngine, incident: Incident, limit: in
             reasons.append("shares a process path with the incident origin")
 
         bounded = max(0.05, min(0.92, risk))
-        candidates.append({
-            "equipment_id": eq.id,
-            "tag": eq.tag,
-            "name": eq.name,
-            "risk": round(bounded, 3),
-            "reasons": reasons,
-            "horizon": "next 30 days" if bounded > 0.5 else "next quarter" if bounded > 0.3 else "monitor",
-        })
+        candidates.append(
+            {
+                "equipment_id": eq.id,
+                "tag": eq.tag,
+                "name": eq.name,
+                "risk": round(bounded, 3),
+                "reasons": reasons,
+                "horizon": "next 30 days"
+                if bounded > 0.5
+                else "next quarter"
+                if bounded > 0.3
+                else "monitor",
+            }
+        )
 
     candidates.sort(key=lambda c: -c["risk"])
     return {

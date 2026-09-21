@@ -333,9 +333,7 @@ class RetrievalService:
 
         missing = [doc_id for doc_id in document_ids if doc_id not in by_id]
         if missing:
-            raise IndexUnavailableError(
-                f"documents not found: {', '.join(sorted(missing))}"
-            )
+            raise IndexUnavailableError(f"documents not found: {', '.join(sorted(missing))}")
 
         staged: list[str] = []
         not_indexed: list[str] = []

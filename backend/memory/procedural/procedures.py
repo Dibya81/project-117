@@ -67,7 +67,11 @@ class Procedure:
         evidence: list[dict[str, Any]] = []
         if self.source_document:
             evidence.append(
-                {"document_id": self.source_document, "section": self.name, "revision": self.revision}
+                {
+                    "document_id": self.source_document,
+                    "section": self.name,
+                    "revision": self.revision,
+                }
             )
         return MemoryCandidate(
             kind=KIND_PROCEDURAL,

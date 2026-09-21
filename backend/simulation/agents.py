@@ -93,8 +93,12 @@ def build_graph_context(engine: SimulationEngine, incident: Incident) -> dict:
         e = by_id[eq_id]
         rt = engine.eq[eq_id]
         return {
-            "id": e.id, "tag": e.tag, "kind": e.kind.value, "area_id": e.area_id,
-            "state": rt.state.value, "capacity": round(rt.capacity, 3),
+            "id": e.id,
+            "tag": e.tag,
+            "kind": e.kind.value,
+            "area_id": e.area_id,
+            "state": rt.state.value,
+            "capacity": round(rt.capacity, 3),
         }
 
     upstream = [describe(i) for i in engine.upstream.get(origin, []) if i in by_id]
@@ -115,8 +119,11 @@ def build_graph_context(engine: SimulationEngine, incident: Incident) -> dict:
     ]
     related_sensors = [
         {
-            "id": s.id, "tag": s.tag, "equipment_id": s.equipment_id,
-            "measurement": s.measurement.value, "unit": s.unit,
+            "id": s.id,
+            "tag": s.tag,
+            "equipment_id": s.equipment_id,
+            "measurement": s.measurement.value,
+            "unit": s.unit,
             "value": round(engine.sensors[s.id].value, 3),
             "quality": engine.sensors[s.id].quality.value,
         }
@@ -125,8 +132,15 @@ def build_graph_context(engine: SimulationEngine, incident: Incident) -> dict:
         for s in by_id[eq_id].sensors
     ]
     paths = [
-        {"id": c.id, "source": c.source, "target": c.target, "medium": c.medium,
-         "kind": c.kind.value, "leaking": c.leaking, "enabled": c.enabled}
+        {
+            "id": c.id,
+            "source": c.source,
+            "target": c.target,
+            "medium": c.medium,
+            "kind": c.kind.value,
+            "leaking": c.leaking,
+            "enabled": c.enabled,
+        }
         for c in engine.plant.connections
         if c.source in scope or c.target in scope
     ]
@@ -147,7 +161,9 @@ def _fmt_value(engine: SimulationEngine, sensor_id: str) -> str:
     return f"{m.tag} = {rt.value:.1f} {m.unit} ({rt.quality.value})"
 
 
-def build_pipeline(engine: SimulationEngine, incident: Incident, t0: float) -> tuple[list[AgentTask], IncidentPlan]:
+def build_pipeline(
+    engine: SimulationEngine, incident: Incident, t0: float
+) -> tuple[list[AgentTask], IncidentPlan]:
     """Decompose an incident into a real task DAG + an executable plan.
 
     Driven by the incident origin and the live topology — run it against any
@@ -188,24 +204,38 @@ def build_pipeline(engine: SimulationEngine, incident: Incident, t0: float) -> t
 
     # --- ORCHESTRATOR -------------------------------------------------------
     orch = add("orchestrator", "Classify incident and decompose into agent tasks")
-    orch.tools.append(ToolCall(tool="incident.classify", summary=f"{incident.severity.value} · origin {eq.tag}"))
-    orch.evidence.append(Evidence(
-        id=f"{incident.id}-E0", source_type="topology", source_id=origin,
-        description=f"Blast radius: {len(affected)} downstream/upstream assets", confidence=1.0,
-    ))
-    orch.tools.append(ToolCall(
-        tool="graph.context",
-        summary=(
-            f"{len(graph_context['upstream'])} upstream · {len(graph_context['downstream'])} downstream · "
-            f"{len(graph_context['areas'])} area(s) · {len(graph_context['related_sensors'])} related sensor(s)"
-        ),
-    ))
+    orch.tools.append(
+        ToolCall(tool="incident.classify", summary=f"{incident.severity.value} · origin {eq.tag}")
+    )
+    orch.evidence.append(
+        Evidence(
+            id=f"{incident.id}-E0",
+            source_type="topology",
+            source_id=origin,
+            description=f"Blast radius: {len(affected)} downstream/upstream assets",
+            confidence=1.0,
+        )
+    )
+    orch.tools.append(
+        ToolCall(
+            tool="graph.context",
+            summary=(
+                f"{len(graph_context['upstream'])} upstream · {len(graph_context['downstream'])} downstream · "
+                f"{len(graph_context['areas'])} area(s) · {len(graph_context['related_sensors'])} related sensor(s)"
+            ),
+        )
+    )
     for area in graph_context["areas"][:3]:
-        orch.evidence.append(Evidence(
-            id=f"{incident.id}-EA{len(orch.evidence)}", source_type="topology",
-            source_id=area["id"], description=f"Affected process area: {area['name']}",
-            confidence=1.0, metadata={"equipment_count": area["equipment_count"]},
-        ))
+        orch.evidence.append(
+            Evidence(
+                id=f"{incident.id}-EA{len(orch.evidence)}",
+                source_type="topology",
+                source_id=area["id"],
+                description=f"Affected process area: {area['name']}",
+                confidence=1.0,
+                metadata={"equipment_count": area["equipment_count"]},
+            )
+        )
     orch.result = f"Classified as {incident.severity.value} incident on {eq.tag}; 5 agents tasked."
 
     # --- DATA ANALYSIS ------------------------------------------------------
@@ -216,15 +246,20 @@ def build_pipeline(engine: SimulationEngine, incident: Incident, t0: float) -> t
         alts = engine.alternate_sensors(origin_sensor)
         for s in alts[:4]:
             rt = engine.sensors[s.id]
-            da.evidence.append(Evidence(
-                id=f"{da.id}-E{len(da.evidence)+1}", source_type="telemetry", source_id=s.id,
-                description=_fmt_value(engine, s.id),
-                confidence=0.95 if rt.quality == TelemetryQuality.GOOD else 0.4,
-            ))
+            da.evidence.append(
+                Evidence(
+                    id=f"{da.id}-E{len(da.evidence) + 1}",
+                    source_type="telemetry",
+                    source_id=s.id,
+                    description=_fmt_value(engine, s.id),
+                    confidence=0.95 if rt.quality == TelemetryQuality.GOOD else 0.4,
+                )
+            )
         good = [a for a in alts if engine.sensors[a.id].quality == TelemetryQuality.GOOD]
         da.result = (
             f"{len(good)} alternate measurement(s) consistent — process readable via redundancy."
-            if good else "No consistent alternate measurement — treat as unreadable process point."
+            if good
+            else "No consistent alternate measurement — treat as unreadable process point."
         )
     else:
         da.result = "Telemetry pattern matches the injected failure signature."
@@ -232,26 +267,46 @@ def build_pipeline(engine: SimulationEngine, incident: Incident, t0: float) -> t
 
     # --- MAINTENANCE --------------------------------------------------------
     mt = add("maintenance", "Evaluate failure mode and replacement requirement", [orch.id])
-    mt.tools.append(ToolCall(tool="maintenance_history.query", summary=f"{eq.tag} · last inspection {eq.last_inspection}"))
+    mt.tools.append(
+        ToolCall(
+            tool="maintenance_history.query",
+            summary=f"{eq.tag} · last inspection {eq.last_inspection}",
+        )
+    )
     mt.tools.append(ToolCall(tool="failure_mode.match", summary=incident.failure_mode or "unknown"))
-    mt.evidence.append(Evidence(
-        id=f"{mt.id}-E1", source_type="maintenance", source_id=eq.id,
-        description=f"{eq.manufacturer} {eq.model} · installed {eq.installed} · inspected {eq.last_inspection}",
-        confidence=1.0,
-    ))
+    mt.evidence.append(
+        Evidence(
+            id=f"{mt.id}-E1",
+            source_type="maintenance",
+            source_id=eq.id,
+            description=f"{eq.manufacturer} {eq.model} · installed {eq.installed} · inspected {eq.last_inspection}",
+            confidence=1.0,
+        )
+    )
     mt.result = "Component-level fault confirmed; inspection/replacement required."
 
     # --- OPERATIONS ---------------------------------------------------------
     op = add("operations", "Evaluate process continuity on degraded instrumentation", [da.id])
-    op.tools.append(ToolCall(tool="topology.impact", summary=f"{len(affected)} assets downstream/upstream"))
+    op.tools.append(
+        ToolCall(tool="topology.impact", summary=f"{len(affected)} assets downstream/upstream")
+    )
     for aid in affected[:4]:
         aeq = next(e for e in engine.plant.equipment if e.id == aid)
         rt = engine.eq[aid]
-        op.evidence.append(Evidence(
-            id=f"{op.id}-E{len(op.evidence)+1}", source_type="topology", source_id=aid,
-            description=f"{aeq.tag} capacity {rt.capacity:.0%} · state {rt.state.value}", confidence=0.9,
-        ))
-    op.result = "Process can continue under compensating monitoring." if origin_sensor else "Production impact under evaluation."
+        op.evidence.append(
+            Evidence(
+                id=f"{op.id}-E{len(op.evidence) + 1}",
+                source_type="topology",
+                source_id=aid,
+                description=f"{aeq.tag} capacity {rt.capacity:.0%} · state {rt.state.value}",
+                confidence=0.9,
+            )
+        )
+    op.result = (
+        "Process can continue under compensating monitoring."
+        if origin_sensor
+        else "Production impact under evaluation."
+    )
 
     # --- SAFETY -------------------------------------------------------------
     sf = add("safety", "Check safe-operating envelope", [da.id, mt.id])
@@ -259,18 +314,31 @@ def build_pipeline(engine: SimulationEngine, incident: Incident, t0: float) -> t
     over_envelope = any(
         not m.is_detector
         and engine.sensors[sid].quality == TelemetryQuality.GOOD
-        and (engine.sensors[sid].value >= m.critical_max or engine.sensors[sid].value <= m.critical_min)
+        and (
+            engine.sensors[sid].value >= m.critical_max
+            or engine.sensors[sid].value <= m.critical_min
+        )
         for sid, m in engine.sensor_model.items()
         # a sensor removed from the running plant is absent from `sensors` but
         # still has a model entry (that is what makes a reset able to rebuild it)
         if sid in engine.sensors and m.equipment_id in [origin, *affected]
     )
-    sf.evidence.append(Evidence(
-        id=f"{sf.id}-E1", source_type="policy", source_id="safe-envelope",
-        description="No critical envelope violation on readable sensors" if not over_envelope else "CRITICAL envelope violation present",
-        confidence=0.98,
-    ))
-    sf.result = "Continued operation acceptable with monitoring." if not over_envelope else "Recommend controlled load reduction."
+    sf.evidence.append(
+        Evidence(
+            id=f"{sf.id}-E1",
+            source_type="policy",
+            source_id="safe-envelope",
+            description="No critical envelope violation on readable sensors"
+            if not over_envelope
+            else "CRITICAL envelope violation present",
+            confidence=0.98,
+        )
+    )
+    sf.result = (
+        "Continued operation acceptable with monitoring."
+        if not over_envelope
+        else "Recommend controlled load reduction."
+    )
 
     # --- DOCUMENTATION ------------------------------------------------------
     # Retrieval actually runs here. The query is built from this incident's
@@ -290,24 +358,25 @@ def build_pipeline(engine: SimulationEngine, incident: Incident, t0: float) -> t
             area=area_name,
             k=3,
         )
-        dc.tools.append(ToolCall(
-            tool="retrieve_documents",
-            summary=f"{retriever.name} · q={query!r} · {len(hits)} passage(s)",
-        ))
-        for hit in hits:
-            dc.evidence.append(Evidence(
-                id=f"{dc.id}-E{len(dc.evidence)+1}",
-                source_type="documents",
-                source_id=hit.document_id,
-                description=f"{hit.title} — {hit.text[:220].strip()}",
-                confidence=min(0.99, 0.6 + hit.score / 40.0),
-                citation=hit.citation,
-                metadata={"source": hit.source, "score": round(hit.score, 3), **hit.metadata},
-            ))
-        dc.result = (
-            "Retrieved " + ", ".join(h.citation for h in hits)
-            + f" via {retriever.name}."
+        dc.tools.append(
+            ToolCall(
+                tool="retrieve_documents",
+                summary=f"{retriever.name} · q={query!r} · {len(hits)} passage(s)",
+            )
         )
+        for hit in hits:
+            dc.evidence.append(
+                Evidence(
+                    id=f"{dc.id}-E{len(dc.evidence) + 1}",
+                    source_type="documents",
+                    source_id=hit.document_id,
+                    description=f"{hit.title} — {hit.text[:220].strip()}",
+                    confidence=min(0.99, 0.6 + hit.score / 40.0),
+                    citation=hit.citation,
+                    metadata={"source": hit.source, "score": round(hit.score, 3), **hit.metadata},
+                )
+            )
+        dc.result = "Retrieved " + ", ".join(h.citation for h in hits) + f" via {retriever.name}."
     except RetrievalUnavailable as exc:
         # No document matched and no backend could serve the query: the task
         # is blocked, not silently "completed" with an invented citation.
@@ -336,10 +405,12 @@ def build_pipeline(engine: SimulationEngine, incident: Incident, t0: float) -> t
             "Create maintenance work order with evidence pack",
         ]
     plan_task.result = f"Plan ready: {len(steps)} steps, approval required before action."
-    plan_task.tools.append(ToolCall(
-        tool="plan.synthesize",
-        summary=f"{sum(len(t.evidence) for t in tasks)} evidence item(s) from {len(tasks)} task(s)",
-    ))
+    plan_task.tools.append(
+        ToolCall(
+            tool="plan.synthesize",
+            summary=f"{sum(len(t.evidence) for t in tasks)} evidence item(s) from {len(tasks)} task(s)",
+        )
+    )
 
     # --- Hand each specialist task to the real Project 117 agent ------------
     # The orchestration records above are engine-derived; the narrative result
@@ -378,7 +449,7 @@ def build_pipeline(engine: SimulationEngine, incident: Incident, t0: float) -> t
         incident_id=incident.id,
         steps=steps,
         requires_approval=True,
-        approval_reason=f"Action changes plant state ({eq.tag}); evidence pack attached from {len(tasks)-1} agent tasks.",
+        approval_reason=f"Action changes plant state ({eq.tag}); evidence pack attached from {len(tasks) - 1} agent tasks.",
         action=action,
         verification=[
             "Alternate/primary measurement consistency within 2%",

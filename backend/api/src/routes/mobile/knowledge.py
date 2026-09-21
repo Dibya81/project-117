@@ -39,7 +39,9 @@ router = APIRouter()
 #: stored document UUID is the fallback when a file carries none.
 _DOC_NUMBER = re.compile(r"Document\s*No\.?\s*:\s*([A-Za-z0-9._/-]+)", re.IGNORECASE)
 _REVISION = re.compile(r"Revision\s*:\s*([^\s|]+)", re.IGNORECASE)
-_EFFECTIVE = re.compile(r"Effective\s+Date\s*:\s*([0-9]{1,2}\s+[A-Za-z]{3,9}\s+[0-9]{4})", re.IGNORECASE)
+_EFFECTIVE = re.compile(
+    r"Effective\s+Date\s*:\s*([0-9]{1,2}\s+[A-Za-z]{3,9}\s+[0-9]{4})", re.IGNORECASE
+)
 
 #: Bounds so one enormous upload cannot make a list response unbounded.
 MAX_CONTENT_CHARS = 200_000
@@ -125,7 +127,9 @@ def _sop_payload(document: Any, ingestion: IngestionService) -> dict[str, Any]:
 
 
 def _sop_documents(documents: DocumentStorage) -> list[Any]:
-    return [document for document in documents.list(limit=500) if _is_sop_document(document.filename)]
+    return [
+        document for document in documents.list(limit=500) if _is_sop_document(document.filename)
+    ]
 
 
 @router.get("/knowledge/sop")

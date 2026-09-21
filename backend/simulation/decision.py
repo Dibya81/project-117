@@ -129,18 +129,20 @@ def _equipment_context(engine: SimulationEngine, incident: Incident) -> dict[str
         for s in by_id[eq_id].sensors:
             rt = engine.sensors.get(s.id)
             m = s
-            sensors.append({
-                "id": s.id,
-                "tag": s.tag,
-                "equipment_id": s.equipment_id,
-                "measurement": s.measurement.value,
-                "unit": s.unit,
-                "value": round(rt.value, 2) if rt else None,
-                "quality": rt.quality.value if rt else "unknown",
-                "normal": [m.normal_min, m.normal_max],
-                "critical": [m.critical_min, m.critical_max],
-                "is_detector": m.is_detector,
-            })
+            sensors.append(
+                {
+                    "id": s.id,
+                    "tag": s.tag,
+                    "equipment_id": s.equipment_id,
+                    "measurement": s.measurement.value,
+                    "unit": s.unit,
+                    "value": round(rt.value, 2) if rt else None,
+                    "quality": rt.quality.value if rt else "unknown",
+                    "normal": [m.normal_min, m.normal_max],
+                    "critical": [m.critical_min, m.critical_max],
+                    "is_detector": m.is_detector,
+                }
+            )
     paths = [
         {
             "id": c.id,
@@ -160,9 +162,15 @@ def _equipment_context(engine: SimulationEngine, incident: Incident) -> dict[str
     if incident.origin_sensor:
         for s in engine.alternate_sensors(incident.origin_sensor):
             rt = engine.sensors.get(s.id)
-            alts.append({"id": s.id, "tag": s.tag, "equipment_id": s.equipment_id,
-                         "measurement": s.measurement.value,
-                         "quality": rt.quality.value if rt else "unknown"})
+            alts.append(
+                {
+                    "id": s.id,
+                    "tag": s.tag,
+                    "equipment_id": s.equipment_id,
+                    "measurement": s.measurement.value,
+                    "quality": rt.quality.value if rt else "unknown",
+                }
+            )
     return {
         "origin": describe(origin) if origin in by_id else {"id": origin},
         "upstream": upstream,
@@ -182,7 +190,8 @@ def _documents(engine: SimulationEngine, incident: Incident) -> list[dict[str, A
     mode = next((m for m in engine.plant.failure_modes if m.id == incident.failure_mode), None)
     measurement = (
         engine.sensor_model[incident.origin_sensor].measurement.value
-        if incident.origin_sensor else None
+        if incident.origin_sensor
+        else None
     )
     area = next((a.name for a in engine.plant.areas if a.id == eq.area_id), eq.area_id)
     try:
@@ -197,8 +206,12 @@ def _documents(engine: SimulationEngine, incident: Incident) -> list[dict[str, A
     except RetrievalUnavailable:
         return []
     return [
-        {"id": h.document_id, "title": h.title, "passage": h.text[:300].strip(),
-         "citation": h.citation}
+        {
+            "id": h.document_id,
+            "title": h.title,
+            "passage": h.text[:300].strip(),
+            "citation": h.citation,
+        }
         for h in hits
     ]
 
@@ -268,8 +281,12 @@ def safety_facts(evidence: dict[str, Any]) -> dict[str, Any]:
             if a.get("severity") == "critical"
         ],
         "readable_sensors_beyond_critical": [
-            {"id": s.get("id"), "tag": s.get("tag"), "value": s.get("value"),
-             "critical": s.get("critical")}
+            {
+                "id": s.get("id"),
+                "tag": s.get("tag"),
+                "value": s.get("value"),
+                "critical": s.get("critical"),
+            }
             for s in readable
             if beyond_critical(s)
         ],
@@ -280,6 +297,7 @@ def safety_facts(evidence: dict[str, Any]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------- model call
+
 
 def _get_provider() -> Any:
     """Build a provider each call.
@@ -481,7 +499,9 @@ async def _ask_async(role: str, system: str, user: str) -> tuple[str, str]:
             )
         logger.warning(
             "decision: %s returned empty response (finish=%s), retry %d",
-            role, last_finish, attempt,
+            role,
+            last_finish,
+            attempt,
         )
     raise ModelUnavailableError(
         f"{role} model {model} returned empty response 3 times (finish={last_finish})"
@@ -517,6 +537,7 @@ def _extract_json(text: str) -> dict[str, Any]:
 def _json_field(data: dict[str, Any], key: str, default: Any = None) -> Any:
     return data.get(key, default)
 
+
 def _validate_recovery_decision(
     engine: SimulationEngine,
     incident: Incident,
@@ -543,8 +564,7 @@ def _validate_recovery_decision(
     # told to change at least one real line.
     if not block and not restore:
         errors.append(
-            "recovery must change the topology: name at least one line to block "
-            "or to restore"
+            "recovery must change the topology: name at least one line to block or to restore"
         )
 
     for cid in [*route, *block, *restore]:
@@ -576,8 +596,7 @@ def _validate_recovery_decision(
         scope = {incident.origin_equipment, *incident.affected}
         if route_start not in scope and route_end not in scope:
             errors.append(
-                "route must start or end inside the incident circuit "
-                f"({incident.origin_equipment})"
+                f"route must start or end inside the incident circuit ({incident.origin_equipment})"
             )
 
     for cid in restore:
@@ -650,9 +669,10 @@ async def run_incident_decision_async(
 
     # Sensor evidence: just the directly related readings, not the whole graph.
     sensor_summary = [
-        f"{s['tag']}={s['value']} {s.get('quality','?')}"
+        f"{s['tag']}={s['value']} {s.get('quality', '?')}"
         for s in evidence["equipment"]["sensors"][:6]
     ]
+
     # Render each candidate WITH its endpoints.
     #
     # The prompt tells the model that "route is an ordered path: each line must
@@ -687,7 +707,9 @@ async def run_incident_decision_async(
 
         # ---- Diagnostic prompt (qwen3:1.7b) --------------------------------
         # Narrow context: just the origin asset, affected list, and sensor snapshot.
-        diag_system = "You are a plant diagnostic agent. Answer ONLY with a JSON object and no prose."
+        diag_system = (
+            "You are a plant diagnostic agent. Answer ONLY with a JSON object and no prose."
+        )
         diag_user = (
             f"A sensor was disabled on asset {origin_tag} (id {origin_id}). "
             "State which assets are affected and why.\n"
@@ -718,8 +740,8 @@ async def run_incident_decision_async(
             "4. `restore` requires a non-empty `route`.\n"
             "5. A line that is already shut may only appear in `restore`.\n"
             "6. `block` must name at least one line and `route` must not use it.\n"
-            + retry_note +
-            "Return JSON only, copying ids exactly:\n"
+            + retry_note
+            + "Return JSON only, copying ids exactly:\n"
             '{"route": ["<id>", ...], "block": ["<id>", ...], '
             '"restore": ["<id>", ...], "rationale": "one sentence"}'
         )
@@ -761,8 +783,7 @@ async def run_incident_decision_async(
                 diag = _extract_json(diag_text)
                 models.append(diag_model)
                 affected = [
-                    a for a in _json_field(diag, "affected_equipment", [])
-                    if a in equipment_ids
+                    a for a in _json_field(diag, "affected_equipment", []) if a in equipment_ids
                 ]
                 decision.affected_equipment = affected or list(incident.affected)
                 decision.diagnosis = str(_json_field(diag, "diagnosis", "")).strip()
@@ -788,7 +809,9 @@ async def run_incident_decision_async(
                     "LOCAL MODEL UNAVAILABLE — diagnostic agent returned unusable "
                     f"output ({exc.__class__.__name__})"
                 )
-                decision.diagnosis = "Diagnostic agent returned unusable output — no recovery attempted."
+                decision.diagnosis = (
+                    "Diagnostic agent returned unusable output — no recovery attempted."
+                )
                 return decision
 
         # ---- Operations result + self-correction loop -------------------
@@ -877,7 +900,9 @@ async def run_incident_decision_async(
             # The Safety agent's REAL verdict: "completed" only when it approved
             # the proposed route, "rejected" when it declined it. It never reads
             # VERIFIED from the fact that it merely replied.
-            decision.agent_status["safety"] = "completed" if decision.safety_confirmed else "rejected"
+            decision.agent_status["safety"] = (
+                "completed" if decision.safety_confirmed else "rejected"
+            )
 
             validation_errors = _validate_recovery_decision(engine, incident, decision)
             validated = True
@@ -885,11 +910,13 @@ async def run_incident_decision_async(
                 break
             feedback = (
                 "\n\nYour previous answer was "
-                + json.dumps({
-                    "route": decision.route,
-                    "block": decision.block,
-                    "restore": decision.restore,
-                })
+                + json.dumps(
+                    {
+                        "route": decision.route,
+                        "block": decision.block,
+                        "restore": decision.restore,
+                    }
+                )
                 + " and the plant's validator rejected it: "
                 + "; ".join(validation_errors)
                 + ". Return corrected JSON only, fixing exactly those problems."
@@ -914,13 +941,10 @@ async def run_incident_decision_async(
             safety_refused = any("safety did not confirm" in e for e in validation_errors)
             decision.available = False
             decision.agent_status["operations"] = "failed"
-            decision.agent_status.setdefault(
-                "safety", "rejected" if safety_refused else "failed"
-            )
+            decision.agent_status.setdefault("safety", "rejected" if safety_refused else "failed")
             decision.error = (
-                ("SAFETY CHECK FAILED — " if safety_refused else "RECOVERY DECISION INVALID — ")
-                + "; ".join(validation_errors)
-            )
+                "SAFETY CHECK FAILED — " if safety_refused else "RECOVERY DECISION INVALID — "
+            ) + "; ".join(validation_errors)
             decision.safety_confirmed = False
             decision.safety_concerns = [*decision.safety_concerns, *validation_errors]
             return decision
@@ -974,13 +998,25 @@ def run_incident_decision(
 
     if loop and loop.is_running():
         import concurrent.futures
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(lambda: asyncio.run(run_incident_decision_async(
-                engine, incident, ask=async_ask, prior_attempt=prior_attempt,
-            )))
+            future = executor.submit(
+                lambda: asyncio.run(
+                    run_incident_decision_async(
+                        engine,
+                        incident,
+                        ask=async_ask,
+                        prior_attempt=prior_attempt,
+                    )
+                )
+            )
             return future.result()
     else:
-        return asyncio.run(run_incident_decision_async(
-            engine, incident, ask=async_ask, prior_attempt=prior_attempt,
-        ))
-
+        return asyncio.run(
+            run_incident_decision_async(
+                engine,
+                incident,
+                ask=async_ask,
+                prior_attempt=prior_attempt,
+            )
+        )

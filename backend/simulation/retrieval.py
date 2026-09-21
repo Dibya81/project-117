@@ -45,8 +45,30 @@ LANCEDB_DIR = Path(os.environ.get("P117_LANCEDB_DIR", "data/lancedb"))
 LANCEDB_TABLE = os.environ.get("P117_LANCEDB_TABLE", "p117_chunks")
 _TOKEN = re.compile(r"[a-z0-9][a-z0-9\-\.]*")
 _STOP = {
-    "the", "a", "an", "and", "or", "of", "to", "in", "for", "on", "is", "are", "be",
-    "with", "at", "by", "as", "it", "this", "that", "from", "shall", "must", "if",
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "of",
+    "to",
+    "in",
+    "for",
+    "on",
+    "is",
+    "are",
+    "be",
+    "with",
+    "at",
+    "by",
+    "as",
+    "it",
+    "this",
+    "that",
+    "from",
+    "shall",
+    "must",
+    "if",
 }
 
 
@@ -82,7 +104,9 @@ class RetrievedChunk:
 class RetrievalBackend(Protocol):
     name: str
 
-    def search(self, query: str, k: int = 3, filters: dict[str, Any] | None = None) -> list[RetrievedChunk]: ...
+    def search(
+        self, query: str, k: int = 3, filters: dict[str, Any] | None = None
+    ) -> list[RetrievedChunk]: ...
 
     def document_count(self) -> int: ...
 
@@ -169,8 +193,7 @@ class LexicalCorpusBackend:
             self._docs.add(chunk.document_id)
             toks = Counter(
                 _tokenize(
-                    f"{chunk.title} {text} "
-                    f"{' '.join(str(v) for v in chunk.metadata.values())}"
+                    f"{chunk.title} {text} {' '.join(str(v) for v in chunk.metadata.values())}"
                 )
             )
             self.chunks.append(chunk)
@@ -185,7 +208,9 @@ class LexicalCorpusBackend:
     def document_count(self) -> int:
         return len(self._docs)
 
-    def search(self, query: str, k: int = 3, filters: dict[str, Any] | None = None) -> list[RetrievedChunk]:
+    def search(
+        self, query: str, k: int = 3, filters: dict[str, Any] | None = None
+    ) -> list[RetrievedChunk]:
         if not self.chunks:
             return []
         q = _tokenize(query)
@@ -204,10 +229,16 @@ class LexicalCorpusBackend:
                     continue
                 df = self._df.get(term, 0) or 1
                 idf = math.log(1 + (n - df + 0.5) / (df + 0.5))
-                s += idf * (f * (self.k1 + 1)) / (f + self.k1 * (1 - self.b + self.b * dl / self._avgdl))
+                s += (
+                    idf
+                    * (f * (self.k1 + 1))
+                    / (f + self.k1 * (1 - self.b + self.b * dl / self._avgdl))
+                )
             if s > 0:
                 scored.append((s, idx))
-        scored.sort(key=lambda p: (-p[0], self.chunks[p[1]].document_id, self.chunks[p[1]].chunk_id))
+        scored.sort(
+            key=lambda p: (-p[0], self.chunks[p[1]].document_id, self.chunks[p[1]].chunk_id)
+        )
         out: list[RetrievedChunk] = []
         seen_docs: set[str] = set()
         for s, idx in scored:
@@ -217,8 +248,13 @@ class LexicalCorpusBackend:
             seen_docs.add(c.document_id)
             out.append(
                 RetrievedChunk(
-                    document_id=c.document_id, chunk_id=c.chunk_id, source=c.source,
-                    title=c.title, text=c.text, score=s, metadata=dict(c.metadata),
+                    document_id=c.document_id,
+                    chunk_id=c.chunk_id,
+                    source=c.source,
+                    title=c.title,
+                    text=c.text,
+                    score=s,
+                    metadata=dict(c.metadata),
                 )
             )
             if len(out) >= k:
@@ -257,7 +293,9 @@ class LocalGPTBackend:
         except Exception:
             return 0
 
-    def search(self, query: str, k: int = 3, filters: dict[str, Any] | None = None) -> list[RetrievedChunk]:
+    def search(
+        self, query: str, k: int = 3, filters: dict[str, Any] | None = None
+    ) -> list[RetrievedChunk]:
         results = self._service.search(query=query, k=k)
         out: list[RetrievedChunk] = []
         for i, ev in enumerate(results or []):

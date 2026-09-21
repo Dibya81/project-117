@@ -126,8 +126,7 @@ class TestUnparseableModelIsNotSilent:
         def ask(role: str, system: str, user: str) -> tuple[str, str]:
             if role == "diagnostic":
                 return (
-                    '{"affected_equipment": [], "diagnosis": "sensor loss", '
-                    '"failure_mode": null}',
+                    '{"affected_equipment": [], "diagnosis": "sensor loss", "failure_mode": null}',
                     "test-model",
                 )
             return "I am afraid I cannot answer that as JSON.", "test-model"
@@ -170,8 +169,7 @@ class TestSafetyFactsAreNarrow:
         }
         assert incident.origin_sensor in facts["out_of_service_points"]
         assert all(
-            s["id"] != incident.origin_sensor
-            for s in facts["readable_sensors_beyond_critical"]
+            s["id"] != incident.origin_sensor for s in facts["readable_sensors_beyond_critical"]
         )
 
 
@@ -191,8 +189,12 @@ class TestLiveAlarmDoesNotBreakTheEvidencePack:
 
         rt = svc.runtime("refinery")
         rt.engine.alarms["A-TEST"] = Alarm(
-            id="A-TEST", sensor_id="s-VIB-1001", tag="VIB-1001",
-            severity=AlarmSeverity.WARNING, message="vibration high", at=0.0,
+            id="A-TEST",
+            sensor_id="s-VIB-1001",
+            tag="VIB-1001",
+            severity=AlarmSeverity.WARNING,
+            message="vibration high",
+            at=0.0,
         )
         out = svc.inject_failure("refinery", "e-P-1001", "sensor_failure")
         incident = rt.engine.incidents[out["incident"]["id"]]

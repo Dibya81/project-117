@@ -130,9 +130,7 @@ async def test_provider_reports_a_block_as_egress_not_as_downtime():
         assert excinfo.value.code == "egress_blocked"
 
         with pytest.raises(ProviderEgressBlocked):
-            await provider.chat(
-                model="gpt-4", messages=[ChatMessage(role="user", content="hi")]
-            )
+            await provider.chat(model="gpt-4", messages=[ChatMessage(role="user", content="hi")])
         with pytest.raises(ProviderEgressBlocked):
             await provider.embed(model="text-embedding-3", texts=["confidential"])
         with pytest.raises(ProviderEgressBlocked):
@@ -148,9 +146,7 @@ async def test_local_provider_still_works_with_the_policy_attached():
     """Enforcement must not make the legitimate local path harder."""
 
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            200, json={"data": [{"id": "llama3:latest", "owned_by": "library"}]}
-        )
+        return httpx.Response(200, json={"data": [{"id": "llama3:latest", "owned_by": "library"}]})
 
     provider = OpenAICompatibleProvider(
         "http://localhost:11434/v1",
@@ -191,9 +187,7 @@ def test_app_actually_installs_the_guard(tmp_path):
 
 
 def test_policy_is_built_from_settings(tmp_path):
-    settings = _settings(
-        tmp_path, egress_allowed_hosts="Historian.Plant.Local, dms.internal"
-    )
+    settings = _settings(tmp_path, egress_allowed_hosts="Historian.Plant.Local, dms.internal")
     policy = policy_from_settings(settings)
     assert policy.allows("https://historian.plant.local/api")  # case-insensitive
     assert policy.allows("https://dms.internal/api")
@@ -263,9 +257,7 @@ def test_health_reports_real_egress_counts(client, clean_monitor):
 
     first = client.get("/health").json()["network"]
 
-    record_decision(
-        host="api.openai.com", scheme="https", decision="blocked", local=False
-    )
+    record_decision(host="api.openai.com", scheme="https", decision="blocked", local=False)
     record_decision(host="127.0.0.1", scheme="http", decision="allowed", local=True)
 
     second = client.get("/health").json()["network"]

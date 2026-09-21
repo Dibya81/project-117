@@ -97,9 +97,7 @@ class SandboxService:
 
             script_path = f"{self._policy.workspace_dir}/main.py"
             await session.write_text(script_path, code)
-            execution = await session.run(
-                f"python3 {script_path}", timeout_seconds=timeout_seconds
-            )
+            execution = await session.run(f"python3 {script_path}", timeout_seconds=timeout_seconds)
 
             files: list[str] = []
             if collect_artifacts:
@@ -150,9 +148,7 @@ class SandboxService:
         # the sandbox has no network and cannot pip install them.
         async with self._client.session(purpose="documents", job_id=job_id) as session:
             spec_path = f"{INPUTS_DIR}/spec.json"
-            await session.write_text(
-                spec_path, json.dumps(spec, ensure_ascii=False, default=str)
-            )
+            await session.write_text(spec_path, json.dumps(spec, ensure_ascii=False, default=str))
             script_path = f"{self._policy.workspace_dir}/generate.py"
             await session.write_text(script_path, generator_code)
 

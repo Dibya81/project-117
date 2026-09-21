@@ -32,6 +32,7 @@ def svc(refinery):
 
 # --------------------------------------------------------------------- unit
 
+
 class TestTelemetry:
     def test_baseline_inside_envelope(self, svc):
         frame = svc.step("refinery")
@@ -65,7 +66,10 @@ class TestTelemetry:
         svc.inject_failure("refinery", "e-P-1042", "instrument_drift")
         for _ in range(70):
             svc.step("refinery")
-        assert any(a.tag.startswith(("PT-1042", "TT-1042", "FT-1042")) for a in rt_engine(svc).alarms.values())
+        assert any(
+            a.tag.startswith(("PT-1042", "TT-1042", "FT-1042"))
+            for a in rt_engine(svc).alarms.values()
+        )
 
 
 class TestTopology:
@@ -105,7 +109,14 @@ class TestIncidentPipeline:
 
         tasks = rt.incident_tasks[inc["id"]]
         agents = {t.agent for t in tasks}
-        assert {"orchestrator", "data_analysis", "maintenance", "operations", "safety", "documentation"} <= agents
+        assert {
+            "orchestrator",
+            "data_analysis",
+            "maintenance",
+            "operations",
+            "safety",
+            "documentation",
+        } <= agents
         assert any(t.depends_on for t in tasks)  # a real DAG, not a flat list
         assert any(len(t.evidence) > 0 for t in tasks)
 
@@ -145,7 +156,8 @@ class TestIncidentPipeline:
 
         # Force verification to fail every pass, deterministically.
         monkeypatch.setattr(
-            service_mod, "verify_plan",
+            service_mod,
+            "verify_plan",
             lambda engine, incident: (False, ["LT-9001 still beyond critical envelope"]),
         )
         seen: list[dict] = []
@@ -178,8 +190,9 @@ class TestIncidentPipeline:
         assert "recovery.replanning" in types
         assert "recovery.escalated" in types
         # Two real verification records, one per attempt — not one overwritten row.
-        ver_ids = [e.payload["verification_id"] for e in rt.events
-                   if e.type == "verification.completed"]
+        ver_ids = [
+            e.payload["verification_id"] for e in rt.events if e.type == "verification.completed"
+        ]
         assert len(ver_ids) == 2 and len(set(ver_ids)) == 2
         # And the escalation is on the audit trail with the real findings.
         audit = svc.store.audit_events(incident_id=inc_id)
@@ -190,6 +203,7 @@ class TestIncidentPipeline:
     def test_successful_recovery_is_one_attempt(self, svc, monkeypatch):
         """The happy path must not pay for the retry loop."""
         from backend.simulation import service as service_mod
+
         real = service_mod.run_incident_decision
         calls = {"n": 0}
 

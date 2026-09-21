@@ -322,11 +322,7 @@ class Planner:
             step_id = str(item.get("id") or f"step{index + 1}").strip()[:64]
             if not step_id or step_id in seen:
                 step_id = f"step{index + 1}"
-            depends = [
-                str(dep)[:64]
-                for dep in (item.get("depends_on") or [])
-                if str(dep) in seen
-            ]
+            depends = [str(dep)[:64] for dep in (item.get("depends_on") or []) if str(dep) in seen]
             arguments = item.get("arguments")
             try:
                 steps.append(

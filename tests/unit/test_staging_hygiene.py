@@ -1,13 +1,14 @@
 from pathlib import Path
+
 import pytest
-from backend.ingestion.staging import DocumentStager, StagingError
+from backend.ingestion.staging import DocumentStager
 
 
 def test_staged_context_cleans_up_on_success(tmp_path: Path):
     staging_dir = tmp_path / "staging"
     uploads_dir = tmp_path / "uploads"
     uploads_dir.mkdir()
-    
+
     file_path = uploads_dir / "test_doc.pdf"
     file_path.write_text("dummy content")
 
@@ -27,7 +28,7 @@ def test_staged_context_cleans_up_on_exception(tmp_path: Path):
     staging_dir = tmp_path / "staging"
     uploads_dir = tmp_path / "uploads"
     uploads_dir.mkdir()
-    
+
     file_path = uploads_dir / "crash_doc.pdf"
     file_path.write_text("crash content")
 

@@ -313,9 +313,7 @@ class WorkflowEngine:
             raise WorkflowValidationError(name, problems)
 
         state, specs = self._prepare_state(definition, inputs)
-        runner = StepRunner(
-            self._executor, retry_manager=self._retry, sleep=self._sleep
-        )
+        runner = StepRunner(self._executor, retry_manager=self._retry, sleep=self._sleep)
         attempts: dict[str, list[dict[str, Any]]] = {}
 
         state.start()

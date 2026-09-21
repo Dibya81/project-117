@@ -45,9 +45,7 @@ async def execute(
     if not source.strip():
         raise ToolArgumentError("no code was supplied")
     if len(source) > MAX_CODE_CHARS:
-        raise ToolArgumentError(
-            f"code is {len(source)} characters; the limit is {MAX_CODE_CHARS}"
-        )
+        raise ToolArgumentError(f"code is {len(source)} characters; the limit is {MAX_CODE_CHARS}")
     files = dict(inputs or {})
     if len(files) > MAX_INPUT_FILES:
         raise ToolArgumentError(

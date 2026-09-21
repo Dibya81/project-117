@@ -156,7 +156,9 @@ def principal_from_request(request: Request, *, settings: Any = None) -> Princip
 
     # Anonymous, local-trust-boundary path. Capped so an anonymous caller can
     # never reach admin even if it claims to.
-    anonymous_roles = tuple(role for role in (header_roles or (DEFAULT_ROLE,)) if role in ANONYMOUS_MAX_ROLES)
+    anonymous_roles = tuple(
+        role for role in (header_roles or (DEFAULT_ROLE,)) if role in ANONYMOUS_MAX_ROLES
+    )
     return Principal(
         user=user or "local",
         roles=anonymous_roles or (DEFAULT_ROLE,),

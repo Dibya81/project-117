@@ -254,16 +254,18 @@ class LocalGPTIndexer:
                 "dict[str, Any]",
                 MappingProxyType(
                     {
-                    "chunker_mode": "docling",
-                    "embedding_model_name": self._embedding_model,
-                    "chunking": {"chunk_size": self._chunk_size},
-                    "overlap_sentences": self._chunk_overlap,
-                    "storage": {"db_path": self._db_path, "text_table_name": self._table_name},
-                    "retrievers": {"dense": {"enabled": True, "lancedb_table_name": self._table_name}},
-                    "contextual_enricher": {"enabled": False},
-                    "overview": {"enabled": False},
-                    "indexing": {"embedding_batch_size": 32},
-                }
+                        "chunker_mode": "docling",
+                        "embedding_model_name": self._embedding_model,
+                        "chunking": {"chunk_size": self._chunk_size},
+                        "overlap_sentences": self._chunk_overlap,
+                        "storage": {"db_path": self._db_path, "text_table_name": self._table_name},
+                        "retrievers": {
+                            "dense": {"enabled": True, "lancedb_table_name": self._table_name}
+                        },
+                        "contextual_enricher": {"enabled": False},
+                        "overview": {"enabled": False},
+                        "indexing": {"embedding_batch_size": 32},
+                    }
                 ),
             ),
             ollama_client=OllamaClient(host=self._ollama_host),

@@ -147,9 +147,7 @@ class MemoryWriter:
         )
 
     # -- model-proposed --------------------------------------------------
-    def propose(
-        self, candidate: MemoryCandidate
-    ) -> tuple[dict[str, Any] | None, str]:
+    def propose(self, candidate: MemoryCandidate) -> tuple[dict[str, Any] | None, str]:
         """Admit a model-proposed record, or explain why not.
 
         Returns ``(record, "")`` on success and ``(None, reason)`` on refusal.

@@ -29,7 +29,6 @@ class ChatResult(BaseModel):
     finish_reason: str | None = None
 
 
-
 class ModelInfo(BaseModel):
     id: str
     owned_by: str = ""

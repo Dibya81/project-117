@@ -47,9 +47,7 @@ def test_chat_without_session_is_stateless(chat_client):
 
 
 def test_chat_stream_emits_sse_events(chat_client):
-    with chat_client.stream(
-        "POST", "/api/chat/stream", json={"message": "stream me"}
-    ) as response:
+    with chat_client.stream("POST", "/api/chat/stream", json={"message": "stream me"}) as response:
         assert response.status_code == 200
         assert response.headers["content-type"].startswith("text/event-stream")
         events = [

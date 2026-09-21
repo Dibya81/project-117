@@ -8,6 +8,7 @@ Item 5: Retrieval backend → lexical-BM25 indexes corpus, returns real citation
 
 This file proves items 3–5 end-to-end without a model or Docker.
 """
+
 import os
 import sys
 
@@ -20,14 +21,17 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 # Item 3 — Model-backed agent runtime
 # ---------------------------------------------------------------------------
 
+
 class TestAgentRuntime:
     def test_roster_loads(self):
         from backend.simulation.agent_bridge import get_roster
+
         roster = get_roster()
         assert roster.loaded, f"AgentRoster failed to load: {roster.reason}"
 
     def test_all_five_roles_registered(self):
         from backend.simulation.agent_bridge import get_roster
+
         roster = get_roster()
         expected = {"data_analysis", "documentation", "maintenance", "operations", "safety"}
         assert expected == set(roster.available_roles.keys()), (
@@ -36,12 +40,14 @@ class TestAgentRuntime:
 
     def test_runtime_label_is_project117_agents(self):
         from backend.simulation.agent_bridge import get_roster
+
         roster = get_roster()
         assert roster.runtime_label() == "project117-agents"
 
     def test_dispatch_falls_back_gracefully_on_bad_role(self):
         """A role not in the registry returns deterministic-evidence, not an error."""
         from backend.simulation.agent_bridge import get_roster
+
         roster = get_roster()
         result = roster.dispatch(
             role="nonexistent_role",
@@ -60,11 +66,13 @@ class TestAgentRuntime:
 # Item 4 — OpenSandbox (no Docker required; proves honest failure path)
 # ---------------------------------------------------------------------------
 
+
 class TestOpenSandbox:
     def test_policy_from_settings(self):
         os.environ.setdefault("P117_SANDBOX_REQUIRE_API_KEY", "false")
         from backend.config import Settings
         from backend.sandbox.policy import policy_from_settings
+
         settings = Settings()
         policy = policy_from_settings(settings)
         assert policy.base_url == "http://localhost:8080"
@@ -72,6 +80,7 @@ class TestOpenSandbox:
     def test_unavailable_raised_without_sdk(self):
         """Without the OpenSandbox SDK installed, SandboxUnavailable is raised."""
         import asyncio
+
         os.environ.setdefault("P117_SANDBOX_REQUIRE_API_KEY", "false")
         from backend.config import Settings
         from backend.sandbox.client import OpenSandboxClient, SandboxUnavailable
@@ -89,7 +98,11 @@ class TestOpenSandbox:
 
         result = asyncio.run(_run())
         assert result is not None, "SandboxUnavailable was not raised without SDK"
-        assert "OpenSandbox SDK" in result or "opensandbox" in result.lower() or "unavailable" in result.lower()
+        assert (
+            "OpenSandbox SDK" in result
+            or "opensandbox" in result.lower()
+            or "unavailable" in result.lower()
+        )
 
     def test_blocked_action_policy_error(self):
         """Policy rejects a request when api_key required but missing."""
@@ -124,9 +137,11 @@ class TestOpenSandbox:
 # Item 5 — Retrieval backend (localGPT / lexical-BM25 fallback)
 # ---------------------------------------------------------------------------
 
+
 class TestRetrievalBackend:
     def test_backend_available(self):
         from backend.simulation.retrieval import get_retriever
+
         ret = get_retriever()
         assert ret.name in ("lexical-bm25", "localgpt-lancedb"), f"Unexpected backend: {ret.name}"
 
@@ -180,6 +195,7 @@ class TestRetrievalBackend:
 
     def test_search_returns_real_citations(self):
         from backend.simulation.retrieval import get_retriever
+
         ret = get_retriever()
         hits = ret.backend.search("pump pressure isolation procedure", k=3)
         assert len(hits) >= 1, "Search returned no results"
@@ -191,6 +207,7 @@ class TestRetrievalBackend:
 
     def test_for_incident_builds_real_query(self):
         from backend.simulation.retrieval import get_retriever
+
         ret = get_retriever()
         query, hits = ret.for_incident(
             equipment_kind="pump",
@@ -207,9 +224,11 @@ class TestRetrievalBackend:
     def test_retrieval_disabled_raises(self):
         """P117_SIM_RETRIEVAL_DISABLE=1 must block docs and raise RetrievalUnavailable."""
         import os
+
         os.environ["P117_SIM_RETRIEVAL_DISABLE"] = "1"
         try:
             from backend.simulation.retrieval import RetrievalUnavailable, SimulationRetriever
+
             fresh = SimulationRetriever()
             with pytest.raises(RetrievalUnavailable):
                 fresh.for_incident(

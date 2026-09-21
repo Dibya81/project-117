@@ -119,8 +119,7 @@ class Sheet(BaseModel):
         for index, row in enumerate(self.rows):
             if len(row) != width:
                 raise ValueError(
-                    f"sheet '{self.name}' row {index + 1} has {len(row)} cells, "
-                    f"expected {width}"
+                    f"sheet '{self.name}' row {index + 1} has {len(row)} cells, expected {width}"
                 )
         return self
 

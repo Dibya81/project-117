@@ -128,7 +128,9 @@ class NetworkMonitor:
                 self._external_blocked += 1
         return entry
 
-    def allowed(self, host: str | None, scheme: str | None = None, *, local: bool = False) -> EgressDecision:
+    def allowed(
+        self, host: str | None, scheme: str | None = None, *, local: bool = False
+    ) -> EgressDecision:
         return self.record(host=host, scheme=scheme, decision="allowed", local=local)
 
     def blocked(

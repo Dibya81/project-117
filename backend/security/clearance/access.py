@@ -140,9 +140,7 @@ def require_document_clearance(
         )
 
 
-def filter_documents(
-    principal: Principal | None, records: Iterable[Any]
-) -> tuple[list[Any], int]:
+def filter_documents(principal: Principal | None, records: Iterable[Any]) -> tuple[list[Any], int]:
     """Split documents into (visible, withheld_count). Order is preserved."""
     held = principal_clearance(principal)
     visible: list[Any] = []
@@ -248,7 +246,9 @@ def filter_graph(
     visible: list[Any] = []
     hidden_ids: set[str] = set()
     for node in nodes:
-        node_id = str(getattr(node, "id", None) or (node.get("id") if isinstance(node, Mapping) else ""))
+        node_id = str(
+            getattr(node, "id", None) or (node.get("id") if isinstance(node, Mapping) else "")
+        )
         # An authoritative record (the document table) wins over a label copied
         # into the graph, so a stale copy cannot restore access that the record
         # itself has since withdrawn.
@@ -290,8 +290,14 @@ def change_clearance(
     - All elevation / modification attempts (allowed or denied) record an audit event if audit_service is provided.
     """
     target_level = parse_clearance(new_clearance)
-    curr_level = parse_clearance(current_clearance) if current_clearance is not None else Clearance.INTERNAL
-    caller_id = getattr(principal, "user", getattr(principal, "user_id", "anonymous")) if principal else "anonymous"
+    curr_level = (
+        parse_clearance(current_clearance) if current_clearance is not None else Clearance.INTERNAL
+    )
+    caller_id = (
+        getattr(principal, "user", getattr(principal, "user_id", "anonymous"))
+        if principal
+        else "anonymous"
+    )
     caller_roles = set(principal.roles) if principal else set()
     is_admin = "admin" in caller_roles
 
@@ -305,12 +311,21 @@ def change_clearance(
         denial_reason = f"Principal '{caller_id}' lacks 'admin' role required to change clearance"
     elif caller_id == target_user_id and target_level > curr_level:
         # Self-elevation requires a distinct approver with admin role
-        approver_id = getattr(approver, "user", getattr(approver, "user_id", None)) if approver else None
-        if not approver or approver_id == caller_id or "admin" not in getattr(approver, "roles", ()):
+        approver_id = (
+            getattr(approver, "user", getattr(approver, "user_id", None)) if approver else None
+        )
+        if (
+            not approver
+            or approver_id == caller_id
+            or "admin" not in getattr(approver, "roles", ())
+        ):
             denial_reason = "Self-elevation requires a distinct admin approver"
         else:
             allowed = True
-    elif target_level in (Clearance.CONFIDENTIAL, Clearance.HIGHLY_CONFIDENTIAL) and target_level > curr_level:
+    elif (
+        target_level in (Clearance.CONFIDENTIAL, Clearance.HIGHLY_CONFIDENTIAL)
+        and target_level > curr_level
+    ):
         # High-sensitivity elevation requires approval
         if approver and "admin" in getattr(approver, "roles", ()):
             allowed = True
@@ -320,7 +335,6 @@ def change_clearance(
             denial_reason = "Elevation to high sensitivity requires admin approval"
     else:
         allowed = True
-
 
     outcome = "success" if allowed else "denied"
 
@@ -337,7 +351,9 @@ def change_clearance(
                     "target_user_id": target_user_id,
                     "previous_clearance": curr_level.value,
                     "new_clearance": target_level.value,
-                    "approver_id": getattr(approver, "user", getattr(approver, "user_id", None)) if approver else None,
+                    "approver_id": getattr(approver, "user", getattr(approver, "user_id", None))
+                    if approver
+                    else None,
                     "reason": reason or "",
                 },
             )
@@ -386,5 +402,3 @@ __all__ = [
     "require_document_clearance",
     "visible_node",
 ]
-
-

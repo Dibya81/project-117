@@ -191,9 +191,7 @@ class BaseAgent:
         if not (task or "").strip():
             problems.append("no task was given")
         if self.requires_rag and not bool(getattr(context, "has_evidence", False)):
-            problems.append(
-                "no document evidence was retrieved, so this answer cannot be grounded"
-            )
+            problems.append("no document evidence was retrieved, so this answer cannot be grounded")
         return problems
 
     def plan(self, *, task: str, context: Any = None) -> list[dict[str, Any]]:
@@ -263,9 +261,7 @@ class BaseAgent:
             notes=problems,
             usage=usage,
         )
-        return await self.postprocess(
-            result, task=task, context=context, arguments=arguments
-        )
+        return await self.postprocess(result, task=task, context=context, arguments=arguments)
 
     def build_prompt(
         self,
@@ -344,9 +340,7 @@ class BaseAgent:
         """
         if not text:
             return None
-        pattern = re.compile(
-            rf"```(?:{language})?\s*\n(.*?)```", re.DOTALL | re.IGNORECASE
-        )
+        pattern = re.compile(rf"```(?:{language})?\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
         match = pattern.search(text)
         if match and match.group(1).strip():
             return match.group(1).strip()

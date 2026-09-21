@@ -6,11 +6,10 @@ offloads plain ``def`` handlers to a threadpool automatically; an ``async def``
 handler that calls blocking code runs it on the event loop, stalling all
 other requests.
 """
+
 from __future__ import annotations
 
 import inspect
-
-import pytest
 
 
 class TestUploadDocumentsIsNotAsync:

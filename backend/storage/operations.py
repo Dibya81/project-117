@@ -329,7 +329,9 @@ class OperationsStore:
         raise KeyError(equipment_id)
 
     # ----------------------------------------------------------- documents
-    def documents(self, *, query: str | None = None, doc_type: str | None = None) -> list[dict[str, Any]]:
+    def documents(
+        self, *, query: str | None = None, doc_type: str | None = None
+    ) -> list[dict[str, Any]]:
         """Per-equipment document linkage has no real backing store yet."""
         return []
 
@@ -430,9 +432,19 @@ class OperationsStore:
                 "due_date,description,evidence,created_by,created_at,origin)"
                 " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
-                    row["id"], row["title"], row["equipmentId"], row["priority"], row["status"],
-                    row["type"], row["assignee"], row["dueDate"], row["description"],
-                    json.dumps(row["evidence"]), row["createdBy"], row["createdAt"], row["origin"],
+                    row["id"],
+                    row["title"],
+                    row["equipmentId"],
+                    row["priority"],
+                    row["status"],
+                    row["type"],
+                    row["assignee"],
+                    row["dueDate"],
+                    row["description"],
+                    json.dumps(row["evidence"]),
+                    row["createdBy"],
+                    row["createdAt"],
+                    row["origin"],
                 ),
             )
             self._db.commit()
@@ -471,7 +483,9 @@ class OperationsStore:
                     patch.get("status", current.get("status")),
                     patch.get("assignee", current.get("assignee")),
                     patch.get("lastNote", current.get("lastNote")),
-                    patch["updatedAt"], patch["updatedBy"], current["id"],
+                    patch["updatedAt"],
+                    patch["updatedBy"],
+                    current["id"],
                 ),
             )
             self._db.commit()

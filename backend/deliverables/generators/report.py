@@ -57,9 +57,7 @@ def citations_from_evidence(evidence: Iterable[dict[str, Any]]) -> list[dict[str
     for item in evidence or ():
         if not isinstance(item, dict):
             continue
-        document_id = (
-            item.get("document_id") or item.get("documentId") or item.get("id")
-        )
+        document_id = item.get("document_id") or item.get("documentId") or item.get("id")
         if not document_id:
             continue
         page = item.get("page")

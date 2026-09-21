@@ -74,9 +74,7 @@ def _codec(settings: Settings):
         return codec_for_settings(settings)
     except MobileAuthConfigError as exc:
         logger.error("mobile auth is misconfigured: %s", exc)
-        raise ServiceUnavailable(
-            str(exc), code="mobile_auth_misconfigured"
-        ) from exc
+        raise ServiceUnavailable(str(exc), code="mobile_auth_misconfigured") from exc
 
 
 def _audit(audit: AuditService, **kwargs) -> None:

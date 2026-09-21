@@ -207,8 +207,7 @@ class RetryManager:
                 retry=False,
                 delay_seconds=0.0,
                 explanation=(
-                    f"'{reason}' is not retryable; an identical retry would fail "
-                    "the same way"
+                    f"'{reason}' is not retryable; an identical retry would fail the same way"
                 ),
                 error_reason=reason,
                 attempt=attempt,

@@ -96,9 +96,7 @@ def test_builder_plant_zero_band_detector_is_not_tripped() -> None:
 
     # Exactly what `mkSensor` in apps/web/src/lib/sim/custom.ts produces for a
     # gas/leak point: nominal 0, so every band collapses to 0.
-    det_id, det_model = next(
-        (sid, m) for sid, m in rt.engine.sensor_model.items() if m.is_detector
-    )
+    det_id, det_model = next((sid, m) for sid, m in rt.engine.sensor_model.items() if m.is_detector)
     det_model.nominal = 0.0
     det_model.normal_min = det_model.normal_max = 0.0
     det_model.warning_min = det_model.warning_max = 0.0

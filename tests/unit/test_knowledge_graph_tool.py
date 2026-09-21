@@ -52,7 +52,12 @@ class _FakeOperations:
         if not self._with_work_order:
             return []
         return [
-            {"id": "WO-2001", "equipmentId": "e-P-1001", "status": "in_progress", "priority": "high"}
+            {
+                "id": "WO-2001",
+                "equipmentId": "e-P-1001",
+                "status": "in_progress",
+                "priority": "high",
+            }
         ]
 
     def documents(self) -> list[dict]:
@@ -93,12 +98,20 @@ def _graph(ops: _FakeOperations | None = None, materials: object = None):
 def test_graph_carries_the_real_relationships() -> None:
     graph, absent = _graph(_FakeOperations(), _FakeMaterials())
     edge_types = {edge.type for edge in graph.edges}
-    assert {"monitored_by", "raised_for", "requires_spare", "has_inspection", "documented_in"} <= edge_types
+    assert {
+        "monitored_by",
+        "raised_for",
+        "requires_spare",
+        "has_inspection",
+        "documented_in",
+    } <= edge_types
     assert absent == [] or all(a["relationship"] != "spare" for a in absent)
 
 
 def test_graph_reports_absent_sources_rather_than_inventing_edges() -> None:
-    graph, absent = _graph(_FakeOperations(with_work_order=False, with_document=False), _FakeMaterials())
+    graph, absent = _graph(
+        _FakeOperations(with_work_order=False, with_document=False), _FakeMaterials()
+    )
     edge_types = {edge.type for edge in graph.edges}
     assert "raised_for" not in edge_types
     assert "documented_in" not in edge_types

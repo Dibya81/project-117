@@ -279,9 +279,7 @@ class Orchestrator:
         if workflow_name and self._workflows is not None:
             # `inputs` is keyword-only on WorkflowManager.compile; passing it
             # positionally raised TypeError, so the workflow branch never ran.
-            plan = self._workflows.compile(
-                workflow_name, inputs=request.get("inputs") or {}
-            )
+            plan = self._workflows.compile(workflow_name, inputs=request.get("inputs") or {})
             route_summary = {"workflow": workflow_name}
         else:
             # TaskRouter exposes exactly one entry point, `await route(...)`,
@@ -364,8 +362,7 @@ class Orchestrator:
         # Action policy: does the caller hold every permission this plan needs?
         try:
             decisions = [
-                decision.to_dict()
-                for decision in self._action_policy.enforce(plan, roles=roles)
+                decision.to_dict() for decision in self._action_policy.enforce(plan, roles=roles)
             ]
         except AuthorizationError as exc:
             return await self._refuse(job_id, exc, policy="action")
@@ -389,9 +386,7 @@ class Orchestrator:
         # Approval policy: park before the work, not after it.
         gated = self._approval_policy.gated_steps(plan, approved_steps=approved)
         if gated:
-            await self._park(
-                job_id, plan, gated, approved=approved, route_summary=route_summary
-            )
+            await self._park(job_id, plan, gated, approved=approved, route_summary=route_summary)
             return await asyncio.to_thread(self._jobs.get, job_id)
         return None
 
@@ -517,9 +512,7 @@ class Orchestrator:
             self._count("job.policy_refused")
             return None
         except Exception as exc:  # noqa: BLE001 - classified below
-            decision = self._recovery.classify(
-                exc, attempts=retries_used, replans=replans_used
-            )
+            decision = self._recovery.classify(exc, attempts=retries_used, replans=replans_used)
             await asyncio.to_thread(
                 self._jobs.progress,
                 job_id,
@@ -582,9 +575,7 @@ class Orchestrator:
         *,
         route_summary: dict[str, Any],
     ) -> dict[str, Any]:
-        failed_steps = [
-            outcome for outcome in state.outcomes.values() if outcome.status == "error"
-        ]
+        failed_steps = [outcome for outcome in state.outcomes.values() if outcome.status == "error"]
         if failed_steps and not state.answer:
             reason = "; ".join(f"{o.step_id}: {o.error}" for o in failed_steps)
             await asyncio.to_thread(
@@ -709,9 +700,7 @@ class _ProgressTracker:
                 )
                 self._current = target
                 return
-        await asyncio.to_thread(
-            self._jobs.progress, self._job_id, message=message, detail=detail
-        )
+        await asyncio.to_thread(self._jobs.progress, self._job_id, message=message, detail=detail)
 
 
 def _restart(state: ExecutionState, *, plan: Plan | None = None) -> ExecutionState:

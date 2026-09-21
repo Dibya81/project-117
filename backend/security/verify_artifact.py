@@ -49,9 +49,7 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="path to the detached signature (default: <file>.sig.json)",
     )
-    parser.add_argument(
-        "--json", action="store_true", help="emit the full result as JSON"
-    )
+    parser.add_argument("--json", action="store_true", help="emit the full result as JSON")
     args = parser.parse_args(argv)
 
     target = Path(args.file)

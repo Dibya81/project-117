@@ -36,6 +36,7 @@ from backend.security.network.network_monitor import summary as network_summary
 
 router = APIRouter(prefix="/api/security", tags=["security"])
 
+
 class EgressProbeRequest(BaseModel):
     """A destination for the socket-free egress probe."""
 
@@ -81,7 +82,9 @@ async def sovereignty_status(request: Request) -> dict:
         return_exceptions=True,
     )
     local_ai, vision, knowledge, vectors, tools, sandbox = (
-        value if isinstance(value, dict) else _entry("unknown", "unknown", NOT_AVAILABLE, str(value))
+        value
+        if isinstance(value, dict)
+        else _entry("unknown", "unknown", NOT_AVAILABLE, str(value))
         for value in services
     )
     return {
@@ -121,11 +124,27 @@ def _now() -> str:
 #: never merely asserted: `PASS` means the call was made and the refusal
 #: happened.
 EVALUATION_SCENARIOS: tuple[dict[str, str], ...] = (
-    {"id": "unauthorized_privileged_action", "name": "Unauthorized privileged action", "expected": "refused"},
-    {"id": "unauthorized_retrieval", "name": "Unauthorized retrieval (clearance boundary)", "expected": "refused"},
+    {
+        "id": "unauthorized_privileged_action",
+        "name": "Unauthorized privileged action",
+        "expected": "refused",
+    },
+    {
+        "id": "unauthorized_retrieval",
+        "name": "Unauthorized retrieval (clearance boundary)",
+        "expected": "refused",
+    },
     {"id": "external_egress", "name": "External egress attempt", "expected": "refused"},
-    {"id": "insufficient_evidence", "name": "Insufficient evidence", "expected": "abstain-or-refuse"},
-    {"id": "prompt_injection_in_document", "name": "Prompt injection hidden in a document", "expected": "detected-and-neutralised"},
+    {
+        "id": "insufficient_evidence",
+        "name": "Insufficient evidence",
+        "expected": "abstain-or-refuse",
+    },
+    {
+        "id": "prompt_injection_in_document",
+        "name": "Prompt injection hidden in a document",
+        "expected": "detected-and-neutralised",
+    },
 )
 
 
@@ -167,7 +186,12 @@ def run_security_evaluation(request: Request) -> dict:
                 ),
             }[scenario["id"]]
             results.append(
-                {**scenario, "status": "NOT IMPLEMENTED", "actual": "no control exists in this build for this scenario", "detail": detail}
+                {
+                    **scenario,
+                    "status": "NOT IMPLEMENTED",
+                    "actual": "no control exists in this build for this scenario",
+                    "detail": detail,
+                }
             )
     return {
         "generated_at": _now(),
@@ -277,7 +301,12 @@ def security_events(request: Request, limit: int = 40) -> dict:
     """
     audit = getattr(request.app.state, "audit", None)
     if audit is None:
-        return {"available": False, "reason": "no audit service is attached", "events": [], "namespaces": []}
+        return {
+            "available": False,
+            "reason": "no audit service is attached",
+            "events": [],
+            "namespaces": [],
+        }
     # Prefixes, not a fixed list of action names: a new security action is
     # picked up by the panel without a second registration step.
     prefixes = ("network.", "auth.", "permission.", "clearance.", "sandbox.", "audit.", "approval.")
@@ -410,7 +439,9 @@ def _is_documentation_address(host: str) -> bool:
 async def _local_ai(state: Any) -> dict[str, Any]:
     gateway = getattr(state, "gateway", None)
     if gateway is None:
-        return _entry("local_ai", "Local AI", NOT_AVAILABLE, "no model gateway is attached to this app")
+        return _entry(
+            "local_ai", "Local AI", NOT_AVAILABLE, "no model gateway is attached to this app"
+        )
     try:
         health = await gateway.health()
         running = bool(health.get("running"))
@@ -469,7 +500,9 @@ async def _local_vision(state: Any) -> dict[str, Any]:
     except Exception:  # noqa: BLE001
         importable = False
     registered = _registered_tool_names(state)
-    vision_tools = sorted(name for name in registered if name in {"ocr", "analyse_drawing", "analyse_image"})
+    vision_tools = sorted(
+        name for name in registered if name in {"ocr", "analyse_drawing", "analyse_image"}
+    )
     if vision_tools:
         return _entry(
             "local_vision",
@@ -503,7 +536,9 @@ async def _local_knowledge(state: Any) -> dict[str, Any]:
     """
     registered = _registered_tool_names(state)
     if any("graph" in name for name in registered):
-        return _entry("local_knowledge", "Local Knowledge (graph)", IMPLEMENTED, "exposed as an agent tool.")
+        return _entry(
+            "local_knowledge", "Local Knowledge (graph)", IMPLEMENTED, "exposed as an agent tool."
+        )
     return _entry(
         "local_knowledge",
         "Local Knowledge (graph)",
@@ -565,7 +600,9 @@ async def _vector_store(state: Any) -> dict[str, Any]:
 async def _tool_registry(state: Any) -> dict[str, Any]:
     registry = getattr(state, "tools", None)
     if registry is None:
-        return _entry("tool_registry", "Tool Registry", NOT_AVAILABLE, "no tool registry is attached.")
+        return _entry(
+            "tool_registry", "Tool Registry", NOT_AVAILABLE, "no tool registry is attached."
+        )
     try:
         catalogue = registry.list()
     except Exception as exc:  # noqa: BLE001

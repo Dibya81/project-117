@@ -144,9 +144,7 @@ class ModelRegistry:
         )
         missing = [r for r in ROLE_ORDER if r not in self._descriptors]
         if missing:
-            raise ValueError(
-                "no descriptor declared for role(s): " + ", ".join(missing)
-            )
+            raise ValueError("no descriptor declared for role(s): " + ", ".join(missing))
 
     # --- declarations ----------------------------------------------------
 
@@ -169,9 +167,7 @@ class ModelRegistry:
         return self._roles.get(role)
 
     def required_roles(self) -> tuple[str, ...]:
-        return tuple(
-            role for role in ROLE_ORDER if self._descriptors[role].required_for_demo
-        )
+        return tuple(role for role in ROLE_ORDER if self._descriptors[role].required_for_demo)
 
     def configuration_problems(self) -> list[str]:
         """Operator-facing configuration gaps.
@@ -199,21 +195,15 @@ class ModelRegistry:
         problems: list[str] = []
         for role in router_roles:
             if role not in self._descriptors:
-                problems.append(
-                    f"router resolves '{role}' but the registry has no descriptor"
-                )
+                problems.append(f"router resolves '{role}' but the registry has no descriptor")
         for role in ROLE_ORDER:
             if role not in router_roles:
-                problems.append(
-                    f"registry declares '{role}' but the router cannot resolve it"
-                )
+                problems.append(f"registry declares '{role}' but the router cannot resolve it")
         return problems
 
     # --- live status -----------------------------------------------------
 
-    def status(
-        self, *, available_models: Iterable[str] | None = None
-    ) -> list[RoleStatus]:
+    def status(self, *, available_models: Iterable[str] | None = None) -> list[RoleStatus]:
         """Status for every role.
 
         ``available_models=None`` means availability is *unknown* (the backend

@@ -197,7 +197,11 @@ def describe_trend(
     change = last - first
     return {
         "usable": fit.points >= MIN_POINTS,
-        "direction": "rising" if fit.slope_per_hour > 0 else "falling" if fit.slope_per_hour < 0 else "flat",
+        "direction": "rising"
+        if fit.slope_per_hour > 0
+        else "falling"
+        if fit.slope_per_hour < 0
+        else "flat",
         "first_value": round(first, 4),
         "last_value": round(last, 4),
         "change": round(change, 4),
@@ -216,8 +220,7 @@ def describe_trend(
             "no maintenance intervention occurs in the projection window",
         ],
         "caveat": (
-            f"fewer than {MIN_POINTS} samples - reported for completeness, not for "
-            "decisions"
+            f"fewer than {MIN_POINTS} samples - reported for completeness, not for decisions"
             if fit.points < MIN_POINTS
             else ""
         ),
@@ -256,9 +259,7 @@ def project(
         "fit": fit.to_dict(),
         "confidence": _confidence(fit),
         "method": "least_squares_linear_extrapolation",
-        "extrapolation_ratio": (
-            round(horizon / fit.span_hours, 2) if fit.span_hours > 0 else None
-        ),
+        "extrapolation_ratio": (round(horizon / fit.span_hours, 2) if fit.span_hours > 0 else None),
         "caveat": (
             "the projection window is longer than the observed window, so this is "
             "an extrapolation well beyond the evidence"

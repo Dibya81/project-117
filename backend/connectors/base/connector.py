@@ -119,7 +119,12 @@ class BaseConnector:
             self._request("GET", "/")
             return {"name": self.config.name, "enabled": True, "status": "ok"}
         except ConnectorError as exc:
-            return {"name": self.config.name, "enabled": True, "status": "unreachable", "error": str(exc)}
+            return {
+                "name": self.config.name,
+                "enabled": True,
+                "status": "unreachable",
+                "error": str(exc),
+            }
 
     def close(self) -> None:
         if self._client is not None:

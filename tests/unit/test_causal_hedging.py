@@ -1,9 +1,9 @@
 """Unit tests for causal claim hedging in data analysis agent."""
 
 import pytest
-from backend.agents.data_analysis.hedging import hedge_causal_claims
-from backend.agents.data_analysis.agent import DataAnalysisAgent
 from backend.agents.base import AgentResult
+from backend.agents.data_analysis.agent import DataAnalysisAgent
+from backend.agents.data_analysis.hedging import hedge_causal_claims
 
 
 def test_hedge_causal_claims_direct():

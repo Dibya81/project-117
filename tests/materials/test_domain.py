@@ -43,9 +43,9 @@ class TestInventoryArithmetic:
             status = svc.inventory_status(store, material["id"])
             if status.get("quantity") is None:
                 continue
-            assert status["available"] == round(
-                status["quantity"] - status["reserved"], 6
-            ), material["id"]
+            assert status["available"] == round(status["quantity"] - status["reserved"], 6), (
+                material["id"]
+            )
 
     def test_basis_is_reported_with_the_value(self, store):
         status = svc.inventory_status(store, "MECH-SEAL-P1001")
@@ -86,14 +86,23 @@ class TestThresholdStates:
     ):
         empty_store.upsert_material(
             Material(
-                id="M", name="m", material_class=MaterialClass.MAINTENANCE_SPARE,
-                unit="EA", provenance=Provenance.synthetic("test"),
+                id="M",
+                name="m",
+                material_class=MaterialClass.MAINTENANCE_SPARE,
+                unit="EA",
+                provenance=Provenance.synthetic("test"),
             )
         )
         empty_store.add_balance(
             InventoryBalance(
-                id="B", material_id="M", location="W", quantity=quantity, reserved=reserved,
-                unit="EA", safety_stock=safety, reorder_level=reorder,
+                id="B",
+                material_id="M",
+                location="W",
+                quantity=quantity,
+                reserved=reserved,
+                unit="EA",
+                safety_stock=safety,
+                reorder_level=reorder,
                 provenance=Provenance.synthetic("test"),
             )
         )
@@ -102,8 +111,7 @@ class TestThresholdStates:
     def test_seeded_data_exercises_every_state(self, store):
         """The demo must show a healthy item, a depleting one and a critical one."""
         states = {
-            svc.inventory_status(store, m["id"])["status"]
-            for m in store.materials(limit=500)
+            svc.inventory_status(store, m["id"])["status"] for m in store.materials(limit=500)
         }
         assert {"AVAILABLE", "CRITICAL"} <= states
         assert "OUT_OF_STOCK" in states
@@ -123,13 +131,20 @@ class TestDaysOfCover:
         """A material nobody consumes has no cover figure — not zero, not infinity."""
         store.upsert_material(
             Material(
-                id="PASSIVE", name="Passive spare", material_class=MaterialClass.MAINTENANCE_SPARE,
-                unit="EA", provenance=Provenance.synthetic("test"),
+                id="PASSIVE",
+                name="Passive spare",
+                material_class=MaterialClass.MAINTENANCE_SPARE,
+                unit="EA",
+                provenance=Provenance.synthetic("test"),
             )
         )
         store.add_balance(
             InventoryBalance(
-                id="BP", material_id="PASSIVE", location="W", quantity=5, unit="EA",
+                id="BP",
+                material_id="PASSIVE",
+                location="W",
+                quantity=5,
+                unit="EA",
                 provenance=Provenance.synthetic("test"),
             )
         )
@@ -149,21 +164,32 @@ class TestForecast:
     def test_thin_history_refuses_to_forecast(self, empty_store):
         empty_store.upsert_material(
             Material(
-                id="THIN", name="thin", material_class=MaterialClass.MAINTENANCE_SPARE,
-                unit="EA", provenance=Provenance.synthetic("test"),
+                id="THIN",
+                name="thin",
+                material_class=MaterialClass.MAINTENANCE_SPARE,
+                unit="EA",
+                provenance=Provenance.synthetic("test"),
             )
         )
         empty_store.add_balance(
             InventoryBalance(
-                id="BT", material_id="THIN", location="W", quantity=10, unit="EA",
+                id="BT",
+                material_id="THIN",
+                location="W",
+                quantity=10,
+                unit="EA",
                 provenance=Provenance.synthetic("test"),
             )
         )
         # One consumption day only — well below the minimum.
         empty_store.append_movement(
             MaterialMovement(
-                id=new_id("MV"), material_id="THIN", movement_type=MovementType.CONSUMPTION,
-                quantity=1, unit="EA", timestamp="2026-09-10T06:00:00+00:00",
+                id=new_id("MV"),
+                material_id="THIN",
+                movement_type=MovementType.CONSUMPTION,
+                quantity=1,
+                unit="EA",
+                timestamp="2026-09-10T06:00:00+00:00",
                 provenance=Provenance.synthetic("test"),
             )
         )
@@ -190,9 +216,13 @@ class TestMovements:
         before = len(store.movements("MECH-SEAL-P1001"))
         store.append_movement(
             MaterialMovement(
-                id=new_id("MV"), material_id="MECH-SEAL-P1001",
-                movement_type=MovementType.ADJUSTMENT, quantity=-1, unit="EA",
-                timestamp="2026-09-14T10:00:00+00:00", reference="correction",
+                id=new_id("MV"),
+                material_id="MECH-SEAL-P1001",
+                movement_type=MovementType.ADJUSTMENT,
+                quantity=-1,
+                unit="EA",
+                timestamp="2026-09-14T10:00:00+00:00",
+                reference="correction",
                 provenance=Provenance.synthetic("test"),
             )
         )
@@ -214,9 +244,14 @@ class TestPriceHistory:
         before = len(store.prices("MECH-SEAL-P1001", limit=2000))
         store.append_price(
             PriceObservation(
-                id=new_id("PRC"), item_id="MECH-SEAL-P1001", price=99_999.0, unit="EA",
-                observed_on=date.today().isoformat(), source="test",
-                data_status=DataStatus.MANUAL, provenance=Provenance.synthetic("test"),
+                id=new_id("PRC"),
+                item_id="MECH-SEAL-P1001",
+                price=99_999.0,
+                unit="EA",
+                observed_on=date.today().isoformat(),
+                source="test",
+                data_status=DataStatus.MANUAL,
+                provenance=Provenance.synthetic("test"),
             )
         )
         assert len(store.prices("MECH-SEAL-P1001", limit=2000)) == before + 1
@@ -229,15 +264,21 @@ class TestPriceHistory:
 
     def test_change_percent_matches_its_own_inputs(self, store, anchor):
         history = svc.price_history(store, "RM-CRUDE-LIGHT", window_days=30, anchor=anchor)
-        expected = (history["current"]["price"] - history["baseline"]["price"]) / history[
-            "baseline"
-        ]["price"] * 100
+        expected = (
+            (history["current"]["price"] - history["baseline"]["price"])
+            / history["baseline"]["price"]
+            * 100
+        )
         assert history["change_percent"] == pytest.approx(expected, rel=1e-3)
 
     def test_movement_flag_respects_configurable_thresholds(self, store, anchor):
         # A zero threshold makes any change abnormal; a huge one makes it normal.
-        strict = svc.price_history(store, "RM-CRUDE-LIGHT", window_days=30, anchor=anchor, abnormal_pct=0.0)
-        loose = svc.price_history(store, "RM-CRUDE-LIGHT", window_days=30, anchor=anchor, abnormal_pct=1e9)
+        strict = svc.price_history(
+            store, "RM-CRUDE-LIGHT", window_days=30, anchor=anchor, abnormal_pct=0.0
+        )
+        loose = svc.price_history(
+            store, "RM-CRUDE-LIGHT", window_days=30, anchor=anchor, abnormal_pct=1e9
+        )
         assert strict["movement"] == "ABNORMAL"
         assert loose["movement"] == "NORMAL"
 
@@ -275,9 +316,7 @@ class TestProduction:
         by_date = {b["period_start"]: b["quantity"] for b in daily["buckets"]}
         week = weekly["buckets"][-1]
         total = sum(
-            q
-            for d, q in by_date.items()
-            if week["period_start"] <= d <= week["period_end"]
+            q for d, q in by_date.items() if week["period_start"] <= d <= week["period_end"]
         )
         assert total == pytest.approx(week["quantity"], rel=1e-6)
 
@@ -351,7 +390,9 @@ class TestEquipmentRequirements:
     def test_multiplier_scales_the_requirement(self, store):
         single = svc.material_requirement(store, "e-P-1001")
         triple = svc.material_requirement(store, "e-P-1001", multiplier=3.0)
-        assert triple["lines"][0]["required_quantity"] == single["lines"][0]["required_quantity"] * 3
+        assert (
+            triple["lines"][0]["required_quantity"] == single["lines"][0]["required_quantity"] * 3
+        )
 
     def test_equipment_ids_are_real_plant_assets(self, store):
         """The bridge must land on the live plant, not a fabricated asset code."""
@@ -367,9 +408,7 @@ class TestEquipmentRequirements:
 class TestFinancial:
     def test_cost_is_quantity_times_unit_price(self, store):
         impact = svc.financial_impact(store, "MECH-SEAL-P1001", 2)
-        assert impact["estimated_cost"] == pytest.approx(
-            2 * impact["unit_price"], rel=1e-9
-        )
+        assert impact["estimated_cost"] == pytest.approx(2 * impact["unit_price"], rel=1e-9)
         assert impact["calculation_basis"]["formula"] == "quantity × unit_price"
 
     def test_cost_is_deterministic(self, store):
@@ -384,8 +423,10 @@ class TestFinancial:
     def test_missing_price_blocks_the_calculation(self, store):
         store.upsert_material(
             Material(
-                id="UNPRICED", name="Item with no recorded price",
-                material_class=MaterialClass.MAINTENANCE_SPARE, unit="EA",
+                id="UNPRICED",
+                name="Item with no recorded price",
+                material_class=MaterialClass.MAINTENANCE_SPARE,
+                unit="EA",
                 provenance=Provenance.synthetic("test"),
             )
         )
@@ -462,7 +503,10 @@ class TestDashboardAndIntelligence:
                 assert entry["limitations"][0]["code"] == svc.INSUFFICIENT_HISTORY
 
     def test_dashboard_marks_its_data_status(self, store):
-        assert svc.materials_dashboard(store, anchor=date(2026, 9, 14))["data_status"] == "SYNTHETIC_DEMO"
+        assert (
+            svc.materials_dashboard(store, anchor=date(2026, 9, 14))["data_status"]
+            == "SYNTHETIC_DEMO"
+        )
 
     def test_intelligence_finds_the_seeded_critical_items(self, store, anchor):
         intel = svc.inventory_intelligence(store, anchor=anchor)
@@ -476,7 +520,10 @@ class TestDashboardAndIntelligence:
 
     def test_insights_are_ordered_by_severity(self, store, anchor):
         order = {"CRITICAL": 0, "WARNING": 1, "INFO": 2}
-        severities = [order[i["severity"]] for i in svc.inventory_intelligence(store, anchor=anchor)["insights"]]
+        severities = [
+            order[i["severity"]]
+            for i in svc.inventory_intelligence(store, anchor=anchor)["insights"]
+        ]
         assert severities == sorted(severities)
 
 
@@ -495,9 +542,13 @@ class TestGraph:
     def test_produces_is_one_edge_per_unit_product_pair(self, store):
         """Iterating production records once emitted one edge per day per product."""
         graph = svc.material_graph(store)
-        produces = [(e["source"], e["target"]) for e in graph["edges"] if e["relation"] == "PRODUCES"]
+        produces = [
+            (e["source"], e["target"]) for e in graph["edges"] if e["relation"] == "PRODUCES"
+        ]
         assert len(produces) == len(set(produces)), "duplicate PRODUCES edges"
-        assert len(produces) < 50, f"{len(produces)} PRODUCES edges looks like per-record duplication"
+        assert len(produces) < 50, (
+            f"{len(produces)} PRODUCES edges looks like per-record duplication"
+        )
 
     def test_edges_carry_provenance(self, store):
         graph = svc.material_graph(store)
@@ -506,8 +557,12 @@ class TestGraph:
     def test_neighbourhood_is_scoped_to_one_material(self, store):
         hood = svc.material_neighbourhood(store, "MECH-SEAL-P1001")
         assert all(
-            n["id"] == "MECH-SEAL-P1001" or any(
-                e["source"] == "MECH-SEAL-P1001" and e["target"] == n["id"] or e["target"] == "MECH-SEAL-P1001" and e["source"] == n["id"]
+            n["id"] == "MECH-SEAL-P1001"
+            or any(
+                e["source"] == "MECH-SEAL-P1001"
+                and e["target"] == n["id"]
+                or e["target"] == "MECH-SEAL-P1001"
+                and e["source"] == n["id"]
                 for e in hood["edges"]
             )
             for n in hood["nodes"]

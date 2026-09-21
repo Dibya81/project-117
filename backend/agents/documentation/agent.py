@@ -136,9 +136,9 @@ class DocumentationAgent(BaseAgent):
 
     @staticmethod
     def _artifact_type(arguments: dict[str, Any]) -> str | None:
-        candidate = str(
-            arguments.get("artifact_type") or arguments.get("artifact") or ""
-        ).strip().lower()
+        candidate = (
+            str(arguments.get("artifact_type") or arguments.get("artifact") or "").strip().lower()
+        )
         return candidate if candidate in DocumentationAgent.ARTIFACT_TYPES else None
 
     def plan(self, *, task: str, context: Any = None) -> list[dict[str, Any]]:
@@ -204,8 +204,7 @@ class DocumentationAgent(BaseAgent):
         if artifact_type is None:
             if result.grounded and "[" not in result.answer:
                 result.notes.append(
-                    "the answer carries no evidence markers, so citation checking will "
-                    "reject it"
+                    "the answer carries no evidence markers, so citation checking will reject it"
                 )
             return result
 
@@ -233,7 +232,7 @@ class DocumentationAgent(BaseAgent):
         result.spec = spec.model_dump(mode="json")
         summary = spec.summary()
         result.answer = (
-            f"Authored a {artifact_type} specification: \"{spec.title}\" with "
+            f'Authored a {artifact_type} specification: "{spec.title}" with '
             f"{spec.content_units()} {('slides' if artifact_type == 'pptx' else 'sheets' if artifact_type == 'xlsx' else 'sections')} "
             f"and {len(spec.all_citations())} citation(s). "
             "The file itself is produced by the generator, not by the model."
@@ -244,8 +243,7 @@ class DocumentationAgent(BaseAgent):
         if not spec.all_citations():
             result.degraded = True
             result.notes.append(
-                "the specification contains no citations, so verification will reject the "
-                "artifact"
+                "the specification contains no citations, so verification will reject the artifact"
             )
         uncited = self._uncited_bullets(spec)
         if uncited:

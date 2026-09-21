@@ -8,6 +8,7 @@ verification -> artifact/audit.
 
 Randomly selects assets (seeded) instead of the documented demo path.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -44,12 +45,10 @@ def run_case(plant_id: str, eq_id: str, mode_id: str, approve: bool = True) -> d
 
     ev_types = Counter(e.type for e in rt.events if e.seq > seq_before)
     # did real state change?
-    changed_eq = [
-        k for k in pre["equipment"]
-        if pre["equipment"][k] != post["equipment"][k]
-    ]
+    changed_eq = [k for k in pre["equipment"] if pre["equipment"][k] != post["equipment"][k]]
     changed_sensors = [
-        k for k in pre["sensors"]
+        k
+        for k in pre["sensors"]
         if pre["sensors"][k]["quality"] != post["sensors"][k]["quality"]
         or pre["sensors"][k]["failed"] != post["sensors"][k]["failed"]
     ]
@@ -99,8 +98,14 @@ def main() -> int:
             try:
                 OUT["cases"].append(run_case(plant_id, eq, fm))
             except Exception as exc:  # noqa: BLE001
-                OUT["cases"].append({"plant": plant_id, "equipment": eq, "mode": fm,
-                                     "ERROR": f"{type(exc).__name__}: {exc}"})
+                OUT["cases"].append(
+                    {
+                        "plant": plant_id,
+                        "equipment": eq,
+                        "mode": fm,
+                        "ERROR": f"{type(exc).__name__}: {exc}",
+                    }
+                )
 
     # negative / failure-path tests
     neg = []
@@ -109,7 +114,10 @@ def main() -> int:
     svc.register(p)
     svc.start("refinery")
     for label, fn in (
-        ("unknown_equipment", lambda: svc.inject_failure("refinery", "NOPE-999", p.failure_modes[0].id)),
+        (
+            "unknown_equipment",
+            lambda: svc.inject_failure("refinery", "NOPE-999", p.failure_modes[0].id),
+        ),
         ("unknown_mode", lambda: svc.inject_failure("refinery", p.equipment[0].id, "not-a-mode")),
         ("unknown_plant", lambda: svc.runtime("ghost")),
         ("unknown_incident_decision", lambda: svc.decide("refinery", "INC-0000", True)),
@@ -128,9 +136,14 @@ def main() -> int:
     try:
         a = svc.inject_failure("refinery", eq0.id, eq0.failure_modes[0])
         b = svc.inject_failure("refinery", eq0.id, eq0.failure_modes[0])
-        neg.append({"case": "duplicate_fault", "first": a["incident"]["id"],
-                    "second": b["incident"]["id"],
-                    "distinct_incidents": a["incident"]["id"] != b["incident"]["id"]})
+        neg.append(
+            {
+                "case": "duplicate_fault",
+                "first": a["incident"]["id"],
+                "second": b["incident"]["id"],
+                "distinct_incidents": a["incident"]["id"] != b["incident"]["id"],
+            }
+        )
     except Exception as exc:  # noqa: BLE001
         neg.append({"case": "duplicate_fault", "raised": type(exc).__name__, "msg": str(exc)[:90]})
     OUT["negative"] = neg

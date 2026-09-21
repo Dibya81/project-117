@@ -1,10 +1,7 @@
 """Unit tests for OpenSandbox policy enforcement, default-deny egress, and isolation."""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-
-from backend.sandbox.policy import SandboxPolicy, SandboxPolicyError, policy_from_settings
-from backend.sandbox.client import OpenSandboxClient, SandboxUnavailable
+from backend.sandbox.policy import SandboxPolicy, SandboxPolicyError
 from backend.sandbox.service import SandboxService
 
 

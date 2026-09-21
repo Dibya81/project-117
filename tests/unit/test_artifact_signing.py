@@ -167,9 +167,7 @@ def test_truncation_is_detected(artifact, key):
     assert outcome.status == "SIGNATURE INVALID"
 
 
-def test_tampering_with_the_recorded_digest_inside_the_sidecar_is_detected(
-    artifact, key
-):
+def test_tampering_with_the_recorded_digest_inside_the_sidecar_is_detected(artifact, key):
     signed = sign_file(artifact, key=key)
     sidecar = json.loads(signed.signature_path.read_text())
     sidecar["sha256"] = "0" * 64
@@ -355,9 +353,7 @@ async def test_service_signs_a_generated_artifact(tmp_path, key, session_factory
 
 
 @pytest.mark.asyncio
-async def test_service_without_a_key_marks_the_artifact_unsigned(
-    tmp_path, session_factory
-):
+async def test_service_without_a_key_marks_the_artifact_unsigned(tmp_path, session_factory):
     service = ArtifactService(
         sandbox=_StubSandbox(b"bytes"),
         storage_dir=tmp_path / "out",

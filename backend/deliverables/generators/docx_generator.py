@@ -71,7 +71,9 @@ def _add_section(document, section: dict) -> int:
         text = str(bullet.get("text", ""))[:MAX_PARAGRAPH_CHARS]
         if not text.strip():
             continue
-        document.add_paragraph(text + _citation_suffix(bullet.get("citations")), style="List Bullet")
+        document.add_paragraph(
+            text + _citation_suffix(bullet.get("citations")), style="List Bullet"
+        )
         written += 1
 
     trailing = _citation_suffix(section.get("citations"))

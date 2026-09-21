@@ -149,7 +149,9 @@ def list_work_orders(
         raise unavailable(exc) from exc
     return {
         "items": [
-            work_order_dto(row, equipment_name=equipment_name_for(operations, row.get("equipmentId")))
+            work_order_dto(
+                row, equipment_name=equipment_name_for(operations, row.get("equipmentId"))
+            )
             for row in rows
         ]
     }
@@ -168,7 +170,9 @@ def get_work_order(
         raise unavailable(exc) from exc
     except KeyError as exc:
         raise _not_found("work order", work_order_id) from exc
-    return work_order_dto(row, equipment_name=equipment_name_for(operations, row.get("equipmentId")))
+    return work_order_dto(
+        row, equipment_name=equipment_name_for(operations, row.get("equipmentId"))
+    )
 
 
 class UpdateWorkOrderRequest(BaseModel):
@@ -224,7 +228,9 @@ def update_work_order(
         )
     except Exception:  # pragma: no cover - auditing must not break the write
         logger.warning("audit write failed for work order update", exc_info=True)
-    return work_order_dto(row, equipment_name=equipment_name_for(operations, row.get("equipmentId")))
+    return work_order_dto(
+        row, equipment_name=equipment_name_for(operations, row.get("equipmentId"))
+    )
 
 
 def _conflict(exc: OperationsStateError) -> HTTPException:

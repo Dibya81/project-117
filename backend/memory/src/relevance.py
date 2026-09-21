@@ -66,14 +66,10 @@ def recency_weight(
     return 0.5 ** (age_days / max(0.1, half_life_days))
 
 
-def score_record(
-    record: dict[str, Any], query: str, *, now: datetime | None = None
-) -> float:
+def score_record(record: dict[str, Any], query: str, *, now: datetime | None = None) -> float:
     """Weighted score in 0.0-1.0. Text overlap dominates; a high-confidence
     record that does not match the question is still not an answer."""
-    text = " ".join(
-        str(record.get(field_name) or "") for field_name in ("key", "content")
-    )
+    text = " ".join(str(record.get(field_name) or "") for field_name in ("key", "content"))
     lexical = overlap(query, text)
     confidence = float(record.get("confidence") or 0.5)
     freshness = recency_weight(

@@ -61,9 +61,7 @@ class ModelRouter:
     def role_mapping(self) -> dict[str, str | None]:
         return {role: self._roles.get(role) for role in self._ROLES}
 
-    async def resolve(
-        self, role: str, *, model_override: str | None = None
-    ) -> ResolvedModel:
+    async def resolve(self, role: str, *, model_override: str | None = None) -> ResolvedModel:
         if role not in self._ROLES:
             raise ValueError(f"unknown model role '{role}' (known: {', '.join(self._ROLES)})")
 

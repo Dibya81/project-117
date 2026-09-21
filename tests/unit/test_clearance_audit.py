@@ -43,7 +43,7 @@ def test_clearance_change_requires_admin():
 def test_clearance_self_elevation_requires_distinct_approver():
     audit = MockAuditService()
     admin = Principal(user="admin1", roles=("admin",), authenticated=True)
-    
+
     # Self elevation without approver fails
     with pytest.raises(ClearanceDenied, match="Self-elevation requires a distinct admin approver"):
         change_clearance(
@@ -53,7 +53,7 @@ def test_clearance_self_elevation_requires_distinct_approver():
             new_clearance=Clearance.HIGHLY_CONFIDENTIAL,
             audit_service=audit,
         )
-    
+
     # Self elevation with self as approver fails
     with pytest.raises(ClearanceDenied, match="Self-elevation requires a distinct admin approver"):
         change_clearance(
@@ -101,4 +101,3 @@ def test_admin_can_modify_other_user_clearance():
     assert len(audit.records) == 1
     assert audit.records[0]["outcome"] == "success"
     assert audit.records[0]["detail"]["target_user_id"] == "worker42"
-

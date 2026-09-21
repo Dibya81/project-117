@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from backend.security.signing import generate_key, sign_file
 from scripts.verify_artifact_standalone import verify
 
@@ -30,4 +31,3 @@ def test_standalone_verifier_detects_tampering(tmp_path: Path):
 
     # Standalone verifier must fail
     assert verify(artifact_file) is False
-

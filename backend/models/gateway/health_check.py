@@ -126,9 +126,7 @@ class HealthChecker:
             if not report.running:
                 degraded.append(f"provider '{report.name}' is not answering: {report.error}")
             elif report.models_served == 0:
-                degraded.append(
-                    f"provider '{report.name}' is up but serves no models"
-                )
+                degraded.append(f"provider '{report.name}' is up but serves no models")
 
         payload: dict[str, Any] = {
             "ready": False,
@@ -141,15 +139,11 @@ class HealthChecker:
             # say so rather than implying role readiness was checked.
             payload["ready"] = any_reachable and bool(served)
             payload["roles"] = []
-            degraded.append(
-                "no model registry was supplied; role readiness was not evaluated"
-            )
+            degraded.append("no model registry was supplied; role readiness was not evaluated")
             payload["degraded"] = degraded
             return payload
 
-        statuses = self._registry.status(
-            available_models=served if any_reachable else None
-        )
+        statuses = self._registry.status(available_models=served if any_reachable else None)
         for status in statuses:
             if status.required_for_demo and not status.usable:
                 degraded.append(

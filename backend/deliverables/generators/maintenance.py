@@ -78,9 +78,7 @@ def build_maintenance_recommendation(
         section(
             "Recommended actions",
             paragraphs=(
-                []
-                if actions
-                else ["No actions are recommended; continue routine monitoring."]
+                [] if actions else ["No actions are recommended; continue routine monitoring."]
             ),
             bullets=[bullet(text) for text in actions],
         )

@@ -58,7 +58,9 @@ class AuditEvent(Base):
     __tablename__ = "audit_events"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_new_id)
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, index=True
+    )
     user: Mapped[str | None] = mapped_column(String(128), nullable=True)
     action: Mapped[str] = mapped_column(String(128), index=True)
     resource_type: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)

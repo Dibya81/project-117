@@ -76,9 +76,7 @@ class ContextPack:
         shown.
         """
         if not self.evidence:
-            return (
-                "No evidence was retrieved from the indexed documents for this request."
-            )
+            return "No evidence was retrieved from the indexed documents for this request."
         blocks = []
         for index, item in enumerate(self.evidence, start=1):
             citation = getattr(item, "citation", None)

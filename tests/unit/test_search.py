@@ -113,9 +113,21 @@ def make_app(settings: Settings, retriever: FakeRetriever) -> TestClient:
 @pytest.fixture
 def search_client(tmp_path):
     rows = [
-        _vendor_row("11111111-1111-1111-1111-111111111111.pdf", 0, "Bearing inspection every 500 hours.", page=2),
-        _vendor_row("22222222-2222-2222-2222-222222222222.pdf", 3, "Replace seals when wear exceeds spec.", page=5),
-        _vendor_row("11111111-1111-1111-1111-111111111111.pdf", 1, "Record vibration readings.", page=2),
+        _vendor_row(
+            "11111111-1111-1111-1111-111111111111.pdf",
+            0,
+            "Bearing inspection every 500 hours.",
+            page=2,
+        ),
+        _vendor_row(
+            "22222222-2222-2222-2222-222222222222.pdf",
+            3,
+            "Replace seals when wear exceeds spec.",
+            page=5,
+        ),
+        _vendor_row(
+            "11111111-1111-1111-1111-111111111111.pdf", 1, "Record vibration readings.", page=2
+        ),
     ]
     retriever = FakeRetriever(rows=rows)
     settings = Settings(
@@ -210,9 +222,7 @@ def test_search_scopes_to_indexed_documents(tmp_path):
         assert response.status_code == 200
         assert response.json()["total"] == 1
         # The where-clause must target the staged basename, not the UUID.
-        assert retriever.calls[-1]["where"] == (
-            f"document_id IN ('{document['id']}.pdf')"
-        )
+        assert retriever.calls[-1]["where"] == (f"document_id IN ('{document['id']}.pdf')")
 
 
 def test_search_unknown_document_is_404_class(search_client):
@@ -227,18 +237,14 @@ def test_search_unknown_document_is_404_class(search_client):
 def test_search_document_not_indexed_is_409(search_client):
     client, _ = search_client
     document = _upload(client)  # stored but never reindexed
-    response = client.post(
-        "/api/search", json={"query": "x", "document_ids": [document["id"]]}
-    )
+    response = client.post("/api/search", json={"query": "x", "document_ids": [document["id"]]})
     assert response.status_code == 409
     assert "not indexed" in response.json()["error"]["message"]
 
 
 def test_search_invalid_filter_is_400_class(search_client):
     client, _ = search_client
-    response = client.post(
-        "/api/search", json={"query": "x", "filters": {"page": {"gte": 1}}}
-    )
+    response = client.post("/api/search", json={"query": "x", "filters": {"page": {"gte": 1}}})
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "retrieval_failed"
     assert "invalid filters" in response.json()["error"]["message"]
@@ -301,7 +307,9 @@ def test_chat_without_use_rag_has_no_evidence(chat_client):
 
 def test_chat_grounded_failure_degrades_gracefully(tmp_path):
     """Retrieval down + use_rag=True → the turn still answers, ungrounded."""
-    retriever = FakeRetriever(rows=[_vendor_row("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb.pdf", 0, "chunk")])
+    retriever = FakeRetriever(
+        rows=[_vendor_row("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb.pdf", 0, "chunk")]
+    )
     retriever.fail = True  # retrieve() raises; has_table() also False
 
     settings = Settings(

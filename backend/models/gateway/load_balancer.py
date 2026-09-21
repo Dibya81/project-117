@@ -34,9 +34,7 @@ class NoProviderAvailable(Exception):
 class LoadBalancer:
     def __init__(self, strategy: str = LEAST_IN_FLIGHT) -> None:
         if strategy not in STRATEGIES:
-            raise ValueError(
-                f"unknown strategy '{strategy}' (known: {', '.join(STRATEGIES)})"
-            )
+            raise ValueError(f"unknown strategy '{strategy}' (known: {', '.join(STRATEGIES)})")
         self._strategy = strategy
         self._lock = threading.Lock()
         self._in_flight: dict[str, int] = {}
@@ -59,8 +57,7 @@ class LoadBalancer:
         names = [str(name) for name in candidates if str(name).strip()]
         if not names:
             raise NoProviderAvailable(
-                "no provider was offered for this request; the router should "
-                "have refused earlier"
+                "no provider was offered for this request; the router should have refused earlier"
             )
         if len(names) == 1:
             return names[0]

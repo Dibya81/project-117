@@ -186,7 +186,9 @@ def clearance_app(tmp_path):
 
 def _search_as(service: RetrievalService, roles: list[str], *, extra: dict | None = None):
     principal = Principal(user="tester", roles=tuple(roles), extra=extra or {})
-    evidence = service.evidence_for_chat("defect rate", top_k=10, user="tester", principal=principal)
+    evidence = service.evidence_for_chat(
+        "defect rate", top_k=10, user="tester", principal=principal
+    )
     return principal, evidence
 
 
@@ -241,7 +243,9 @@ def test_the_document_row_is_the_authority_not_the_chunk_copy():
         }
     ]
     viewer = Principal(user="v", roles=("viewer",))
-    visible, withheld = filter_chunks(viewer, rows, overrides_by_id={SECRET_DOC: "HIGHLY_CONFIDENTIAL"})
+    visible, withheld = filter_chunks(
+        viewer, rows, overrides_by_id={SECRET_DOC: "HIGHLY_CONFIDENTIAL"}
+    )
     assert visible == [] and withheld == 1
     # Without the authoritative override the chunk's own label applies.
     visible2, withheld2 = filter_chunks(viewer, rows)
@@ -291,7 +295,12 @@ def _labelled_graph() -> MemoryGraph:
     builder.graph.add_entity(ent.equipment("P-1001"))
     builder.add_documents(
         [
-            {"id": PUBLIC_DOC, "title": "Public manual", "clearance": "PUBLIC", "equipment": ["P-1001"]},
+            {
+                "id": PUBLIC_DOC,
+                "title": "Public manual",
+                "clearance": "PUBLIC",
+                "equipment": ["P-1001"],
+            },
             {"id": SECRET_DOC, "title": "Restricted defect report", "clearance": "CONFIDENTIAL"},
         ]
     )
@@ -350,7 +359,9 @@ def test_a_hidden_graph_node_is_indistinguishable_from_a_missing_one():
 def test_graph_subgraph_does_not_leak_a_requested_hidden_node():
     graph = _labelled_graph()
     viewer = GraphQuery(graph, principal=Principal(user="v", roles=("viewer",)))
-    sub = viewer.subgraph([ent.node_id("document", PUBLIC_DOC), ent.node_id("document", SECRET_DOC)])
+    sub = viewer.subgraph(
+        [ent.node_id("document", PUBLIC_DOC), ent.node_id("document", SECRET_DOC)]
+    )
     assert [n["id"] for n in sub["nodes"]] == [ent.node_id("document", PUBLIC_DOC)]
     assert sub["edges"] == []
 
@@ -367,8 +378,17 @@ class _StubRetrieval:
         self._service = service
         self.seen_principals: list[Principal | None] = []
 
-    def search(self, query, *, top_k=10, mode="hybrid", document_ids=None, rerank=None,
-               user=None, principal=None):
+    def search(
+        self,
+        query,
+        *,
+        top_k=10,
+        mode="hybrid",
+        document_ids=None,
+        rerank=None,
+        user=None,
+        principal=None,
+    ):
         self.seen_principals.append(principal)
         return self._service.search(
             query,
@@ -389,9 +409,7 @@ async def test_agent_tool_call_is_filtered_by_the_callers_clearance(clearance_ap
     viewer_ctx = ToolContext(
         user="v", roles=["viewer"], clearance=None, retrieval=service, session_factory=None
     )
-    viewer_result = await tool.run(
-        tool.arguments_model(query="defect rate", top_k=10), viewer_ctx
-    )
+    viewer_result = await tool.run(tool.arguments_model(query="defect rate", top_k=10), viewer_ctx)
     viewer_texts = [r.get("text", "") for r in viewer_result.output["results"]]
     assert viewer_texts and all("Restricted" not in t for t in viewer_texts)
 

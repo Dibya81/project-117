@@ -129,9 +129,7 @@ def probe(data: bytes) -> dict[str, Any]:
     if not data:
         raise ToolArgumentError("no image bytes were supplied")
     if len(data) > MAX_IMAGE_BYTES:
-        raise ToolArgumentError(
-            f"image is {len(data)} bytes; the limit is {MAX_IMAGE_BYTES}"
-        )
+        raise ToolArgumentError(f"image is {len(data)} bytes; the limit is {MAX_IMAGE_BYTES}")
 
     fmt: str | None = None
     size: tuple[int, int] | None = None
@@ -153,8 +151,7 @@ def probe(data: bytes) -> dict[str, Any]:
 
     if fmt is None:
         raise ToolArgumentError(
-            "the supplied bytes are not a recognised image "
-            "(png, jpeg, gif, bmp, webp, tiff)"
+            "the supplied bytes are not a recognised image (png, jpeg, gif, bmp, webp, tiff)"
         )
 
     width, height = size if size else (None, None)

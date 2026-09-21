@@ -292,9 +292,7 @@ class MemoryService:
             statement = (
                 select(MemoryRecord)
                 .where(MemoryRecord.scope.in_(scopes))
-                .where(
-                    (MemoryRecord.expires_at.is_(None)) | (MemoryRecord.expires_at > now)
-                )
+                .where((MemoryRecord.expires_at.is_(None)) | (MemoryRecord.expires_at > now))
                 .order_by(MemoryRecord.confidence.desc(), MemoryRecord.updated_at.desc())
                 .limit(200)
             )

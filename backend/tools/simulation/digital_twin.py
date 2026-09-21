@@ -154,9 +154,7 @@ def assess(
     against. Silently dropping such a signal would hide a measurement.
     """
     if not isinstance(equipment, Mapping) or not equipment.get("id"):
-        raise ToolArgumentError(
-            "an equipment record with an 'id' is required to build a twin"
-        )
+        raise ToolArgumentError("an equipment record with an 'id' is required to build a twin")
     if not telemetry:
         raise ToolArgumentError(
             f"no telemetry was supplied for {equipment.get('id')}; a twin with no "
@@ -197,17 +195,13 @@ def assess(
     findings: list[dict[str, Any]] = []
     for signal in exceeded + warning + elevated:
         crossing = ((signal.get("projection") or {}).get("crossing") or {}) or {}
-        statement = (
-            f"{signal['signal']} is {signal['current']}{(' ' + signal['unit']) if signal['unit'] else ''}"
-        )
+        statement = f"{signal['signal']} is {signal['current']}{(' ' + signal['unit']) if signal['unit'] else ''}"
         if signal.get("limit") is not None:
             statement += f" against a limit of {signal['limit']}"
         if signal.get("deviation_pct") is not None:
             statement += f", {signal['deviation_pct']:+}% versus baseline"
         if crossing.get("days") is not None:
-            statement += (
-                f"; the fitted trend reaches the limit in {crossing['days']} days"
-            )
+            statement += f"; the fitted trend reaches the limit in {crossing['days']} days"
         findings.append(
             {
                 "signal": signal["signal"],

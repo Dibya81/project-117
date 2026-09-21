@@ -10,20 +10,32 @@ import json
 import logging
 import re
 import sys
-from typing import Any
 
 # Sensitive regex patterns to redact
 _SENSITIVE_PATTERNS = [
     # API keys / generic secret tokens
-    (re.compile(r"(?i)(api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token)\s*[:=]\s*['\"]?([a-zA-Z0-9_\-\.]{8,})['\"]?"), r"\1=[REDACTED]"),
+    (
+        re.compile(
+            r"(?i)(api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token)\s*[:=]\s*['\"]?([a-zA-Z0-9_\-\.]{8,})['\"]?"
+        ),
+        r"\1=[REDACTED]",
+    ),
     # OpenAI-style keys
     (re.compile(r"sk-[a-zA-Z0-9_\-]{20,}"), "[REDACTED_API_KEY]"),
     # Bearer tokens
     (re.compile(r"(?i)bearer\s+[a-zA-Z0-9_\-\.]{15,}"), "Bearer [REDACTED_TOKEN]"),
     # Passwords in URLs, JSON, key-value
-    (re.compile(r"(?i)(password|passwd|pwd)\s*[:=]\s*['\"]?([^\s,;'\"]{4,})['\"]?"), r"\1=[REDACTED]"),
+    (
+        re.compile(r"(?i)(password|passwd|pwd)\s*[:=]\s*['\"]?([^\s,;'\"]{4,})['\"]?"),
+        r"\1=[REDACTED]",
+    ),
     # Private keys
-    (re.compile(r"-----BEGIN [A-Z\s]+ PRIVATE KEY-----[\s\S]*?-----END [A-Z\s]+ PRIVATE KEY-----"), "[REDACTED_PRIVATE_KEY]"),
+    (
+        re.compile(
+            r"-----BEGIN [A-Z\s]+ PRIVATE KEY-----[\s\S]*?-----END [A-Z\s]+ PRIVATE KEY-----"
+        ),
+        "[REDACTED_PRIVATE_KEY]",
+    ),
     # Authorization header
     (re.compile(r"(?i)authorization:\s*[^\r\n]+"), "Authorization: [REDACTED]"),
 ]
@@ -46,13 +58,17 @@ class SensitiveDataFilter(logging.Filter):
         # Redact main message if it's a string
         if isinstance(record.msg, str):
             record.msg = redact_text(record.msg)
-        
+
         # Redact formatted args if string
         if record.args:
             if isinstance(record.args, dict):
-                record.args = {k: redact_text(v) if isinstance(v, str) else v for k, v in record.args.items()}
+                record.args = {
+                    k: redact_text(v) if isinstance(v, str) else v for k, v in record.args.items()
+                }
             elif isinstance(record.args, (list, tuple)):
-                record.args = tuple(redact_text(a) if isinstance(a, str) else a for a in record.args)
+                record.args = tuple(
+                    redact_text(a) if isinstance(a, str) else a for a in record.args
+                )
 
         # Redact exception text if already formatted
         if getattr(record, "exc_text", None):

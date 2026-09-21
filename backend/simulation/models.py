@@ -44,18 +44,18 @@ class EquipmentKind(str, Enum):
 
 
 class Measurement(str, Enum):
-    PRESSURE = "pressure"        # bar
+    PRESSURE = "pressure"  # bar
     TEMPERATURE = "temperature"  # degC
-    FLOW = "flow"                # m3/h
-    LEVEL = "level"              # %
-    VIBRATION = "vibration"      # mm/s
-    RPM = "rpm"                  # rpm
-    CURRENT = "current"          # A
-    POWER = "power"              # kW
-    GAS = "gas"                  # ppm
-    LEAK = "leak"                # bool-ish 0/1
-    POSITION = "position"        # %
-    SPEED = "speed"              # m/s (conveyors)
+    FLOW = "flow"  # m3/h
+    LEVEL = "level"  # %
+    VIBRATION = "vibration"  # mm/s
+    RPM = "rpm"  # rpm
+    CURRENT = "current"  # A
+    POWER = "power"  # kW
+    GAS = "gas"  # ppm
+    LEAK = "leak"  # bool-ish 0/1
+    POSITION = "position"  # %
+    SPEED = "speed"  # m/s (conveyors)
 
 
 UNITS: dict[Measurement, str] = {
@@ -94,7 +94,7 @@ class AssetState(str, Enum):
 
 class TelemetryQuality(str, Enum):
     GOOD = "good"
-    BAD = "bad"          # sensor failed — value must not be trusted
+    BAD = "bad"  # sensor failed — value must not be trusted
     STALE = "stale"
     SUBSTITUTED = "substituted"  # value comes from a validated alternate
 
@@ -168,10 +168,10 @@ class Equipment(BaseModel):
 
 
 class ConnectionKind(str, Enum):
-    PIPE = "pipe"        # process medium flows here — failure propagates
-    SIGNAL = "signal"    # instrumentation wiring — no process flow
+    PIPE = "pipe"  # process medium flows here — failure propagates
+    SIGNAL = "signal"  # instrumentation wiring — no process flow
     CONTROL = "control"  # controller → actuator
-    POWER = "power"      # electrical feed
+    POWER = "power"  # electrical feed
 
 
 class Connection(BaseModel):
@@ -192,7 +192,7 @@ class Connection(BaseModel):
     relation: str | None = None
     medium: str = "process"  # crude|water|steam|gas|ore|air…
     capacity: float = 100.0  # m3/h nominal
-    flow: float = 0.0        # engine state (m3/h equivalent)
+    flow: float = 0.0  # engine state (m3/h equivalent)
     status: AssetState = AssetState.NORMAL
     leaking: bool = False
     enabled: bool = True

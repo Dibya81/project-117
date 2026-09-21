@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Sequence
 
 
 @dataclass(frozen=True)
@@ -22,14 +21,31 @@ class PromptGuard:
     """Heuristic and regex-based guard for prompt injection and role hijacking."""
 
     INJECTION_PATTERNS = [
-        (re.compile(r"ignore\s+(all\s+)?(previous|prior|above)\s+instructions?", re.IGNORECASE), "instruction_override"),
-        (re.compile(r"disregard\s+(the\s+)?(previous|above|system)\s+prompts?", re.IGNORECASE), "instruction_override"),
+        (
+            re.compile(r"ignore\s+(all\s+)?(previous|prior|above)\s+instructions?", re.IGNORECASE),
+            "instruction_override",
+        ),
+        (
+            re.compile(r"disregard\s+(the\s+)?(previous|above|system)\s+prompts?", re.IGNORECASE),
+            "instruction_override",
+        ),
         (re.compile(r"system\s*:\s*you\s+are\s+now", re.IGNORECASE), "system_role_hijack"),
         (re.compile(r"<\s*\|\s*im_start\s*\|\s*>", re.IGNORECASE), "chatml_token_injection"),
         (re.compile(r"\[\s*INST\s*\]", re.IGNORECASE), "llama_inst_token_injection"),
-        (re.compile(r"jailbreak|dan\s+mode|developer\s+mode\s+enabled", re.IGNORECASE), "jailbreak_attempt"),
-        (re.compile(r"bypass\s+(all\s+)?(safety|security|filter)\s+checks?", re.IGNORECASE), "filter_bypass"),
-        (re.compile(r"reveal\s+(your\s+)?(secret|system\s+prompt|hidden\s+instructions?)", re.IGNORECASE), "prompt_leakage"),
+        (
+            re.compile(r"jailbreak|dan\s+mode|developer\s+mode\s+enabled", re.IGNORECASE),
+            "jailbreak_attempt",
+        ),
+        (
+            re.compile(r"bypass\s+(all\s+)?(safety|security|filter)\s+checks?", re.IGNORECASE),
+            "filter_bypass",
+        ),
+        (
+            re.compile(
+                r"reveal\s+(your\s+)?(secret|system\s+prompt|hidden\s+instructions?)", re.IGNORECASE
+            ),
+            "prompt_leakage",
+        ),
     ]
 
     # Zero-width / invisible characters used to obfuscate text

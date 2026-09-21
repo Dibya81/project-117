@@ -103,10 +103,7 @@ class EvidenceChecker:
             return CheckResult(
                 checker=self.name,
                 status=CheckStatus.FAILED,
-                message=(
-                    "a substantive answer was produced with no retrieved evidence "
-                    "behind it"
-                ),
+                message=("a substantive answer was produced with no retrieved evidence behind it"),
                 findings=[{"type": "answer_without_evidence", "answer_chars": len(answer)}],
                 duration_ms=(time.perf_counter() - started) * 1000,
             )

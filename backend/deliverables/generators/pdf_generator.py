@@ -31,12 +31,7 @@ MAX_PARAGRAPH_CHARS = 4000
 
 def _escape(text: str) -> str:
     """Make text safe for Platypus' inline markup parser."""
-    return (
-        str(text)
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )
+    return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def _citation_suffix(citations: list | None) -> str:
@@ -107,9 +102,7 @@ def main(argv: list[str] | None = None) -> int:
         canvas.drawString(20 * mm, 12 * mm, label)
         canvas.restoreState()
 
-    flowables = [
-        Paragraph(_escape(str(spec.get("title", "Untitled"))[:300]), styles["Title"])
-    ]
+    flowables = [Paragraph(_escape(str(spec.get("title", "Untitled"))[:300]), styles["Title"])]
     subtitle = str(spec.get("subtitle", "") or "")
     if subtitle:
         flowables.append(Paragraph(_escape(subtitle[:300]), styles["Heading3"]))

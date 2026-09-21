@@ -104,9 +104,7 @@ class PlanApprovalPolicy:
                 "tool_rule",
             )
 
-        decision: ApprovalDecision = self.policy.evaluate(
-            spec, already_approved=already_approved
-        )
+        decision: ApprovalDecision = self.policy.evaluate(spec, already_approved=already_approved)
         required = decision.required or (step.requires_approval and not already_approved)
         reason = decision.reason
         basis = decision.basis
@@ -125,9 +123,7 @@ class PlanApprovalPolicy:
             for step in plan.steps
         ]
 
-    def gated_steps(
-        self, plan: Plan, *, approved_steps: Iterable[str] = ()
-    ) -> list[StepApproval]:
+    def gated_steps(self, plan: Plan, *, approved_steps: Iterable[str] = ()) -> list[StepApproval]:
         return [s for s in self.evaluate_plan(plan, approved_steps=approved_steps) if s.required]
 
     def requires_approval(self, plan: Plan, *, approved_steps: Iterable[str] = ()) -> bool:

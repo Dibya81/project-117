@@ -7,11 +7,12 @@ Key assertions:
 - Garbage/unknown role strings are silently ignored (they grant nothing).
 - Missing X-P117-Roles falls back to DEFAULT_ROLE on both paths.
 """
+
 from __future__ import annotations
 
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
 from backend.security.auth import (
     API_KEY_HEADER,
     ROLES_HEADER,
@@ -21,13 +22,13 @@ from backend.security.auth import (
     principal_from_request,
     split_roles,
 )
-from backend.security.rbac import DEFAULT_ROLE, ANONYMOUS_MAX_ROLES
+from backend.security.rbac import ANONYMOUS_MAX_ROLES, DEFAULT_ROLE
 from backend.tools.base import Permission
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _settings(
     *,
@@ -72,6 +73,7 @@ VALID_KEY = "secret-key-123"
 # ---------------------------------------------------------------------------
 # CRIT-1 regression: authenticated caller cannot self-escalate via header
 # ---------------------------------------------------------------------------
+
 
 class TestCrit1RoleEscalation:
     """The core regression. An authenticated caller with a valid API key MUST
@@ -140,6 +142,7 @@ class TestCrit1RoleEscalation:
 # Anonymous path: ANONYMOUS_MAX_ROLES ceiling still intact
 # ---------------------------------------------------------------------------
 
+
 class TestAnonymousRoleCeiling:
     """The anonymous path must still cap at ANONYMOUS_MAX_ROLES."""
 
@@ -178,6 +181,7 @@ class TestAnonymousRoleCeiling:
 # Garbage / unknown role strings
 # ---------------------------------------------------------------------------
 
+
 class TestGarbageRoleStrings:
     def test_unknown_role_ignored_anonymous(self):
         settings = _settings()
@@ -209,6 +213,7 @@ class TestGarbageRoleStrings:
 # ---------------------------------------------------------------------------
 # Wrong / missing API key
 # ---------------------------------------------------------------------------
+
 
 class TestApiKeyChecks:
     def test_wrong_key_refused(self):
@@ -242,6 +247,7 @@ class TestApiKeyChecks:
 # Case/whitespace handling in split_roles
 # ---------------------------------------------------------------------------
 
+
 class TestSplitRoles:
     def test_normalises_case(self):
         assert split_roles("ADMIN,Operator") == ("admin", "operator")
@@ -265,6 +271,7 @@ class TestSplitRoles:
 # ---------------------------------------------------------------------------
 # describe() surfaces auth_roles
 # ---------------------------------------------------------------------------
+
 
 class TestDescribe:
     def test_describe_includes_authenticated_roles(self):

@@ -167,15 +167,14 @@ def compute_hash(row: Mapping[str, Any], previous_hash: str, chain_seq: int) -> 
 
 # --------------------------------------------------------------------- schema
 
+
 def chain_columns_present(db_path: str | Path) -> bool:
     """True when every chain column exists on ``audit_events``."""
     import sqlite3
 
     try:
         with sqlite3.connect(str(db_path)) as conn:
-            names = {
-                row[1] for row in conn.execute("PRAGMA table_info(audit_events)")
-            }
+            names = {row[1] for row in conn.execute("PRAGMA table_info(audit_events)")}
     except sqlite3.DatabaseError:
         return False
     return bool(names) and set(CHAIN_COLUMNS) <= names
@@ -319,13 +318,14 @@ def append_link(conn: Any, row: Mapping[str, Any]) -> tuple[int, str, str]:
         )
         head = cursor.fetchone()
         last_seq = int(head[0]) if head and head[0] is not None else 0
-        last_hash = (head[1] if head and head[1] else GENESIS_HASH)
+        last_hash = head[1] if head and head[1] else GENESIS_HASH
         seq = last_seq + 1
         current = compute_hash(row, last_hash, seq)
         return seq, last_hash, current
 
 
 # ------------------------------------------------------------------- verify
+
 
 @dataclass
 class ChainVerification:
@@ -439,7 +439,10 @@ def verify_chain(db_path: str | Path) -> ChainVerification:
 
         if not rows:
             return ChainVerification(
-                valid=True, events=0, last_hash=GENESIS_HASH, last_seq=0,
+                valid=True,
+                events=0,
+                last_hash=GENESIS_HASH,
+                last_seq=0,
                 checked_at=checked_at,
             )
 

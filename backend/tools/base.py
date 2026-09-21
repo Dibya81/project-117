@@ -114,8 +114,7 @@ class ToolSpec(BaseModel):
             "limits": self.limits.model_dump(),
             "input_schema": self.input_schema,
             "output_schema": self.output_schema,
-            "requires_approval_by_default": risk_rank(self.risk)
-            >= risk_rank(RiskLevel.EXECUTE),
+            "requires_approval_by_default": risk_rank(self.risk) >= risk_rank(RiskLevel.EXECUTE),
         }
 
 
@@ -228,4 +227,6 @@ class Tool(Protocol):
     @property
     def arguments_model(self) -> type[BaseModel]: ...
 
-    async def run(self, arguments: BaseModel, context: ToolContext) -> ToolResult | dict[str, Any]: ...
+    async def run(
+        self, arguments: BaseModel, context: ToolContext
+    ) -> ToolResult | dict[str, Any]: ...

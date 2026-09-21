@@ -19,9 +19,7 @@ def audit(client) -> AuditService:
 
 
 def test_new_columns_default_honestly(audit):
-    event = audit.record(
-        action="document.uploaded", resource_type="document", resource_id="d1"
-    )
+    event = audit.record(action="document.uploaded", resource_type="document", resource_id="d1")
     assert event.agent is None
     assert event.tool is None
     assert event.model is None

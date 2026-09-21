@@ -198,9 +198,7 @@ class StepRunner:
     ) -> StepResult:
         resolved_id = step_id or spec.id or ""
         if not state.has_step(resolved_id):
-            raise KeyError(
-                f"step '{resolved_id}' was not registered on run {state.run_id}"
-            )
+            raise KeyError(f"step '{resolved_id}' was not registered on run {state.run_id}")
 
         # 1. Guard. A guard that cannot be evaluated is an authoring error, and
         #    it aborts the run regardless of continue_on_error: that flag is a
@@ -262,9 +260,7 @@ class StepRunner:
                 # the caller is shutting the run down.
                 raise
             except Exception as exc:  # noqa: BLE001 - classified below
-                decision = self._retry.decide(
-                    attempt=attempt, error=exc, spec=spec_retry
-                )
+                decision = self._retry.decide(attempt=attempt, error=exc, spec=spec_retry)
                 attempt_log.append(
                     {
                         "attempt": attempt,

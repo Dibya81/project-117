@@ -215,8 +215,7 @@ class CitationChecker:
             measurements = [m.group(0) for m in _MEASUREMENT.finditer(sentence)]
             if measurements and not valid:
                 in_evidence = all(
-                    re.search(re.escape(value.split()[0]), evidence_all)
-                    for value in measurements
+                    re.search(re.escape(value.split()[0]), evidence_all) for value in measurements
                 )
                 if evidence_available and not in_evidence:
                     worst = CheckStatus.FAILED

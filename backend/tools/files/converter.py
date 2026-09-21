@@ -36,9 +36,7 @@ def _normalise_format(name: str) -> str:
     aliases = {"ndjson": "jsonl", "md": "markdown", "text/csv": "csv"}
     value = aliases.get(value, value)
     if value not in FORMATS:
-        raise ToolArgumentError(
-            f"unsupported format '{name}'; supported: {', '.join(FORMATS)}"
-        )
+        raise ToolArgumentError(f"unsupported format '{name}'; supported: {', '.join(FORMATS)}")
     return value
 
 
@@ -82,9 +80,7 @@ def parse(text: str, source_format: str) -> list[dict[str, Any]]:
         if isinstance(parsed, dict):
             parsed = [parsed]
         if not isinstance(parsed, list):
-            raise ToolArgumentError(
-                f"expected an array of objects, got {type(parsed).__name__}"
-            )
+            raise ToolArgumentError(f"expected an array of objects, got {type(parsed).__name__}")
         return [item for item in parsed if isinstance(item, dict)]
     if fmt == "jsonl":
         rows = []
@@ -139,7 +135,9 @@ def parse_markdown_table(text: str) -> list[dict[str, Any]]:
 # --- rendering -------------------------------------------------------------
 
 
-def render(rows: Sequence[dict[str, Any]], target_format: str, *, columns: Sequence[str] | None = None) -> str:
+def render(
+    rows: Sequence[dict[str, Any]], target_format: str, *, columns: Sequence[str] | None = None
+) -> str:
     """Render records into ``target_format``."""
     fmt = _normalise_format(target_format)
     records = [dict(row) for row in rows or []]
@@ -156,9 +154,7 @@ def render(rows: Sequence[dict[str, Any]], target_format: str, *, columns: Seque
     if fmt == "json":
         return json.dumps(records, ensure_ascii=False, indent=2, default=str) + "\n"
     if fmt == "jsonl":
-        return "".join(
-            json.dumps(row, ensure_ascii=False, default=str) + "\n" for row in records
-        )
+        return "".join(json.dumps(row, ensure_ascii=False, default=str) + "\n" for row in records)
     widths = [len(str(col)) for col in header]
     for row in records:
         for index, col in enumerate(header):
@@ -170,9 +166,7 @@ def render(rows: Sequence[dict[str, Any]], target_format: str, *, columns: Seque
     for row in records:
         out.append(
             "| "
-            + " | ".join(
-                str(row.get(col, "")).ljust(widths[i]) for i, col in enumerate(header)
-            )
+            + " | ".join(str(row.get(col, "")).ljust(widths[i]) for i, col in enumerate(header))
             + " |"
         )
     return "\n".join(out) + "\n"

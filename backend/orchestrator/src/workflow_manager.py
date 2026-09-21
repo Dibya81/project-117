@@ -107,9 +107,7 @@ class WorkflowManager:
         required = list(getattr(definition, "inputs", []) or [])
         missing = [key for key in required if key not in supplied]
         if missing:
-            raise WorkflowError(
-                f"workflow '{name}' requires input(s) {', '.join(missing)}"
-            )
+            raise WorkflowError(f"workflow '{name}' requires input(s) {', '.join(missing)}")
 
         steps: list[PlanStep] = []
         seen: set[str] = set()
@@ -166,8 +164,7 @@ class WorkflowManager:
                 )
             if self._tool_names and step_name not in self._tool_names:
                 raise WorkflowError(
-                    f"workflow '{workflow}' step '{step_id}' names unregistered tool "
-                    f"'{step_name}'"
+                    f"workflow '{workflow}' step '{step_id}' names unregistered tool '{step_name}'"
                 )
 
         depends = [str(dep) for dep in (data.get("depends_on") or [])]
@@ -199,17 +196,13 @@ class WorkflowManager:
             if match:
                 key = match.group(1)
                 if key not in inputs:
-                    raise WorkflowError(
-                        f"workflow '{workflow}' references undefined input '{key}'"
-                    )
+                    raise WorkflowError(f"workflow '{workflow}' references undefined input '{key}'")
                 return inputs[key]
 
             def replace(found: re.Match[str]) -> str:
                 key = found.group(1)
                 if key not in inputs:
-                    raise WorkflowError(
-                        f"workflow '{workflow}' references undefined input '{key}'"
-                    )
+                    raise WorkflowError(f"workflow '{workflow}' references undefined input '{key}'")
                 return str(inputs[key])
 
             return _PLACEHOLDER.sub(replace, value)

@@ -37,15 +37,17 @@ def list_plants(store: SimulationStore | None = None) -> list[dict]:
     for meta in st.list_saved_plants(origin="dataset"):
         definition = st.load_plant_dict(meta["id"]) or {}
         equipment = definition.get("equipment", [])
-        out.append({
-            "id": meta["id"],
-            "name": meta["name"],
-            "industry": meta.get("industry", "process"),
-            "assets": len(equipment),
-            "sensors": sum(len(e.get("sensors", [])) for e in equipment),
-            "scenarios": len(st.load_scenarios(meta["id"])),
-            "areas": len(definition.get("areas", [])),
-        })
+        out.append(
+            {
+                "id": meta["id"],
+                "name": meta["name"],
+                "industry": meta.get("industry", "process"),
+                "assets": len(equipment),
+                "sensors": sum(len(e.get("sensors", [])) for e in equipment),
+                "scenarios": len(st.load_scenarios(meta["id"])),
+                "areas": len(definition.get("areas", [])),
+            }
+        )
     # Stable, human-sensible order regardless of SQLite's default row order.
     out.sort(key=lambda p: p["id"])
     return out
@@ -60,7 +62,9 @@ def _validate(plant: Plant) -> None:
     sensor_ids = [s.id for e in plant.equipment for s in e.sensors]
     if len(sensor_ids) != len(set(sensor_ids)):
         raise DatasetError("duplicate sensor ids")
-    tags = [e.tag for e in plant.equipment] + [s.tag for s in (s for e in plant.equipment for s in e.sensors)]
+    tags = [e.tag for e in plant.equipment] + [
+        s.tag for s in (s for e in plant.equipment for s in e.sensors)
+    ]
     if len(tags) != len(set(tags)):
         raise DatasetError("duplicate tags")
     area_set = {a.id for a in plant.areas}

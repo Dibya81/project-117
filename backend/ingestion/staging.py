@@ -66,7 +66,11 @@ class DocumentStager:
         if extension:
             candidates = [self._staging_dir / f"{document_id}{extension.lower()}"]
         else:
-            candidates = sorted(self._staging_dir.glob(f"{document_id}.*")) if self._staging_dir.exists() else []
+            candidates = (
+                sorted(self._staging_dir.glob(f"{document_id}.*"))
+                if self._staging_dir.exists()
+                else []
+            )
         for link in candidates:
             try:
                 link.unlink(missing_ok=True)

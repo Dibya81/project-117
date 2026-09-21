@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import pytest
-from fastapi import FastAPI
-
 from backend.api.src.middleware.rate_limit import RateLimitMiddleware, TokenBucket
 from backend.config import Settings
+from fastapi import FastAPI
 
 
 def test_token_bucket_consume_and_refill():

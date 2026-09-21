@@ -102,8 +102,7 @@ class VerificationReport:
         return [
             check
             for check in self.checks
-            if check.status is CheckStatus.WARNING
-            or (check.failed and not check.blocking)
+            if check.status is CheckStatus.WARNING or (check.failed and not check.blocking)
         ]
 
     @property

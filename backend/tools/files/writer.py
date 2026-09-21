@@ -137,9 +137,7 @@ def write_json(
     except (TypeError, ValueError) as exc:
         raise ToolArgumentError(f"payload is not JSON-serialisable: {exc}") from exc
     name = filename if str(filename).lower().endswith(".json") else f"{filename}.json"
-    return write_text(
-        text + "\n", filename=name, job_id=job_id, subdir=subdir, overwrite=overwrite
-    )
+    return write_text(text + "\n", filename=name, job_id=job_id, subdir=subdir, overwrite=overwrite)
 
 
 def write_csv(

@@ -102,9 +102,7 @@ class ActionPolicy:
             f"role(s) {held} lack permission '{permission.value}'",
         )
 
-    def evaluate_plan(
-        self, plan: Plan, *, roles: Iterable[str] | None
-    ) -> list[ActionDecision]:
+    def evaluate_plan(self, plan: Plan, *, roles: Iterable[str] | None) -> list[ActionDecision]:
         return [self.evaluate(step, roles=roles) for step in plan.steps]
 
     def enforce(self, plan: Plan, *, roles: Iterable[str] | None) -> Sequence[ActionDecision]:
@@ -116,9 +114,7 @@ class ActionPolicy:
         decisions = self.evaluate_plan(plan, roles=roles)
         for decision in decisions:
             if not decision.allowed:
-                raise AuthorizationError(
-                    f"step '{decision.step_id}' refused: {decision.reason}"
-                )
+                raise AuthorizationError(f"step '{decision.step_id}' refused: {decision.reason}")
         return decisions
 
 

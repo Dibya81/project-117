@@ -143,9 +143,7 @@ class HallucinationChecker:
                 continue
             seen.add(key)
             if _normalise(value) not in corpus:
-                findings.append(
-                    {"type": "fabricated_specific", "kind": kind, "value": value}
-                )
+                findings.append({"type": "fabricated_specific", "kind": kind, "value": value})
 
         pages = _evidence_pages(evidence)
         if pages:

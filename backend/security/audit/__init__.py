@@ -174,10 +174,7 @@ class AuditService:
                 events=0,
                 last_hash=GENESIS_HASH,
                 last_seq=0,
-                error=(
-                    "the audit log is not on SQLite, so no hash chain is maintained "
-                    "for it"
-                ),
+                error=("the audit log is not on SQLite, so no hash chain is maintained for it"),
             )
         self._ensure_chain()
         return verify_chain(self._db_path)
@@ -229,9 +226,7 @@ class AuditService:
             # writing a UUID would make every fresh row fail verification.
             event.id = event.id or _new_event_id()
             event.timestamp = event.timestamp or datetime.now(timezone.utc)
-            link = self._next_link(
-                {**payload, "id": event.id, "timestamp": event.timestamp}
-            )
+            link = self._next_link({**payload, "id": event.id, "timestamp": event.timestamp})
             if link is not None:
                 seq, previous_hash, current_hash = link
                 event.chain_seq = seq

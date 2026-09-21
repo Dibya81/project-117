@@ -123,12 +123,16 @@ class SimulationEngine:
             "t": self.t,
             "readings": readings,
             "alarms": [a.model_dump() for a in alarms],
-            "states": {eid: r.state.value for eid, r in self.eq.items() if r.state != AssetState.NORMAL},
+            "states": {
+                eid: r.state.value for eid, r in self.eq.items() if r.state != AssetState.NORMAL
+            },
         }
 
     # ------------------------------------------------------------- telemetry
 
-    def _process_factor(self, eq_id: str, measurement: Measurement, flow: dict[str, float]) -> float:
+    def _process_factor(
+        self, eq_id: str, measurement: Measurement, flow: dict[str, float]
+    ) -> float:
         """How much the process should push this sensor right now.
 
         Returns a signed offset in units of the sensor's normal span.
@@ -175,7 +179,11 @@ class SimulationEngine:
             model = self.sensor_model[sid]
             if rt.failed:
                 # failed sensors freeze on their last value; quality says so
-                out.append(TelemetryPoint(sensor_id=sid, value=rt.value, quality=TelemetryQuality.BAD, t=self.t).model_dump())
+                out.append(
+                    TelemetryPoint(
+                        sensor_id=sid, value=rt.value, quality=TelemetryQuality.BAD, t=self.t
+                    ).model_dump()
+                )
                 continue
             span = model.normal_max - model.normal_min or 1.0
             noise = self.rng.uniform(-model.noise, model.noise) * span
@@ -187,7 +195,11 @@ class SimulationEngine:
             else:
                 revert = (model.nominal - rt.value) * 0.03 if not rt.drifting else 0.0
                 rt.value = max(0.0, rt.value + noise + process + drift + revert)
-            out.append(TelemetryPoint(sensor_id=sid, value=round(rt.value, 3), quality=rt.quality, t=self.t).model_dump())
+            out.append(
+                TelemetryPoint(
+                    sensor_id=sid, value=round(rt.value, 3), quality=rt.quality, t=self.t
+                ).model_dump()
+            )
         return out
 
     # ----------------------------------------------------------- propagation
@@ -233,8 +245,12 @@ class SimulationEngine:
                 if aid not in self.alarms:
                     self._alarm_seq += 1
                     self.alarms[aid] = Alarm(
-                        id=f"{aid}-{self._alarm_seq}", sensor_id=sid, tag=m.tag, severity=sev,
-                        message=f"{m.tag} {m.measurement.value} {v:.1f} {m.unit} outside envelope", at=self.t,
+                        id=f"{aid}-{self._alarm_seq}",
+                        sensor_id=sid,
+                        tag=m.tag,
+                        severity=sev,
+                        message=f"{m.tag} {m.measurement.value} {v:.1f} {m.unit} outside envelope",
+                        at=self.t,
                     )
                     fresh.append(self.alarms[aid])
                 active_ids.add(aid)
@@ -269,7 +285,9 @@ class SimulationEngine:
                 changed["sensor_id"] = target.id
                 changed["tag"] = target.tag
         elif mode.mechanism == "drift":
-            target = next((s for s in eq_model.sensors if s.measurement.value in mode.applies_to), None)
+            target = next(
+                (s for s in eq_model.sensors if s.measurement.value in mode.applies_to), None
+            )
             if target:
                 self.sensors[target.id].drifting = True
                 changed["sensor_id"] = target.id
@@ -284,9 +302,13 @@ class SimulationEngine:
                 self.pipe_by_id[pid].leaking = True
             # trip the nearest gas/leak detector in the same area
             det = next(
-                (s for s, m in self.sensor_model.items()
-                 if m.is_detector and s in self.sensors
-                 and self._area_of(m.equipment_id) == eq_model.area_id),
+                (
+                    s
+                    for s, m in self.sensor_model.items()
+                    if m.is_detector
+                    and s in self.sensors
+                    and self._area_of(m.equipment_id) == eq_model.area_id
+                ),
                 None,
             )
             if det:
@@ -348,9 +370,7 @@ class SimulationEngine:
         it is absent from the plant definition, so only a reset can rebuild it
         consistently."""
         if sensor_id in self._removed_sensors:
-            raise KeyError(
-                f"sensor {sensor_id} was removed; it only returns via a plant reset"
-            )
+            raise KeyError(f"sensor {sensor_id} was removed; it only returns via a plant reset")
         rt = self.sensors[sensor_id]
         self._disabled_sensors.discard(sensor_id)
         rt.failed = False
@@ -462,7 +482,8 @@ class SimulationEngine:
         # also correlated measurements on the same equipment (flow/vibration)
         if model.measurement == Measurement.PRESSURE:
             alts.extend(
-                s for s in eq.sensors
+                s
+                for s in eq.sensors
                 if s.measurement in (Measurement.FLOW, Measurement.VIBRATION) and s.id != sensor_id
             )
         return alts
@@ -497,8 +518,14 @@ class SimulationEngine:
 
     # -------------------------------------------------------------- helpers
 
-    def create_incident(self, title: str, severity: AlarmSeverity, origin_equipment: str,
-                        origin_sensor: str | None, failure_mode: str | None) -> Incident:
+    def create_incident(
+        self,
+        title: str,
+        severity: AlarmSeverity,
+        origin_equipment: str,
+        origin_sensor: str | None,
+        failure_mode: str | None,
+    ) -> Incident:
         self._incident_seq += 1
         hood = self.neighbors(origin_equipment, depth=2)["affected"]
         inc = Incident(

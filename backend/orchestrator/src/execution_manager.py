@@ -134,9 +134,7 @@ class ExecutionState:
     def trace(self) -> list[dict[str, Any]]:
         """Ordered record of what actually ran. Surfaced in the result."""
         return [
-            self.outcomes[step.id].summary()
-            for step in self.plan.steps
-            if step.id in self.outcomes
+            self.outcomes[step.id].summary() for step in self.plan.steps if step.id in self.outcomes
         ]
 
 
@@ -203,9 +201,7 @@ class ExecutionManager:
         )
         for wave in state.plan.waves():
             pending = [
-                step
-                for step in wave
-                if step.kind != "verify" and not state.completed(step.id)
+                step for step in wave if step.kind != "verify" and not state.completed(step.id)
             ]
             if not pending:
                 continue
@@ -230,9 +226,7 @@ class ExecutionManager:
 
     # --- one step ---------------------------------------------------------
 
-    async def _run_step(
-        self, step: PlanStep, state: ExecutionState, hooks: "_RunHooks"
-    ) -> None:
+    async def _run_step(self, step: PlanStep, state: ExecutionState, hooks: "_RunHooks") -> None:
         state.attempts[step.id] = state.attempts.get(step.id, 0) + 1
         started = time.perf_counter()
         await self._emit(

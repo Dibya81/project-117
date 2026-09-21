@@ -37,9 +37,7 @@ def audit_db(tmp_path):
     path = tmp_path / "audit.db"
     engine = create_engine_for(f"sqlite:///{path}")
     init_db(engine)
-    service = AuditService(
-        create_session_factory(engine), database_url=f"sqlite:///{path}"
-    )
+    service = AuditService(create_session_factory(engine), database_url=f"sqlite:///{path}")
     return path, service
 
 
@@ -96,9 +94,7 @@ def test_tampered_row_is_detected_and_named(audit_db):
         ).fetchone()
         # Bypass the application entirely: this is what an operator with
         # `sqlite3` does, and it is exactly what the chain must catch.
-        conn.execute(
-            "UPDATE audit_events SET outcome = 'refused' WHERE chain_seq = 2"
-        )
+        conn.execute("UPDATE audit_events SET outcome = 'refused' WHERE chain_seq = 2")
         conn.commit()
 
     verdict = service.verify()
@@ -124,9 +120,7 @@ def test_editing_the_stored_hash_does_not_repair_the_chain(audit_db):
 
     with _raw(db_path) as conn:
         conn.execute("UPDATE audit_events SET user = 'somebody-else' WHERE chain_seq = 1")
-        conn.execute(
-            "UPDATE audit_events SET previous_hash = previous_hash WHERE chain_seq = 2"
-        )
+        conn.execute("UPDATE audit_events SET previous_hash = previous_hash WHERE chain_seq = 2")
         conn.commit()
 
     verdict = service.verify()
@@ -339,9 +333,7 @@ async def test_audit_chain_checker_skips_without_an_audit_sink():
     from backend.verification import AuditChainChecker, Verifier
     from backend.verification.base import VerificationInput
 
-    report = await Verifier(checkers=[AuditChainChecker()]).verify(
-        VerificationInput(task="x")
-    )
+    report = await Verifier(checkers=[AuditChainChecker()]).verify(VerificationInput(task="x"))
     result = report.checks[0]
     # An unrun check is never a pass.
     assert result.status.value == "skipped"
@@ -387,12 +379,8 @@ def test_integrity_endpoint_reports_real_values(tmp_path):
 
         # Tamper through SQLite, then re-read the endpoint.
         with sqlite3.connect(settings.database_url.removeprefix("sqlite:///")) as conn:
-            victim = conn.execute(
-                "SELECT id FROM audit_events WHERE chain_seq = 1"
-            ).fetchone()[0]
-            conn.execute(
-                "UPDATE audit_events SET action = 'tampered' WHERE chain_seq = 1"
-            )
+            victim = conn.execute("SELECT id FROM audit_events WHERE chain_seq = 1").fetchone()[0]
+            conn.execute("UPDATE audit_events SET action = 'tampered' WHERE chain_seq = 1")
             conn.commit()
 
         broken = client.get("/api/audit/integrity").json()

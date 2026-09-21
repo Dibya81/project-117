@@ -75,9 +75,7 @@ def build_analysis_report(
         section(
             "Conclusions",
             paragraphs=(
-                []
-                if conclusions
-                else ["The analysis did not produce a supported conclusion."]
+                [] if conclusions else ["The analysis did not produce a supported conclusion."]
             ),
             bullets=[bullet(text, sources[:2]) for text in conclusions],
         )

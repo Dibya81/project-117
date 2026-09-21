@@ -9,11 +9,11 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "pnpm --filter web dev",
-    "build": "pnpm --filter web build",
-    "start": "pnpm --filter web start",
-    "lint": "pnpm --filter web lint",
-    "typecheck": "pnpm --filter web typecheck",
+    "dev": "pnpm --filter @project-117/web dev",
+    "build": "pnpm --filter @project-117/web build",
+    "start": "pnpm --filter @project-117/web start",
+    "lint": "pnpm --filter @project-117/web lint",
+    "typecheck": "pnpm --filter @project-117/web typecheck",
     "validate:plants": "python3 scripts/validate_plant_data.py",
     "test:simulation": "python3 tests/simulation/test_verification_regression.py",
     "test:redteam": "python3 tests/simulation/redteam_harness.py"

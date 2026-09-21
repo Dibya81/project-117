@@ -71,9 +71,7 @@ _TASK_ID: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 
 
 @contextmanager
-def network_identity(
-    agent: str | None = None, task_id: str | None = None
-) -> Iterator[None]:
+def network_identity(agent: str | None = None, task_id: str | None = None) -> Iterator[None]:
     """Attribute outbound attempts made in this block to ``agent``/``task_id``.
 
     Used where a task is genuinely in scope. Outside such a block both values
@@ -263,9 +261,7 @@ class SentinelStream:
 class SentinelSubscription:
     """Handle for one subscriber. ``close()`` is idempotent."""
 
-    def __init__(
-        self, stream: SentinelStream, queue: asyncio.Queue[dict[str, Any]]
-    ) -> None:
+    def __init__(self, stream: SentinelStream, queue: asyncio.Queue[dict[str, Any]]) -> None:
         self._stream = stream
         self._queue = queue
 

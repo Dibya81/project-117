@@ -560,7 +560,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     @app.exception_handler(DocumentValidationError)
-    async def handle_document_validation(request: Request, exc: DocumentValidationError) -> JSONResponse:
+    async def handle_document_validation(
+        request: Request, exc: DocumentValidationError
+    ) -> JSONResponse:
         return JSONResponse(
             status_code=exc.status_code,
             content={"error": {"code": "bad_request", "message": str(exc)}},

@@ -79,10 +79,7 @@ class OperationsAgent(BaseAgent):
         arguments = dict(arguments or {})
         unit = str(arguments.get("unit") or arguments.get("equipment") or "").strip()
         header = f"Unit or system in question: {unit}\n\n" if unit else ""
-        user = (
-            f"{header}Evidence:\n{self.evidence_text(context)}\n\n"
-            f"Operations request: {task}"
-        )
+        user = f"{header}Evidence:\n{self.evidence_text(context)}\n\nOperations request: {task}"
         return [
             ChatMessage(role="system", content=self.system_prompt),
             ChatMessage(role="user", content=user[:60_000]),

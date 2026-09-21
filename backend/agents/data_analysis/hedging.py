@@ -10,16 +10,28 @@ scientific qualifiers.
 from __future__ import annotations
 
 import re
-from typing import Tuple, List
+from typing import List, Tuple
 
 # Patterns matching overconfident causal language
 _CAUSAL_PATTERNS = [
     (re.compile(r"\bproves\s+that\b", re.IGNORECASE), "suggests that"),
-    (re.compile(r"\bdefinitely\s+(caused|led\s+to)\b", re.IGNORECASE), "is strongly correlated with"),
-    (re.compile(r"\bconclusively\s+proves\b", re.IGNORECASE), "provides evidence of an association with"),
+    (
+        re.compile(r"\bdefinitely\s+(caused|led\s+to)\b", re.IGNORECASE),
+        "is strongly correlated with",
+    ),
+    (
+        re.compile(r"\bconclusively\s+proves\b", re.IGNORECASE),
+        "provides evidence of an association with",
+    ),
     (re.compile(r"\bdirectly\s+caused\s+by\b", re.IGNORECASE), "associated with"),
-    (re.compile(r"\bproves\s+causation\b", re.IGNORECASE), "indicates statistical correlation (observational)"),
-    (re.compile(r"\bis\s+the\s+sole\s+cause\s+of\b", re.IGNORECASE), "is a primary correlated factor in"),
+    (
+        re.compile(r"\bproves\s+causation\b", re.IGNORECASE),
+        "indicates statistical correlation (observational)",
+    ),
+    (
+        re.compile(r"\bis\s+the\s+sole\s+cause\s+of\b", re.IGNORECASE),
+        "is a primary correlated factor in",
+    ),
 ]
 
 

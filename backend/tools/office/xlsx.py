@@ -99,8 +99,7 @@ def sheet_from_grid(
         values = list(row)
         if len(values) != len(header):
             raise SpecError(
-                f"sheet '{name}' row {index + 1} has {len(values)} cells, "
-                f"expected {len(header)}"
+                f"sheet '{name}' row {index + 1} has {len(values)} cells, expected {len(header)}"
             )
         grid.append([cell(value) for value in values])
     return {

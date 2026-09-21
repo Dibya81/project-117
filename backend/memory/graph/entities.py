@@ -82,7 +82,9 @@ class Entity:
         }
 
 
-def make(entity_type: str, identifier: str, *, label: str | None = None, **attributes: Any) -> Entity:
+def make(
+    entity_type: str, identifier: str, *, label: str | None = None, **attributes: Any
+) -> Entity:
     return Entity(
         id=node_id(entity_type, identifier),
         type=entity_type.strip().lower(),

@@ -125,9 +125,7 @@ def test_agent_and_task_come_from_the_task_context():
     queue, sub = sentinel_stream.STREAM.subscribe()
     try:
         with network_identity(agent="recovery-planner", task_id="task-117"):
-            record_decision(
-                host="127.0.0.1", scheme="http", decision="allowed", local=True
-            )
+            record_decision(host="127.0.0.1", scheme="http", decision="allowed", local=True)
         data = queue.get_nowait()
         assert data["agent"] == "recovery-planner"
         assert data["task_id"] == "task-117"

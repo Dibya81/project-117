@@ -116,21 +116,16 @@ def _resolve_path(parts: list[str], context: Mapping[str, Any], expression: str)
     root = parts[0]
     if root not in ALLOWED_ROOTS:
         raise ConditionError(
-            f"guard may only reference {' or '.join(ALLOWED_ROOTS)}, got "
-            f"'{root}' in {expression!r}"
+            f"guard may only reference {' or '.join(ALLOWED_ROOTS)}, got '{root}' in {expression!r}"
         )
     value: Any = context.get(root) or {}
 
     if root == "steps":
         if len(parts) < 2:
-            raise ConditionError(
-                f"'steps' must be followed by a step id in {expression!r}"
-            )
+            raise ConditionError(f"'steps' must be followed by a step id in {expression!r}")
         step_id = parts[1]
         if step_id not in value:
-            raise ConditionError(
-                f"guard references unknown step '{step_id}' in {expression!r}"
-            )
+            raise ConditionError(f"guard references unknown step '{step_id}' in {expression!r}")
         value = value[step_id]
         remaining = parts[2:]
     else:
@@ -139,8 +134,7 @@ def _resolve_path(parts: list[str], context: Mapping[str, Any], expression: str)
     for part in remaining:
         if part.startswith("__"):
             raise ConditionError(
-                f"guard may not reference dunder attribute '{part}' in "
-                f"{expression!r}"
+                f"guard may not reference dunder attribute '{part}' in {expression!r}"
             )
         if isinstance(value, Mapping):
             if part not in value:
@@ -213,9 +207,7 @@ def _evaluate(node: ast.AST, context: Mapping[str, Any], expression: str) -> Any
             left = right
         return True
 
-    raise ConditionError(
-        f"unsupported expression node {type(node).__name__} in {expression!r}"
-    )
+    raise ConditionError(f"unsupported expression node {type(node).__name__} in {expression!r}")
 
 
 def _compare(op: ast.AST, left: Any, right: Any, expression: str) -> bool:
@@ -381,8 +373,7 @@ def validate_expression(
         root = parts[0]
         if root not in ALLOWED_ROOTS:
             problems.append(
-                f"guard {text!r} may only reference "
-                f"{' or '.join(ALLOWED_ROOTS)}, got '{root}'"
+                f"guard {text!r} may only reference {' or '.join(ALLOWED_ROOTS)}, got '{root}'"
             )
             continue
         if root == "steps":
@@ -395,9 +386,7 @@ def validate_expression(
         elif root == "inputs":
             key = parts[1]
             if known_inputs is not None and key not in known_inputs:
-                problems.append(
-                    f"guard {text!r} references undeclared input '{key}'"
-                )
+                problems.append(f"guard {text!r} references undeclared input '{key}'")
     return problems
 
 

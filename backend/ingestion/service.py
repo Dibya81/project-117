@@ -217,7 +217,9 @@ class IngestionService:
                 row.metadata_json = json.dumps(metadata)
             session.commit()
 
-    def _fail(self, document: Document, error: Exception, *, elapsed: float, user: str | None) -> None:
+    def _fail(
+        self, document: Document, error: Exception, *, elapsed: float, user: str | None
+    ) -> None:
         metadata = _document_metadata(
             document,
             indexed=False,
@@ -241,7 +243,9 @@ def _extension_of(filename: str) -> str:
     return Path(filename or "").suffix.lower()
 
 
-def _document_metadata(document: Document, *, indexed: bool, extra: dict[str, Any]) -> dict[str, Any]:
+def _document_metadata(
+    document: Document, *, indexed: bool, extra: dict[str, Any]
+) -> dict[str, Any]:
     try:
         metadata: dict[str, Any] = json.loads(document.metadata_json or "{}")
     except ValueError:

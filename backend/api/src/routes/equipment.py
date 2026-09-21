@@ -94,7 +94,9 @@ def get_equipment(
     return {
         "equipment": item,
         "openWorkOrders": [
-            wo for wo in work_orders if wo.get("status") in {"draft", "open", "in_progress", "on_hold"}
+            wo
+            for wo in work_orders
+            if wo.get("status") in {"draft", "open", "in_progress", "on_hold"}
         ],
         "workOrders": work_orders,
         "documents": documents,
@@ -130,7 +132,9 @@ def get_equipment_qr(
     if not tag:
         # A tagless asset cannot have a resolvable label; say so rather than
         # printing a symbol that decodes to nothing the store can find.
-        raise HTTPException(status_code=404, detail=f"equipment {equipment_id} has no tag to encode")
+        raise HTTPException(
+            status_code=404, detail=f"equipment {equipment_id} has no tag to encode"
+        )
     return Response(
         content=qr_svg(qr_payload(tag)),
         media_type="image/svg+xml",
@@ -171,4 +175,9 @@ def get_history(
         rows = operations.history(equipment_id)
     except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
-    return {"equipmentId": equipment_id, "items": rows, "count": len(rows), "source": EQUIPMENT_SOURCE}
+    return {
+        "equipmentId": equipment_id,
+        "items": rows,
+        "count": len(rows),
+        "source": EQUIPMENT_SOURCE,
+    }

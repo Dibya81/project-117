@@ -20,9 +20,7 @@ class ModelGateway:
         default_provider: str = "openai_compatible",
     ) -> None:
         if default_provider not in providers:
-            raise ValueError(
-                f"default_provider '{default_provider}' not among {sorted(providers)}"
-            )
+            raise ValueError(f"default_provider '{default_provider}' not among {sorted(providers)}")
         self._providers = dict(providers)
         self._default = default_provider
 

@@ -21,9 +21,7 @@ DESCRIPTOR = RoleDescriptor(
     setting="P117_DOMAIN_MODEL",
     modalities=("text",),
     capabilities=("domain_qa", "failure_mode_reasoning", "sop_interpretation"),
-    suggested_models=(
-        "a locally fine-tuned checkpoint served by the local backend",
-    ),
+    suggested_models=("a locally fine-tuned checkpoint served by the local backend",),
     required_for_demo=False,
     notes=(
         "Fluency is not authority. Output from this role carries no extra trust "

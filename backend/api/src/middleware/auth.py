@@ -131,4 +131,10 @@ class PrincipalMiddleware(BaseHTTPMiddleware):
             logger.warning("audit write failed for rejected request", exc_info=True)
 
 
-__all__ = ["MOBILE_API_PREFIX", "PUBLIC_PATHS", "PrincipalMiddleware", "is_public", "requires_mobile_token"]
+__all__ = [
+    "MOBILE_API_PREFIX",
+    "PUBLIC_PATHS",
+    "PrincipalMiddleware",
+    "is_public",
+    "requires_mobile_token",
+]

@@ -204,8 +204,7 @@ class ArtifactService:
             # Refuse rather than record a digest we know is wrong.
             await asyncio.to_thread(self._unlink, path)
             raise ArtifactIntegrityError(
-                "the artifact digest changed between the sandbox and disk; the file "
-                "was discarded"
+                "the artifact digest changed between the sandbox and disk; the file was discarded"
             )
 
         # Sign the bytes that are now on disk, and only those. Signing before
@@ -360,14 +359,15 @@ class ArtifactService:
             )
 
         status = record.get("verification_status")
-        if status in {STATUS_FAILED, STATUS_UNVERIFIED, STATUS_PENDING} and not acknowledge_unverified:
+        if (
+            status in {STATUS_FAILED, STATUS_UNVERIFIED, STATUS_PENDING}
+            and not acknowledge_unverified
+        ):
             raise ArtifactError(
                 f"artifact '{artifact_id}' has verification status '{status}'; "
                 "re-request with an explicit unverified acknowledgement to download it"
             )
-        record["acknowledged_unverified"] = bool(
-            acknowledge_unverified and status != STATUS_PASSED
-        )
+        record["acknowledged_unverified"] = bool(acknowledge_unverified and status != STATUS_PASSED)
         return record
 
     # --- storage / persistence -------------------------------------------
@@ -548,9 +548,7 @@ class ArtifactService:
             # lose the artifact. Surfaced loudly in logs instead.
             logger.exception("failed to record artifact %s", record["artifact_id"])
 
-    def _update_verification(
-        self, artifact_id: str, status: str, report: dict[str, Any]
-    ) -> None:
+    def _update_verification(self, artifact_id: str, status: str, report: dict[str, Any]) -> None:
         if self._sessions is None:
             return
         from backend.database.execution import Artifact

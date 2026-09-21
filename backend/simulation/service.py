@@ -103,7 +103,10 @@ class PlantRuntime:
         # step's own timestamp so the console shows the event's real time rather
         # than the time the request happened to flush.
         ev = SimulationEvent(
-            seq=self.seq, plant_id=self.engine.plant.id, type=type_, payload=payload,
+            seq=self.seq,
+            plant_id=self.engine.plant.id,
+            type=type_,
+            payload=payload,
             at=self.engine.t if at is None else at,
         )
         self.events.append(ev)
@@ -168,8 +171,11 @@ class SimulationService:
         # because this ran.
         self.store.save_plant(plant, origin=origin)
         self.store.audit(
-            event_type="plant.registered", actor="system", plant_id=plant.id,
-            target=plant.id, result=f"{len(plant.equipment)} equipment",
+            event_type="plant.registered",
+            actor="system",
+            plant_id=plant.id,
+            target=plant.id,
+            result=f"{len(plant.equipment)} equipment",
             runtime=self.roster.runtime_label(),
         )
         return rt
@@ -187,8 +193,9 @@ class SimulationService:
         rt = self.runtime(plant_id)
         rt.running = True
         rt.emit("simulation.started", {"plant": plant_id})
-        self.store.audit(event_type="simulation.started", actor="operator", plant_id=plant_id,
-                         sim_t=rt.engine.t)
+        self.store.audit(
+            event_type="simulation.started", actor="operator", plant_id=plant_id, sim_t=rt.engine.t
+        )
 
     def pause(self, plant_id: str) -> None:
         rt = self.runtime(plant_id)
@@ -212,8 +219,12 @@ class SimulationService:
         origin = self.store.plant_origin(plant_id) or "dataset"
         rt = self.register(plant, seed=seed, origin=origin)
         self.store.audit(
-            event_type="plant.reset", actor="operator", plant_id=plant_id, target=plant_id,
-            sim_t=rt.engine.t, result=f"{len(plant.equipment)} equipment",
+            event_type="plant.reset",
+            actor="operator",
+            plant_id=plant_id,
+            target=plant_id,
+            sim_t=rt.engine.t,
+            result=f"{len(plant.equipment)} equipment",
             runtime=self.roster.runtime_label(),
         )
         return rt
@@ -229,15 +240,26 @@ class SimulationService:
         written = 0
         if self.telemetry_every and n % self.telemetry_every == 0:
             written = self.store.record_telemetry(plant_id, frame["readings"], frame["t"])
-        rt.emit("telemetry.batch", {
-            "t": frame["t"], "count": len(frame["readings"]),
-            "persisted": written, "readings": frame["readings"],
-        })
+        rt.emit(
+            "telemetry.batch",
+            {
+                "t": frame["t"],
+                "count": len(frame["readings"]),
+                "persisted": written,
+                "readings": frame["readings"],
+            },
+        )
         for alarm in frame["alarms"]:
             rt.emit("alarm.created", alarm)
-            self.store.audit(event_type="alarm.created", actor="engine", plant_id=plant_id,
-                             sim_t=frame["t"], target=alarm.get("tag"), result=alarm.get("severity"),
-                             payload=alarm)
+            self.store.audit(
+                event_type="alarm.created",
+                actor="engine",
+                plant_id=plant_id,
+                sim_t=frame["t"],
+                target=alarm.get("tag"),
+                result=alarm.get("severity"),
+                payload=alarm,
+            )
         return frame
 
     async def run_loop(self, plant_id: str, tick_s: float = 1.0) -> None:
@@ -280,16 +302,29 @@ class SimulationService:
         mode = next(m for m in rt.engine.plant.failure_modes if m.id == mode_id)
         fault_id = f"FLT-{plant_id}-{equipment_id}-{mode_id}-{rt.seq}"
         self.store.record_fault(
-            fault_id, plant_id, equipment_id, changed.get("sensor_id"),
-            mode_id, mode.mechanism, changed, rt.engine.t,
+            fault_id,
+            plant_id,
+            equipment_id,
+            changed.get("sensor_id"),
+            mode_id,
+            mode.mechanism,
+            changed,
+            rt.engine.t,
         )
         self.store.audit(
-            event_type="simulation.fault", actor="operator", plant_id=plant_id,
-            sim_t=rt.engine.t, action="inject_failure", target=equipment_id,
-            result=mode.mechanism, payload={"fault_event_id": fault_id, **changed},
+            event_type="simulation.fault",
+            actor="operator",
+            plant_id=plant_id,
+            sim_t=rt.engine.t,
+            action="inject_failure",
+            target=equipment_id,
+            result=mode.mechanism,
+            payload={"fault_event_id": fault_id, **changed},
         )
         eq = next(e for e in rt.engine.plant.equipment if e.id == equipment_id)
-        severity = AlarmSeverity.CRITICAL if mode.mechanism in ("stop", "leak") else AlarmSeverity.WARNING
+        severity = (
+            AlarmSeverity.CRITICAL if mode.mechanism in ("stop", "leak") else AlarmSeverity.WARNING
+        )
         title = f"{changed.get('tag', eq.tag)} — {mode.name}"
         incident = rt.engine.create_incident(
             title=title,
@@ -302,9 +337,14 @@ class SimulationService:
         rt.emit("incident.created", incident.model_dump())
         self._emit_perception(rt, incident, source="fault.injected")
         self.store.audit(
-            event_type="incident.created", actor="orchestrator", plant_id=plant_id,
-            incident_id=incident.id, sim_t=rt.engine.t, target=equipment_id,
-            result=incident.severity.value, runtime=self.roster.runtime_label(),
+            event_type="incident.created",
+            actor="orchestrator",
+            plant_id=plant_id,
+            incident_id=incident.id,
+            sim_t=rt.engine.t,
+            target=equipment_id,
+            result=incident.severity.value,
+            runtime=self.roster.runtime_label(),
             payload={"affected": incident.affected},
         )
         self._run_agents(rt, incident)
@@ -338,11 +378,20 @@ class SimulationService:
         context = self._sensor_redundancy(rt.engine, sensor_id)
         rt.engine.disable_sensor(sensor_id)
         rt.emit("sensor.disabled", {"sensor_id": sensor_id})
-        self.store.audit(event_type="sensor.disabled", actor="operator", plant_id=plant_id,
-                         sim_t=rt.engine.t, action="disable_sensor", target=sensor_id)
+        self.store.audit(
+            event_type="sensor.disabled",
+            actor="operator",
+            plant_id=plant_id,
+            sim_t=rt.engine.t,
+            action="disable_sensor",
+            target=sensor_id,
+        )
         tag = rt.engine.sensor_model[sensor_id].tag
         incident_id = self._raise_sensor_incident(
-            rt, sensor_id, AlarmSeverity.WARNING, f"Loss of measurement — {tag}",
+            rt,
+            sensor_id,
+            AlarmSeverity.WARNING,
+            f"Loss of measurement — {tag}",
         )
         return {**context, "incident_id": incident_id}
 
@@ -358,10 +407,19 @@ class SimulationService:
         rt = self.runtime(plant_id)
         conn = rt.engine.set_line_enabled(connection_id, False)
         rt.emit("line.blocked", {"connection_id": connection_id, "medium": conn.medium})
-        self.store.audit(event_type="line.blocked", actor="operator", plant_id=plant_id,
-                         sim_t=rt.engine.t, action="block_line", target=connection_id)
+        self.store.audit(
+            event_type="line.blocked",
+            actor="operator",
+            plant_id=plant_id,
+            sim_t=rt.engine.t,
+            action="block_line",
+            target=connection_id,
+        )
         incident_id = self._raise_line_incident(
-            rt, conn, AlarmSeverity.WARNING, f"Line blocked — {connection_id}",
+            rt,
+            conn,
+            AlarmSeverity.WARNING,
+            f"Line blocked — {connection_id}",
         )
         return {"connection_id": connection_id, "enabled": False, "incident_id": incident_id}
 
@@ -370,23 +428,39 @@ class SimulationService:
         rt = self.runtime(plant_id)
         conn = rt.engine.set_line_enabled(connection_id, True)
         rt.emit("line.restored", {"connection_id": connection_id})
-        self.store.audit(event_type="line.restored", actor="operator", plant_id=plant_id,
-                         sim_t=rt.engine.t, action="restore_line", target=connection_id)
+        self.store.audit(
+            event_type="line.restored",
+            actor="operator",
+            plant_id=plant_id,
+            sim_t=rt.engine.t,
+            action="restore_line",
+            target=connection_id,
+        )
         return {"connection_id": connection_id, "enabled": conn.enabled}
 
     def leak_line(self, plant_id: str, connection_id: str, *, leaking: bool = True) -> dict:
         """Mark a line leaking (or seal it). Flow continues at reduced capacity."""
         rt = self.runtime(plant_id)
         conn = rt.engine.set_line_leaking(connection_id, leaking)
-        rt.emit("line.leaking" if leaking else "line.sealed",
-                {"connection_id": connection_id, "medium": conn.medium})
-        self.store.audit(event_type="line.leaking" if leaking else "line.sealed",
-                         actor="operator", plant_id=plant_id, sim_t=rt.engine.t,
-                         action="leak_line", target=connection_id)
+        rt.emit(
+            "line.leaking" if leaking else "line.sealed",
+            {"connection_id": connection_id, "medium": conn.medium},
+        )
+        self.store.audit(
+            event_type="line.leaking" if leaking else "line.sealed",
+            actor="operator",
+            plant_id=plant_id,
+            sim_t=rt.engine.t,
+            action="leak_line",
+            target=connection_id,
+        )
         incident_id = None
         if leaking:
             incident_id = self._raise_line_incident(
-                rt, conn, AlarmSeverity.WARNING, f"Line leaking — {connection_id}",
+                rt,
+                conn,
+                AlarmSeverity.WARNING,
+                f"Line leaking — {connection_id}",
             )
         return {"connection_id": connection_id, "leaking": conn.leaking, "incident_id": incident_id}
 
@@ -413,9 +487,14 @@ class SimulationService:
         rt.emit("incident.created", incident.model_dump())
         self._emit_perception(rt, incident, source="line.loss")
         self.store.audit(
-            event_type="incident.created", actor="orchestrator", plant_id=rt.engine.plant.id,
-            incident_id=incident.id, sim_t=rt.engine.t, target=conn.source,
-            result=incident.severity.value, runtime=self.roster.runtime_label(),
+            event_type="incident.created",
+            actor="orchestrator",
+            plant_id=rt.engine.plant.id,
+            incident_id=incident.id,
+            sim_t=rt.engine.t,
+            target=conn.source,
+            result=incident.severity.value,
+            runtime=self.roster.runtime_label(),
             payload={"affected": incident.affected, "connection_id": conn.id},
         )
         self._run_agents(rt, incident)
@@ -430,12 +509,21 @@ class SimulationService:
         context = self._sensor_redundancy(rt.engine, sensor_id)
         rt.engine.remove_sensor(sensor_id)
         rt.emit("sensor.removed", {"sensor_id": sensor_id})
-        self.store.audit(event_type="sensor.removed", actor="operator", plant_id=plant_id,
-                         sim_t=rt.engine.t, action="remove_sensor", target=sensor_id,
-                         payload=context)
+        self.store.audit(
+            event_type="sensor.removed",
+            actor="operator",
+            plant_id=plant_id,
+            sim_t=rt.engine.t,
+            action="remove_sensor",
+            target=sensor_id,
+            payload=context,
+        )
         tag = rt.engine.sensor_model[sensor_id].tag
         incident_id = self._raise_sensor_incident(
-            rt, sensor_id, AlarmSeverity.CRITICAL, f"Instrument deleted — {tag}",
+            rt,
+            sensor_id,
+            AlarmSeverity.CRITICAL,
+            f"Instrument deleted — {tag}",
         )
         return {**context, "incident_id": incident_id}
 
@@ -443,8 +531,14 @@ class SimulationService:
         rt = self.runtime(plant_id)
         rt.engine.restore_sensor(sensor_id)
         rt.emit("sensor.restored", {"sensor_id": sensor_id})
-        self.store.audit(event_type="sensor.restored", actor="operator", plant_id=plant_id,
-                         sim_t=rt.engine.t, action="restore_sensor", target=sensor_id)
+        self.store.audit(
+            event_type="sensor.restored",
+            actor="operator",
+            plant_id=plant_id,
+            sim_t=rt.engine.t,
+            action="restore_sensor",
+            target=sensor_id,
+        )
 
     def _sensor_redundancy(self, engine: SimulationEngine, sensor_id: str) -> dict:
         """What still reads a point the operator is removing.
@@ -454,7 +548,8 @@ class SimulationService:
         never offers a substitute that is itself dead."""
         model = engine.sensor_model[sensor_id]  # KeyError → 404 at the API
         alternates = [
-            s.id for s in engine.alternate_sensors(sensor_id)
+            s.id
+            for s in engine.alternate_sensors(sensor_id)
             if s.id in engine.sensors
             and engine.sensor_out_of_service(s.id) is None
             and not engine.sensors[s.id].failed
@@ -473,13 +568,17 @@ class SimulationService:
         Re-raising would stack a second task DAG and a second approval on the
         same loss, so the console would show the agents twice."""
         return next(
-            (i for i in rt.engine.incidents.values()
-             if i.origin_sensor == sensor_id and i.status != IncidentStatus.RESOLVED),
+            (
+                i
+                for i in rt.engine.incidents.values()
+                if i.origin_sensor == sensor_id and i.status != IncidentStatus.RESOLVED
+            ),
             None,
         )
 
-    def _raise_sensor_incident(self, rt: PlantRuntime, sensor_id: str, severity: AlarmSeverity,
-                               title: str) -> str | None:
+    def _raise_sensor_incident(
+        self, rt: PlantRuntime, sensor_id: str, severity: AlarmSeverity, title: str
+    ) -> str | None:
         """Raise the measurement-loss incident and run the real agent pipeline.
 
         Same machinery as ``inject_failure`` (create_incident → store → event →
@@ -500,9 +599,14 @@ class SimulationService:
         rt.emit("incident.created", incident.model_dump())
         self._emit_perception(rt, incident, source="sensor.loss")
         self.store.audit(
-            event_type="incident.created", actor="orchestrator", plant_id=rt.engine.plant.id,
-            incident_id=incident.id, sim_t=rt.engine.t, target=model.equipment_id,
-            result=incident.severity.value, runtime=self.roster.runtime_label(),
+            event_type="incident.created",
+            actor="orchestrator",
+            plant_id=rt.engine.plant.id,
+            incident_id=incident.id,
+            sim_t=rt.engine.t,
+            target=model.equipment_id,
+            result=incident.severity.value,
+            runtime=self.roster.runtime_label(),
             payload={"affected": incident.affected, "origin_sensor": sensor_id},
         )
         self._run_agents(rt, incident)
@@ -533,21 +637,24 @@ class SimulationService:
         mode = next((m for m in engine.plant.failure_modes if m.id == incident.failure_mode), None)
         sensor = engine.sensor_model.get(incident.origin_sensor) if incident.origin_sensor else None
         department = resolve_department(engine, incident.origin_equipment)
-        rt.emit("response.perception", {
-            "job_id": incident.id,
-            "incident_id": incident.id,
-            "equipment_id": incident.origin_equipment,
-            "equipment_tag": eq.tag if eq else incident.origin_equipment,
-            "fault_type": incident.failure_mode,
-            "fault_name": mode.name if mode else None,
-            "mechanism": mode.mechanism if mode else None,
-            "severity": incident.severity.value,
-            "sensor_id": sensor.id if sensor else None,
-            "sensor_tag": sensor.tag if sensor else None,
-            "department": department["department"],
-            "department_source": department["department_source"],
-            "source": source,
-        })
+        rt.emit(
+            "response.perception",
+            {
+                "job_id": incident.id,
+                "incident_id": incident.id,
+                "equipment_id": incident.origin_equipment,
+                "equipment_tag": eq.tag if eq else incident.origin_equipment,
+                "fault_type": incident.failure_mode,
+                "fault_name": mode.name if mode else None,
+                "mechanism": mode.mechanism if mode else None,
+                "severity": incident.severity.value,
+                "sensor_id": sensor.id if sensor else None,
+                "sensor_tag": sensor.tag if sensor else None,
+                "department": department["department"],
+                "department_source": department["department_source"],
+                "source": source,
+            },
+        )
 
     def _lane_emitted(self, rt: PlantRuntime, incident_id: str, marker: str) -> bool:
         """Whether this incident's lane has already been announced.
@@ -563,8 +670,9 @@ class SimulationService:
             for e in rt.events
         )
 
-    def _emit_response_lanes_start(self, rt: PlantRuntime, incident: Incident,
-                                   tasks: list[AgentTask]) -> None:
+    def _emit_response_lanes_start(
+        self, rt: PlantRuntime, incident: Incident, tasks: list[AgentTask]
+    ) -> None:
         """Announce that the two response lanes have begun work.
 
         ONLY start-of-work beats are emitted here. This method used to emit the
@@ -586,11 +694,14 @@ class SimulationService:
         rt.emit("response.operations_notified", {**job, "role": "shift supervisor"})
         # The engine really is evaluating candidates at this moment; the ones it
         # is considering are real topology reads, not a conclusion.
-        rt.emit("response.failover_evaluating", {
-            **job,
-            "origin_sensor_id": incident.origin_sensor,
-            "candidates": failover_candidates(rt.engine, incident.origin_sensor),
-        })
+        rt.emit(
+            "response.failover_evaluating",
+            {
+                **job,
+                "origin_sensor_id": incident.origin_sensor,
+                "candidates": failover_candidates(rt.engine, incident.origin_sensor),
+            },
+        )
 
     def _lane_job(self, rt: PlantRuntime, incident: Incident) -> dict[str, Any]:
         """The incident context every lane beat carries."""
@@ -607,8 +718,9 @@ class SimulationService:
             "department_source": department["department_source"],
         }
 
-    def _emit_response_lanes_result(self, rt: PlantRuntime, incident: Incident,
-                                    tasks: list[AgentTask]) -> None:
+    def _emit_response_lanes_result(
+        self, rt: PlantRuntime, incident: Incident, tasks: list[AgentTask]
+    ) -> None:
         """Emit the lane FINDINGS, once the real decision exists.
 
         Called from the decide path after the three models have answered, so
@@ -635,21 +747,27 @@ class SimulationService:
         if chosen is None:
             chosen = choose_failover(engine, origin_sensor)
         if chosen is not None:
-            origin_equipment = engine.sensor_model[origin_sensor].equipment_id if origin_sensor else None
-            rt.emit("response.failover_completed", {
-                **job,
-                "origin_sensor_id": origin_sensor,
-                "related_equipment_id": chosen.equipment_id,
-                "related_sensor_id": chosen.id,
-                "related_sensor_tag": chosen.tag,
-                "same_asset": chosen.equipment_id == origin_equipment,
-            })
+            origin_equipment = (
+                engine.sensor_model[origin_sensor].equipment_id if origin_sensor else None
+            )
+            rt.emit(
+                "response.failover_completed",
+                {
+                    **job,
+                    "origin_sensor_id": origin_sensor,
+                    "related_equipment_id": chosen.equipment_id,
+                    "related_sensor_id": chosen.id,
+                    "related_sensor_tag": chosen.tag,
+                    "same_asset": chosen.equipment_id == origin_equipment,
+                },
+            )
         # No usable alternate -> this beat is never emitted. The console reports
         # "no response from orchestrator" after the configured timeout instead
         # of inventing a switch.
 
-    def _emit_response_lanes_diagnosis(self, rt: PlantRuntime, incident: Incident,
-                                       tasks: list[AgentTask]) -> None:
+    def _emit_response_lanes_diagnosis(
+        self, rt: PlantRuntime, incident: Incident, tasks: list[AgentTask]
+    ) -> None:
         """The diagnostics-lane conclusion, emitted after the agents answered.
 
         Split out for the same reason as the result half: a root cause and a
@@ -664,15 +782,20 @@ class SimulationService:
         job = self._lane_job(rt, incident)
         origin_sensor = incident.origin_sensor
 
-        rt.emit("response.history_reviewed", {
-            **job,
-            "counts": maintenance_counts(engine, incident, tasks),
-        })
+        rt.emit(
+            "response.history_reviewed",
+            {
+                **job,
+                "counts": maintenance_counts(engine, incident, tasks),
+            },
+        )
 
         mode = next((m for m in engine.plant.failure_modes if m.id == incident.failure_mode), None)
         sensor = engine.sensor_model.get(origin_sensor) if origin_sensor else None
         if mode is not None and eq is not None and mode.id in eq.failure_modes:
-            explanation = mode.description or f"{equipment_tag}: {mode.name} confirmed by the evidence pack."
+            explanation = (
+                mode.description or f"{equipment_tag}: {mode.name} confirmed by the evidence pack."
+            )
         elif sensor is not None:
             explanation = (
                 f"{sensor.tag} measurement loss on {equipment_tag} — no declared equipment "
@@ -680,16 +803,21 @@ class SimulationService:
             )
         else:
             explanation = f"{equipment_tag}: fault confirmed by the evidence pack."
-        rt.emit("response.root_cause_identified", {
-            **job,
-            # A failure mode is only reported when the equipment itself declares
-            # it; sensor-loss incidents honestly report no mode.
-            "failure_mode": mode.id if mode is not None else None,
-            "failure_mode_name": mode.name if mode is not None else None,
-            "mechanism": mode.mechanism if mode is not None else None,
-            "failure_mode_declared": bool(mode is not None and eq is not None and mode.id in eq.failure_modes),
-            "explanation": explanation,
-        })
+        rt.emit(
+            "response.root_cause_identified",
+            {
+                **job,
+                # A failure mode is only reported when the equipment itself declares
+                # it; sensor-loss incidents honestly report no mode.
+                "failure_mode": mode.id if mode is not None else None,
+                "failure_mode_name": mode.name if mode is not None else None,
+                "mechanism": mode.mechanism if mode is not None else None,
+                "failure_mode_declared": bool(
+                    mode is not None and eq is not None and mode.id in eq.failure_modes
+                ),
+                "explanation": explanation,
+            },
+        )
 
         prediction = predict_next_failure(engine, incident)
         rt.emit("response.prediction", {**job, **prediction})
@@ -703,10 +831,13 @@ class SimulationService:
             chosen = engine.sensor_model.get(decision.restore[0])
         if chosen is None:
             chosen = choose_failover(engine, origin_sensor)
-        rt.emit("response.user_notified", {
-            **job,
-            "summary": build_user_summary(equipment_tag, mode, chosen, prediction),
-        })
+        rt.emit(
+            "response.user_notified",
+            {
+                **job,
+                "summary": build_user_summary(equipment_tag, mode, chosen, prediction),
+            },
+        )
 
     def _run_agents(self, rt: PlantRuntime, incident: Incident) -> None:
         """Schedule the multi-agent pipeline as a background asyncio Task.
@@ -759,7 +890,9 @@ class SimulationService:
         runtime_label = self.roster.runtime_label()
         self.store.start_execution(execution_id, incident.id, incident.plant_id, runtime_label)
         eq = next((e for e in rt.engine.plant.equipment if e.id == incident.origin_equipment), None)
-        mode = next((m for m in rt.engine.plant.failure_modes if m.id == incident.failure_mode), None)
+        mode = next(
+            (m for m in rt.engine.plant.failure_modes if m.id == incident.failure_mode), None
+        )
         department = resolve_department(rt.engine, incident.origin_equipment)
         handoff = {
             "from": "perception",
@@ -767,23 +900,34 @@ class SimulationService:
             "equipment_id": incident.origin_equipment,
             "equipment_tag": eq.tag if eq else incident.origin_equipment,
         }
-        rt.emit("agent.started", {
-            "execution_id": execution_id, "incident_id": incident.id,
-            "runtime": runtime_label, "agents": self.roster.status()["roles"],
-            # Console-facing context: the same real incident fields the lanes
-            # key off, plus the explicit handoff that tells lane A it may grey.
-            "job_id": incident.id,
-            "equipment_id": incident.origin_equipment,
-            "equipment_tag": eq.tag if eq else incident.origin_equipment,
-            "fault_type": incident.failure_mode,
-            "fault_name": mode.name if mode else None,
-            "severity": incident.severity.value,
-            "department": department["department"],
-            "handoff": handoff,
-        })
-        self.store.audit(event_type="agent.started", actor="orchestrator", plant_id=incident.plant_id,
-                         incident_id=incident.id, sim_t=rt.engine.t, runtime=runtime_label,
-                         payload=self.roster.status())
+        rt.emit(
+            "agent.started",
+            {
+                "execution_id": execution_id,
+                "incident_id": incident.id,
+                "runtime": runtime_label,
+                "agents": self.roster.status()["roles"],
+                # Console-facing context: the same real incident fields the lanes
+                # key off, plus the explicit handoff that tells lane A it may grey.
+                "job_id": incident.id,
+                "equipment_id": incident.origin_equipment,
+                "equipment_tag": eq.tag if eq else incident.origin_equipment,
+                "fault_type": incident.failure_mode,
+                "fault_name": mode.name if mode else None,
+                "severity": incident.severity.value,
+                "department": department["department"],
+                "handoff": handoff,
+            },
+        )
+        self.store.audit(
+            event_type="agent.started",
+            actor="orchestrator",
+            plant_id=incident.plant_id,
+            incident_id=incident.id,
+            sim_t=rt.engine.t,
+            runtime=runtime_label,
+            payload=self.roster.status(),
+        )
 
         tasks, plan = build_pipeline(rt.engine, incident, rt.engine.t)
         rt.incident_tasks[incident.id] = tasks
@@ -800,17 +944,32 @@ class SimulationService:
         for task in tasks:
             rt.emit("agent.task_started", task.model_dump())
             self.store.upsert_task(execution_id, task)
-            self.store.audit(event_type="agent.task.created", actor=task.agent,
-                             plant_id=incident.plant_id, incident_id=incident.id,
-                             task_id=task.id, sim_t=task.started_at, runtime=task.agent_runtime,
-                             result=task.status)
+            self.store.audit(
+                event_type="agent.task.created",
+                actor=task.agent,
+                plant_id=incident.plant_id,
+                incident_id=incident.id,
+                task_id=task.id,
+                sim_t=task.started_at,
+                runtime=task.agent_runtime,
+                result=task.status,
+            )
             for tool in task.tools:
-                rt.emit("agent.tool_completed", {"task_id": task.id, "tool": tool.tool, "summary": tool.summary, "ok": tool.ok})
-                self.store.audit(event_type="agent.tool.called", actor=task.agent,
-                                 plant_id=incident.plant_id, incident_id=incident.id,
-                                 task_id=task.id, action=tool.tool,
-                                 result="ok" if tool.ok else "failed",
-                                 runtime=task.agent_runtime, payload={"summary": tool.summary})
+                rt.emit(
+                    "agent.tool_completed",
+                    {"task_id": task.id, "tool": tool.tool, "summary": tool.summary, "ok": tool.ok},
+                )
+                self.store.audit(
+                    event_type="agent.tool.called",
+                    actor=task.agent,
+                    plant_id=incident.plant_id,
+                    incident_id=incident.id,
+                    task_id=task.id,
+                    action=tool.tool,
+                    result="ok" if tool.ok else "failed",
+                    runtime=task.agent_runtime,
+                    payload={"summary": tool.summary},
+                )
             for ev in task.evidence:
                 rt.emit("agent.evidence_found", ev.model_dump())
                 self.store.add_evidence(task.id, incident.id, ev)
@@ -820,35 +979,52 @@ class SimulationService:
                 task.status = "completed"
             rt.emit("agent.task_completed", task.model_dump())
             self.store.upsert_task(execution_id, task)
-            self.store.audit(event_type="agent.completed", actor=task.agent,
-                             plant_id=incident.plant_id, incident_id=incident.id,
-                             task_id=task.id, sim_t=task.completed_at,
-                             result=task.status, evidence_count=len(task.evidence),
-                             runtime=task.agent_runtime,
-                             payload={"agent_error": task.agent_error} if task.agent_error else None)
+            self.store.audit(
+                event_type="agent.completed",
+                actor=task.agent,
+                plant_id=incident.plant_id,
+                incident_id=incident.id,
+                task_id=task.id,
+                sim_t=task.completed_at,
+                result=task.status,
+                evidence_count=len(task.evidence),
+                runtime=task.agent_runtime,
+                payload={"agent_error": task.agent_error} if task.agent_error else None,
+            )
 
         blocked = [t.id for t in tasks if t.status == "blocked"]
         self.store.finish_execution(execution_id, "blocked" if blocked else "completed", len(tasks))
 
         approval_id = f"APR-{incident.id}"
-        self.store.request_approval(approval_id, incident.id, plan.approval_reason, plan.model_dump())
+        self.store.request_approval(
+            approval_id, incident.id, plan.approval_reason, plan.model_dump()
+        )
         incident.status = IncidentStatus.AWAITING_APPROVAL
         self.store.upsert_incident(incident)
         rt.emit("incident.updated", incident.model_dump())
-        rt.emit("approval.required", {
-            "incident_id": incident.id,
-            "approval_id": approval_id,
-            "action": plan.action,
-            "reason": plan.approval_reason,
-            "steps": plan.steps,
-            "risk": "medium",
-            "blocked_tasks": blocked,
-        })
-        self.store.audit(event_type="approval.requested", actor="orchestrator",
-                         plant_id=incident.plant_id, incident_id=incident.id,
-                         approval_id=approval_id, action=plan.action.get("kind"),
-                         target=plan.action.get("target"), sim_t=rt.engine.t,
-                         runtime=runtime_label)
+        rt.emit(
+            "approval.required",
+            {
+                "incident_id": incident.id,
+                "approval_id": approval_id,
+                "action": plan.action,
+                "reason": plan.approval_reason,
+                "steps": plan.steps,
+                "risk": "medium",
+                "blocked_tasks": blocked,
+            },
+        )
+        self.store.audit(
+            event_type="approval.requested",
+            actor="orchestrator",
+            plant_id=incident.plant_id,
+            incident_id=incident.id,
+            approval_id=approval_id,
+            action=plan.action.get("kind"),
+            target=plan.action.get("target"),
+            sim_t=rt.engine.t,
+            runtime=runtime_label,
+        )
 
     def decide(self, plant_id: str, incident_id: str, approved: bool) -> dict:
         """Human decision → action → verification → resolution.
@@ -865,8 +1041,11 @@ class SimulationService:
             # If we're already inside a running loop (e.g. from an async endpoint),
             # caller should ideally await decide_async, but if called synchronously:
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(lambda: asyncio.run(self.decide_async(plant_id, incident_id, approved)))
+                future = executor.submit(
+                    lambda: asyncio.run(self.decide_async(plant_id, incident_id, approved))
+                )
                 return future.result()
         else:
             return asyncio.run(self.decide_async(plant_id, incident_id, approved))
@@ -883,11 +1062,18 @@ class SimulationService:
         plan = rt.incident_plans[incident_id]
         approval_id = f"APR-{incident_id}"
         self.store.decide_approval(approval_id, approved)
-        rt.emit("approval.granted" if approved else "approval.rejected",
-                {"incident_id": incident_id, "approval_id": approval_id})
-        self.store.audit(event_type="approval.granted" if approved else "approval.rejected",
-                         actor="operator", plant_id=plant_id, incident_id=incident_id,
-                         approval_id=approval_id, sim_t=rt.engine.t)
+        rt.emit(
+            "approval.granted" if approved else "approval.rejected",
+            {"incident_id": incident_id, "approval_id": approval_id},
+        )
+        self.store.audit(
+            event_type="approval.granted" if approved else "approval.rejected",
+            actor="operator",
+            plant_id=plant_id,
+            incident_id=incident_id,
+            approval_id=approval_id,
+            sim_t=rt.engine.t,
+        )
         if not approved:
             incident.status = IncidentStatus.ESCALATED
             self.store.upsert_incident(incident)
@@ -914,29 +1100,34 @@ class SimulationService:
             if run_incident_decision != _orig_run_incident_decision:
                 decision = run_incident_decision(rt.engine, incident, prior_attempt=prior_attempt)
             else:
-                decision = await run_incident_decision_async(rt.engine, incident, prior_attempt=prior_attempt)
+                decision = await run_incident_decision_async(
+                    rt.engine, incident, prior_attempt=prior_attempt
+                )
             rt.incident_decisions[incident.id] = decision
-            rt.emit("response.decision", {
-                "job_id": incident_id,
-                "incident_id": incident_id,
-                "equipment_id": incident.origin_equipment,
-                "available": decision.available,
-                "model": decision.model,
-                "error": decision.error,
-                "diagnosis": decision.diagnosis,
-                "route": decision.route,
-                "block": decision.block,
-                "restore": decision.restore,
-                "safety_confirmed": decision.safety_confirmed,
-                "safety_concerns": decision.safety_concerns,
-                "rationale": decision.rationale,
-                # Per-agent truth from the backend, so a console panel can only
-                # report the outcome its OWN turn produced. Without this the UI
-                # inferred success from the presence of a task record and showed
-                # "Safety Verified" for an agent that had never approved a route.
-                "agent_status": decision.agent_status,
-                "attempt": attempt,
-            })
+            rt.emit(
+                "response.decision",
+                {
+                    "job_id": incident_id,
+                    "incident_id": incident_id,
+                    "equipment_id": incident.origin_equipment,
+                    "available": decision.available,
+                    "model": decision.model,
+                    "error": decision.error,
+                    "diagnosis": decision.diagnosis,
+                    "route": decision.route,
+                    "block": decision.block,
+                    "restore": decision.restore,
+                    "safety_confirmed": decision.safety_confirmed,
+                    "safety_concerns": decision.safety_concerns,
+                    "rationale": decision.rationale,
+                    # Per-agent truth from the backend, so a console panel can only
+                    # report the outcome its OWN turn produced. Without this the UI
+                    # inferred success from the presence of a task record and showed
+                    # "Safety Verified" for an agent that had never approved a route.
+                    "agent_status": decision.agent_status,
+                    "attempt": attempt,
+                },
+            )
             # The lane findings and the diagnostics conclusion are emitted HERE,
             # not at handoff: the models have now answered, so an alternate and a
             # root cause reported from this point are things that actually exist.
@@ -946,8 +1137,12 @@ class SimulationService:
             # would tell the console a second "root cause identified" for a run
             # that is still the same incident.
             if not lanes_emitted:
-                self._emit_response_lanes_result(rt, incident, rt.incident_tasks.get(incident_id, []))
-                self._emit_response_lanes_diagnosis(rt, incident, rt.incident_tasks.get(incident_id, []))
+                self._emit_response_lanes_result(
+                    rt, incident, rt.incident_tasks.get(incident_id, [])
+                )
+                self._emit_response_lanes_diagnosis(
+                    rt, incident, rt.incident_tasks.get(incident_id, [])
+                )
                 lanes_emitted = True
 
             if not decision.available:
@@ -957,7 +1152,8 @@ class SimulationService:
                 self.store.upsert_incident(incident)
                 rt.emit("incident.updated", incident.model_dump())
                 return {
-                    "status": incident.status.value, "verified": False,
+                    "status": incident.status.value,
+                    "verified": False,
                     "available": False,
                     "findings": [decision.error or "LOCAL MODEL UNAVAILABLE"],
                 }
@@ -971,32 +1167,64 @@ class SimulationService:
             suffix = "" if attempt == 1 else f"-{attempt}"
             action_id = f"ACT-{incident_id}{suffix}"
             outcome = execute_action(rt.engine, incident, decision.reroute, job_id=incident_id)
-            self.store.start_action(action_id, incident_id, approval_id, plan.action["kind"],
-                                    str(plan.action.get("target")), outcome.executor,
-                                    outcome.policy, outcome.policy_reason)
-            rt.emit("action.started", {"incident_id": incident_id, "action_id": action_id,
-                                       "kind": plan.action["kind"], "executor": outcome.executor,
-                                       "policy": outcome.policy})
-            self.store.audit(event_type="action.started", actor="orchestrator", plant_id=plant_id,
-                             incident_id=incident_id, approval_id=approval_id,
-                             action=plan.action["kind"], target=str(plan.action.get("target")),
-                             result=outcome.executor, sim_t=rt.engine.t,
-                             payload={"policy": outcome.policy, "policy_reason": outcome.policy_reason})
+            self.store.start_action(
+                action_id,
+                incident_id,
+                approval_id,
+                plan.action["kind"],
+                str(plan.action.get("target")),
+                outcome.executor,
+                outcome.policy,
+                outcome.policy_reason,
+            )
+            rt.emit(
+                "action.started",
+                {
+                    "incident_id": incident_id,
+                    "action_id": action_id,
+                    "kind": plan.action["kind"],
+                    "executor": outcome.executor,
+                    "policy": outcome.policy,
+                },
+            )
+            self.store.audit(
+                event_type="action.started",
+                actor="orchestrator",
+                plant_id=plant_id,
+                incident_id=incident_id,
+                approval_id=approval_id,
+                action=plan.action["kind"],
+                target=str(plan.action.get("target")),
+                result=outcome.executor,
+                sim_t=rt.engine.t,
+                payload={"policy": outcome.policy, "policy_reason": outcome.policy_reason},
+            )
             self.store.finish_action(action_id, outcome.status, outcome.detail)
-            self.store.audit(event_type="action.completed" if outcome.ok else "action.blocked",
-                             actor="orchestrator", plant_id=plant_id, incident_id=incident_id,
-                             approval_id=approval_id, action=plan.action["kind"],
-                             target=str(plan.action.get("target")), result=outcome.status,
-                             sim_t=rt.engine.t, payload=outcome.detail)
+            self.store.audit(
+                event_type="action.completed" if outcome.ok else "action.blocked",
+                actor="orchestrator",
+                plant_id=plant_id,
+                incident_id=incident_id,
+                approval_id=approval_id,
+                action=plan.action["kind"],
+                target=str(plan.action.get("target")),
+                result=outcome.status,
+                sim_t=rt.engine.t,
+                payload=outcome.detail,
+            )
             if not outcome.ok:
                 incident.status = IncidentStatus.ESCALATED
                 self.store.upsert_incident(incident)
-                rt.emit("action.blocked", {"incident_id": incident_id, "action_id": action_id,
-                                            **outcome.detail})
+                rt.emit(
+                    "action.blocked",
+                    {"incident_id": incident_id, "action_id": action_id, **outcome.detail},
+                )
                 rt.emit("incident.updated", incident.model_dump())
                 return {
-                    "status": incident.status.value, "verified": False,
-                    "action": outcome.status, "policy": outcome.policy,
+                    "status": incident.status.value,
+                    "verified": False,
+                    "action": outcome.status,
+                    "policy": outcome.policy,
                     "findings": [outcome.detail.get("message", "action did not execute")],
                 }
             result = dict(outcome.detail)
@@ -1004,10 +1232,17 @@ class SimulationService:
 
             incident.status = IncidentStatus.VERIFYING
             self.store.upsert_incident(incident)
-            rt.emit("verification.started", {"incident_id": incident_id, "action_id": action_id,
-                                             "attempt": attempt})
-            self.store.audit(event_type="verification.started", actor="orchestrator",
-                             plant_id=plant_id, incident_id=incident_id, sim_t=rt.engine.t)
+            rt.emit(
+                "verification.started",
+                {"incident_id": incident_id, "action_id": action_id, "attempt": attempt},
+            )
+            self.store.audit(
+                event_type="verification.started",
+                actor="orchestrator",
+                plant_id=plant_id,
+                incident_id=incident_id,
+                sim_t=rt.engine.t,
+            )
             # Observe until the plant settles — bounded at 12 ticks. Verification
             # is real each pass; when the envelope never recovers the route is
             # handed back to the agents once, then escalated.
@@ -1020,54 +1255,93 @@ class SimulationService:
                 if ok:
                     break
             verification_id = f"VER-{incident_id}{suffix}"
-            self.store.record_verification(verification_id, incident_id, action_id, ok, findings,
-                                            checks, rt.engine.t)
-            rt.emit("verification.completed", {"incident_id": incident_id, "ok": ok,
-                                                "findings": findings, "checks_run": checks,
-                                                "attempt": attempt,
-                                                "verification_id": verification_id})
-            self.store.audit(event_type="verification.completed", actor="orchestrator",
-                             plant_id=plant_id, incident_id=incident_id,
-                             verification_id=verification_id, result="passed" if ok else "failed",
-                             sim_t=rt.engine.t,
-                             payload={"findings": findings, "checks_run": checks,
-                                      "attempt": attempt})
-            last = {"verified": ok, "findings": findings,
-                    "action": outcome.status, "verification_id": verification_id,
-                    "attempt": attempt}
+            self.store.record_verification(
+                verification_id, incident_id, action_id, ok, findings, checks, rt.engine.t
+            )
+            rt.emit(
+                "verification.completed",
+                {
+                    "incident_id": incident_id,
+                    "ok": ok,
+                    "findings": findings,
+                    "checks_run": checks,
+                    "attempt": attempt,
+                    "verification_id": verification_id,
+                },
+            )
+            self.store.audit(
+                event_type="verification.completed",
+                actor="orchestrator",
+                plant_id=plant_id,
+                incident_id=incident_id,
+                verification_id=verification_id,
+                result="passed" if ok else "failed",
+                sim_t=rt.engine.t,
+                payload={"findings": findings, "checks_run": checks, "attempt": attempt},
+            )
+            last = {
+                "verified": ok,
+                "findings": findings,
+                "action": outcome.status,
+                "verification_id": verification_id,
+                "attempt": attempt,
+            }
 
             if not ok:
                 # Hand the failure to the agents rather than looping in the dark.
                 prior_attempt = {
-                    "route": decision.route, "block": decision.block,
-                    "restore": decision.restore, "findings": findings,
+                    "route": decision.route,
+                    "block": decision.block,
+                    "restore": decision.restore,
+                    "findings": findings,
                 }
                 if attempt < RECOVERY_ATTEMPTS:
-                    rt.emit("recovery.replanning", {
-                        "incident_id": incident_id, "attempt": attempt,
-                        "next_attempt": attempt + 1, "findings": findings,
-                    })
+                    rt.emit(
+                        "recovery.replanning",
+                        {
+                            "incident_id": incident_id,
+                            "attempt": attempt,
+                            "next_attempt": attempt + 1,
+                            "findings": findings,
+                        },
+                    )
                     continue
                 # Out of turns: the route the agents can build does not clear the
                 # plant's own checks. That is a real escalation, and it ends the
                 # recovery — the operator gets a terminal state to read.
                 incident.status = IncidentStatus.ESCALATED
                 self.store.upsert_incident(incident)
-                rt.emit("recovery.escalated", {
-                    "incident_id": incident_id, "equipment_id": incident.origin_equipment,
-                    "attempts": attempt, "findings": findings,
-                    "route": decision.route, "block": decision.block,
-                    "message": ("No route the agents can build clears the plant's own "
-                                "verification — handed to the operator"),
-                })
+                rt.emit(
+                    "recovery.escalated",
+                    {
+                        "incident_id": incident_id,
+                        "equipment_id": incident.origin_equipment,
+                        "attempts": attempt,
+                        "findings": findings,
+                        "route": decision.route,
+                        "block": decision.block,
+                        "message": (
+                            "No route the agents can build clears the plant's own "
+                            "verification — handed to the operator"
+                        ),
+                    },
+                )
                 rt.emit("incident.updated", incident.model_dump())
                 self.store.audit(
-                    event_type="recovery.escalated", actor="orchestrator", plant_id=plant_id,
-                    incident_id=incident_id, sim_t=rt.engine.t,
-                    action="recovery.escalated", target=incident.origin_equipment,
+                    event_type="recovery.escalated",
+                    actor="orchestrator",
+                    plant_id=plant_id,
+                    incident_id=incident_id,
+                    sim_t=rt.engine.t,
+                    action="recovery.escalated",
+                    target=incident.origin_equipment,
                     result="escalated",
-                    payload={"attempts": attempt, "findings": findings,
-                             "route": decision.route, "block": decision.block},
+                    payload={
+                        "attempts": attempt,
+                        "findings": findings,
+                        "route": decision.route,
+                        "block": decision.block,
+                    },
                 )
                 return {**last, "status": incident.status.value, "escalated": True}
 
@@ -1086,29 +1360,49 @@ class SimulationService:
             self.store.record_artifact(artifact, incident_id)
             self.store.upsert_incident(incident)
             rt.emit("artifact.created", artifact)
-            self.store.audit(event_type="artifact.created", actor="documentation",
-                             plant_id=plant_id, incident_id=incident_id,
-                             action="artifact.created", target=artifact["filename"],
-                             result="verified", sim_t=rt.engine.t,
-                             payload={"artifact_id": artifact["id"], "sources": artifact["sources"]})
+            self.store.audit(
+                event_type="artifact.created",
+                actor="documentation",
+                plant_id=plant_id,
+                incident_id=incident_id,
+                action="artifact.created",
+                target=artifact["filename"],
+                result="verified",
+                sim_t=rt.engine.t,
+                payload={"artifact_id": artifact["id"], "sources": artifact["sources"]},
+            )
             rt.emit("incident.resolved", incident.model_dump())
             audit_id = self.store.audit(
-                event_type="incident.resolved", actor="operator", plant_id=plant_id,
-                incident_id=incident_id, sim_t=rt.engine.t, action="incident.resolved",
-                verification_id=verification_id, approval_id=approval_id,
-                target=",".join(decision.reroute["block"] + decision.reroute["restore"]), result="resolved",
+                event_type="incident.resolved",
+                actor="operator",
+                plant_id=plant_id,
+                incident_id=incident_id,
+                sim_t=rt.engine.t,
+                action="incident.resolved",
+                verification_id=verification_id,
+                approval_id=approval_id,
+                target=",".join(decision.reroute["block"] + decision.reroute["restore"]),
+                result="resolved",
                 evidence_count=sum(len(t.evidence) for t in rt.incident_tasks.get(incident_id, [])),
                 runtime=self.roster.runtime_label(),
             )
-            rt.emit("audit.recorded", {"incident_id": incident_id, "actor": "operator",
-                                        "action": "incident.resolved", "audit_id": audit_id,
-                                        "persisted": True})
+            rt.emit(
+                "audit.recorded",
+                {
+                    "incident_id": incident_id,
+                    "actor": "operator",
+                    "action": "incident.resolved",
+                    "audit_id": audit_id,
+                    "persisted": True,
+                },
+            )
             return {**last, "status": incident.status.value}
 
         return last
 
-    def _artifact_body(self, rt: PlantRuntime, incident: Incident, action: dict,
-                       findings: list[str]) -> str:
+    def _artifact_body(
+        self, rt: PlantRuntime, incident: Incident, action: dict, findings: list[str]
+    ) -> str:
         """Incident report text assembled from the persisted records."""
         tasks = rt.incident_tasks.get(incident.id, [])
         lines = [
@@ -1149,6 +1443,7 @@ class SimulationService:
     def get_incident_pdf(self, incident_id: str, plant_id: str | None = None) -> bytes:
         """Generate and return post-incident PDF report bytes."""
         from backend.simulation.pdf_report import generate_incident_report_pdf
+
         record = self.store.incident_record(incident_id)
         if record is None and plant_id:
             try:
@@ -1160,7 +1455,9 @@ class SimulationService:
                         "tasks": [t.model_dump() for t in rt.incident_tasks.get(incident_id, [])],
                         "action": {},
                         "findings": [],
-                        "audit_events": self.store.audit_events(plant_id=plant_id, incident_id=incident_id),
+                        "audit_events": self.store.audit_events(
+                            plant_id=plant_id, incident_id=incident_id
+                        ),
                     }
             except KeyError:
                 pass

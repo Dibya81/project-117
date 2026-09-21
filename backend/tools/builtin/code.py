@@ -192,7 +192,7 @@ class RunPythonTool:
 
 #: Constant, reviewed. Never assembled from model output - which is why this
 #: tool is compute risk rather than execute risk.
-_PROFILE_SCRIPT = '''
+_PROFILE_SCRIPT = """
 import json
 
 import pandas as pd
@@ -244,7 +244,7 @@ if preview_rows > 0:
     report["preview"] = frame.head(preview_rows).astype(str).to_dict(orient="records")
 
 print(json.dumps(report))
-'''
+"""
 
 
 class AnalyzeCsvArguments(BaseModel):

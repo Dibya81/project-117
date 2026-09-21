@@ -60,7 +60,7 @@ _PDF_PAGE = re.compile(rb"/Type\s*/Page[^s]")
 
 #: Runs inside the sandbox. A constant, reviewed script - not model output -
 #: so it is data as far as the sandbox policy is concerned.
-_INSPECT_SCRIPT = r'''
+_INSPECT_SCRIPT = r"""
 import base64
 import json
 import sys
@@ -146,7 +146,7 @@ elif kind == "xlsx":
     report["formula_count"] = formulas
 
 print(json.dumps(report))
-'''
+"""
 
 
 def _sha256(path: Path) -> str:
@@ -295,7 +295,10 @@ class ArtifactChecker:
         if kind in _OOXML_TYPES:
             if not zipfile.is_zipfile(path):
                 findings.append(
-                    {"status": CheckStatus.FAILED.value, "type_of_finding": "not_an_ooxml_container"}
+                    {
+                        "status": CheckStatus.FAILED.value,
+                        "type_of_finding": "not_an_ooxml_container",
+                    }
                 )
                 return {"findings": findings, "units": units}
             try:
@@ -468,9 +471,7 @@ class ArtifactChecker:
                         "slides": empty[:20],
                     }
                 )
-            overflowing = [
-                slide["index"] for slide in slides if slide.get("overflow")
-            ]
+            overflowing = [slide["index"] for slide in slides if slide.get("overflow")]
             if overflowing:
                 findings.append(
                     {
@@ -494,7 +495,10 @@ class ArtifactChecker:
             sheets = report.get("sheets") or []
             if not sheets:
                 findings.append(
-                    {"status": CheckStatus.FAILED.value, "type_of_finding": "workbook_has_no_sheets"}
+                    {
+                        "status": CheckStatus.FAILED.value,
+                        "type_of_finding": "workbook_has_no_sheets",
+                    }
                 )
             empty = [sheet["name"] for sheet in sheets if not sheet.get("rows")]
             if empty:

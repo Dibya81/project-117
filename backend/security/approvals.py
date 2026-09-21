@@ -82,9 +82,7 @@ class ApprovalPolicy:
             return ApprovalDecision(False, f"{spec.risk.value} risk is auto-approved", "risk")
 
         if spec.risk is RiskLevel.EXTERNAL and self.auto_approve_external:
-            return ApprovalDecision(
-                False, "external risk auto-approved by configuration", "policy"
-            )
+            return ApprovalDecision(False, "external risk auto-approved by configuration", "policy")
         if spec.risk is RiskLevel.EXECUTE and self.auto_approve_execute:
             return ApprovalDecision(
                 False, "code execution auto-approved by configuration", "policy"

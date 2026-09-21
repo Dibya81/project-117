@@ -69,28 +69,42 @@ def check_policy(engine: SimulationEngine, incident: Incident, action: dict) -> 
     if kind == "reroute":
         lines = [*action.get("block", []), *action.get("restore", [])]
         if not lines:
-            return PolicyDecision(False, "reroute requires block/restore line ids", "plant_actuator")
+            return PolicyDecision(
+                False, "reroute requires block/restore line ids", "plant_actuator"
+            )
         for cid in lines:
             conn = engine.pipe_by_id.get(cid)
             if conn is None:
                 return PolicyDecision(False, f"unknown line {cid!r}", "plant_actuator")
             if conn.source not in scope and conn.target not in scope:
-                return PolicyDecision(False, f"line {cid!r} is outside the incident scope", "plant_actuator")
+                return PolicyDecision(
+                    False, f"line {cid!r} is outside the incident scope", "plant_actuator"
+                )
         return PolicyDecision(True, "route change within incident scope", "plant_actuator")
     if kind == "repair_sensor":
         model = engine.sensor_model.get(target)
         if model is None:
             return PolicyDecision(False, f"unknown sensor {target!r}", "plant_actuator")
         if model.equipment_id not in scope:
-            return PolicyDecision(False, f"sensor {target!r} is outside the incident scope", "plant_actuator")
-        return PolicyDecision(True, "instrument maintenance within incident scope", "plant_actuator")
+            return PolicyDecision(
+                False, f"sensor {target!r} is outside the incident scope", "plant_actuator"
+            )
+        return PolicyDecision(
+            True, "instrument maintenance within incident scope", "plant_actuator"
+        )
 
     if target not in engine.eq:
         return PolicyDecision(False, f"unknown equipment {target!r}", "plant_actuator")
     if target not in scope:
-        return PolicyDecision(False, f"equipment {target!r} is outside the incident scope", "plant_actuator")
+        return PolicyDecision(
+            False, f"equipment {target!r} is outside the incident scope", "plant_actuator"
+        )
     if engine.eq[target].state == AssetState.DISABLED:
-        return PolicyDecision(False, f"equipment {target!r} is disabled; manual intervention required", "plant_actuator")
+        return PolicyDecision(
+            False,
+            f"equipment {target!r} is disabled; manual intervention required",
+            "plant_actuator",
+        )
     return PolicyDecision(True, "plant actuation within incident scope", "plant_actuator")
 
 
@@ -118,7 +132,9 @@ class SandboxExecutor:
         ok, why = self.available()
         if not ok:
             return ActionOutcome(
-                status="blocked", executor="sandbox", policy="allowed",
+                status="blocked",
+                executor="sandbox",
+                policy="allowed",
                 policy_reason="command action requires sandbox",
                 detail={"message": "ACTION BLOCKED / SANDBOX UNAVAILABLE", "reason": why},
             )
@@ -135,18 +151,24 @@ class SandboxExecutor:
             result = asyncio.run(_go())
         except SandboxUnavailable as exc:
             return ActionOutcome(
-                status="blocked", executor="sandbox", policy="allowed",
+                status="blocked",
+                executor="sandbox",
+                policy="allowed",
                 policy_reason="command action requires sandbox",
                 detail={"message": "ACTION BLOCKED / SANDBOX UNAVAILABLE", "reason": str(exc)},
             )
         except Exception as exc:
             return ActionOutcome(
-                status="failed", executor="sandbox", policy="allowed",
+                status="failed",
+                executor="sandbox",
+                policy="allowed",
                 policy_reason="command action requires sandbox",
                 detail={"error": f"{exc.__class__.__name__}: {exc}"},
             )
         status = "completed" if result.get("exit_code") in (0, None) else "failed"
-        return ActionOutcome(status, "sandbox", "allowed", "command action executed in sandbox", result)
+        return ActionOutcome(
+            status, "sandbox", "allowed", "command action executed in sandbox", result
+        )
 
 
 class PlantActuator:
@@ -160,16 +182,24 @@ class PlantActuator:
                 before = engine.sensors[target].quality.value
                 engine.repair_sensor(target)
                 after = engine.sensors[target].quality.value
-                detail = {"executed": kind, "target": target,
-                          "quality_before": before, "quality_after": after}
+                detail = {
+                    "executed": kind,
+                    "target": target,
+                    "quality_before": before,
+                    "quality_after": after,
+                }
                 status = "completed" if not engine.sensors[target].failed else "failed"
             elif kind == "restore_equipment":
                 before = engine.eq[target].capacity
                 engine.restore_equipment(target)
                 rt = engine.eq[target]
-                detail = {"executed": kind, "target": target,
-                          "capacity_before": before, "capacity_after": rt.capacity,
-                          "faults_cleared": not rt.faults}
+                detail = {
+                    "executed": kind,
+                    "target": target,
+                    "capacity_before": before,
+                    "capacity_after": rt.capacity,
+                    "faults_cleared": not rt.faults,
+                }
                 status = "completed" if rt.capacity > before or not rt.faults else "failed"
             elif kind == "reroute":
                 blocked, restored = [], []
@@ -186,32 +216,52 @@ class PlantActuator:
                     engine._area_of(eq) for eq in {incident.origin_equipment, *incident.affected}
                 }
                 for sid, m in engine.sensor_model.items():
-                    if m.is_detector and sid in engine.sensors and engine._area_of(m.equipment_id) in area_ids:
+                    if (
+                        m.is_detector
+                        and sid in engine.sensors
+                        and engine._area_of(m.equipment_id) in area_ids
+                    ):
                         engine.sensors[sid].value = 0.0
                         engine.sensors[sid].quality = TelemetryQuality.GOOD
-                detail = {"executed": kind, "blocked": blocked, "restored": restored,
-                          "route": action.get("route", [])}
+                detail = {
+                    "executed": kind,
+                    "blocked": blocked,
+                    "restored": restored,
+                    "route": action.get("route", []),
+                }
                 status = "completed" if (blocked or restored) else "failed"
             elif kind == "reduce_load":
                 rt = engine.eq[target]
                 before = rt.capacity
                 rt.capacity = max(0.4, rt.capacity * 0.8)
-                detail = {"executed": kind, "target": target,
-                          "capacity_before": before, "capacity_after": rt.capacity}
+                detail = {
+                    "executed": kind,
+                    "target": target,
+                    "capacity_before": before,
+                    "capacity_after": rt.capacity,
+                }
                 status = "completed" if rt.capacity <= before else "failed"
             else:
-                return ActionOutcome("failed", "plant_actuator", "allowed", "unknown kind", {"error": kind})
+                return ActionOutcome(
+                    "failed", "plant_actuator", "allowed", "unknown kind", {"error": kind}
+                )
         except KeyError as exc:
-            return ActionOutcome("failed", "plant_actuator", "allowed", "target missing", {"error": str(exc)})
+            return ActionOutcome(
+                "failed", "plant_actuator", "allowed", "target missing", {"error": str(exc)}
+            )
         return ActionOutcome(status, "plant_actuator", "allowed", "plant actuation", detail)
 
 
-def execute_action(engine: SimulationEngine, incident: Incident, action: dict, *, job_id: str) -> ActionOutcome:
+def execute_action(
+    engine: SimulationEngine, incident: Incident, action: dict, *, job_id: str
+) -> ActionOutcome:
     """The only path from an approved plan to a state change."""
     decision = check_policy(engine, incident, action)
     if not decision.allowed:
         return ActionOutcome(
-            status="blocked", executor=decision.executor, policy="blocked",
+            status="blocked",
+            executor=decision.executor,
+            policy="blocked",
             policy_reason=decision.reason,
             detail={"message": "ACTION BLOCKED / POLICY", "reason": decision.reason},
         )

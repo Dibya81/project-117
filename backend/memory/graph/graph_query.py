@@ -76,7 +76,9 @@ class GraphQuery:
         return self._graph.nodes.get(node_id) if self._visible(node_id) else None
 
     def by_type(self, entity_type: str) -> list[dict[str, Any]]:
-        return [node.to_dict() for node in self._graph.by_type(entity_type) if self._visible(node.id)]
+        return [
+            node.to_dict() for node in self._graph.by_type(entity_type) if self._visible(node.id)
+        ]
 
     def search(self, term: str, *, limit: int = 20) -> list[dict[str, Any]]:
         needle = (term or "").strip().lower()
@@ -210,9 +212,7 @@ class GraphQuery:
         """
         wanted = {identifier for identifier in node_ids if self._visible(identifier)}
         edges = [
-            edge
-            for edge in self._graph.edges
-            if edge.source in wanted and edge.target in wanted
+            edge for edge in self._graph.edges if edge.source in wanted and edge.target in wanted
         ]
         return {
             "nodes": [self._graph.nodes[identifier].to_dict() for identifier in wanted],

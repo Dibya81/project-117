@@ -216,8 +216,7 @@ def load_or_create_key(path: Path | None = None) -> SigningKey:
             return _describe(data, target)
         except Exception as exc:  # noqa: BLE001 - a bad key must not be used
             raise KeyConfigurationError(
-                f"{target} is not a usable {ALGORITHM} private key: "
-                f"{type(exc).__name__}: {exc}"
+                f"{target} is not a usable {ALGORITHM} private key: {type(exc).__name__}: {exc}"
             ) from exc
     return generate_key(target)
 
@@ -345,9 +344,7 @@ class VerificationOutcome:
         }
 
 
-def verify_file(
-    path: str | Path, *, signature: str | Path | None = None
-) -> VerificationOutcome:
+def verify_file(path: str | Path, *, signature: str | Path | None = None) -> VerificationOutcome:
     """Verify ``path`` against its detached signature.
 
     Never raises for a bad signature: an invalid artifact is a *result*, and

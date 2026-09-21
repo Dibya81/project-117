@@ -121,9 +121,7 @@ class Classification:
             "reasons": list(self.reasons),
             "signals": list(self.signals),
             "method": "rule_table",
-            "caveat": (
-                "confidence is a heuristic score, not a calibrated probability"
-            ),
+            "caveat": ("confidence is a heuristic score, not a calibrated probability"),
         }
 
 
@@ -160,8 +158,7 @@ def classify(
         role = str(explicit_role).strip()
         if role not in KNOWN_ROLES:
             raise ValueError(
-                f"unknown model role '{explicit_role}' "
-                f"(known: {', '.join(KNOWN_ROLES)})"
+                f"unknown model role '{explicit_role}' (known: {', '.join(KNOWN_ROLES)})"
             )
         return Classification(
             role=role,
@@ -173,9 +170,7 @@ def classify(
         return Classification(
             role=VISION,
             confidence=1.0,
-            reasons=(
-                "image inputs are present and no text-only role can read them",
-            ),
+            reasons=("image inputs are present and no text-only role can read them",),
             signals=("images",),
         )
 

@@ -11,21 +11,20 @@ import hmac
 from unittest.mock import patch
 
 import pytest
-from starlette.requests import Request
-
 from backend.config import Settings
 from backend.security.auth import (
     API_KEY_HEADER,
     ROLES_HEADER,
     USER_HEADER,
     AuthenticationError,
-    Principal,
     principal_from_request,
-    split_roles,
 )
+from starlette.requests import Request
 
 
-def _make_request(headers: dict[str, str] | None = None, settings: Settings | None = None) -> Request:
+def _make_request(
+    headers: dict[str, str] | None = None, settings: Settings | None = None
+) -> Request:
     raw_headers = []
     if headers:
         for k, v in headers.items():
@@ -60,7 +59,7 @@ FUZZ_ROLE_INPUTS = [
     ",",
     ",,,",
     "   ,   ,   ",
-    "\"admin\"",
+    '"admin"',
     "'admin'",
     "аdmin",  # Cyrillic 'а' homoglyph
     "👨‍💻",
@@ -203,7 +202,9 @@ def test_hmac_compare_digest_is_strictly_on_comparison_path():
         settings=settings,
     )
 
-    with patch("backend.security.auth.hmac.compare_digest", wraps=hmac.compare_digest) as mock_compare:
+    with patch(
+        "backend.security.auth.hmac.compare_digest", wraps=hmac.compare_digest
+    ) as mock_compare:
         principal = principal_from_request(req, settings=settings)
         assert principal.authenticated is True
         mock_compare.assert_called_once_with("correct-secure-key", "correct-secure-key")

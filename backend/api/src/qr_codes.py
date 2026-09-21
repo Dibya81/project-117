@@ -78,11 +78,9 @@ def resolve_scanned_code(raw: str) -> str:
     code = (raw or "").strip()
     if not code.startswith(QR_PREFIX):
         return code
-    tag = code[len(QR_PREFIX):].strip()
+    tag = code[len(QR_PREFIX) :].strip()
     if not tag:
-        raise MalformedQRCode(
-            f"QR code uses the {QR_PREFIX} prefix but carries no equipment tag"
-        )
+        raise MalformedQRCode(f"QR code uses the {QR_PREFIX} prefix but carries no equipment tag")
     return tag
 
 

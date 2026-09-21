@@ -76,8 +76,7 @@ class SemanticMemoryRetriever:
         if not candidates or self._router is None:
             return candidates[: max(1, limit)], "lexical"
         texts = [
-            f"{record.get('key', '')} {record.get('content', '')}".strip()
-            for record in candidates
+            f"{record.get('key', '')} {record.get('content', '')}".strip() for record in candidates
         ]
         try:
             ranked = await rank_by_similarity(self._router, query, texts, limit=limit)

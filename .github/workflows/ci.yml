@@ -94,13 +94,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Typecheck — apps/web
-        run: pnpm --filter web typecheck
+        run: pnpm --filter @project-117/web typecheck
 
       - name: Lint — apps/web
-        run: pnpm --filter web lint
+        run: pnpm --filter @project-117/web lint
 
       - name: Build — apps/web
-        run: pnpm --filter web build
+        run: pnpm --filter @project-117/web build
         env:
           # Disable telemetry for reproducible builds
           NEXT_TELEMETRY_DISABLED: "1"

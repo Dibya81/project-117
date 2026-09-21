@@ -42,7 +42,9 @@ async def generate_artifact(
     except ArtifactError as exc:
         # A rejected spec or a failed sandbox render is a 400, not a 500 —
         # the service, not the API layer, already decided this call failed.
-        raise HTTPException(status_code=400, detail={"reason": exc.reason, "message": str(exc)}) from exc
+        raise HTTPException(
+            status_code=400, detail={"reason": exc.reason, "message": str(exc)}
+        ) from exc
 
 
 @router.get("")

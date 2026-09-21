@@ -285,7 +285,10 @@ def forecast_inventory(
             "samples": samples,
             "status": INSUFFICIENT_DATA,
             "limitations": [
-                _limitation(INSUFFICIENT_DATA, "recorded consumption averages zero, so no depletion can be projected")
+                _limitation(
+                    INSUFFICIENT_DATA,
+                    "recorded consumption averages zero, so no depletion can be projected",
+                )
             ],
         }
 
@@ -310,7 +313,9 @@ def forecast_inventory(
         "coefficient_of_variation": round(cv, 4),
         "projected_depletion_date": (today + timedelta(days=days_to_zero)).isoformat(),
         "projected_safety_stock_crossing_date": (
-            (today + timedelta(days=days_to_safety)).isoformat() if available > safety else today.isoformat()
+            (today + timedelta(days=days_to_safety)).isoformat()
+            if available > safety
+            else today.isoformat()
         ),
         "days_to_depletion": round(days_to_zero, 2),
         "days_to_safety_stock": round(days_to_safety, 2),
@@ -416,7 +421,9 @@ def price_history(
     if not math.isfinite(change_pct):
         change_pct = 0.0
         limitations.append(
-            _limitation(INSUFFICIENT_DATA, "baseline price is zero, so no percentage change is defined")
+            _limitation(
+                INSUFFICIENT_DATA, "baseline price is zero, so no percentage change is defined"
+            )
         )
 
     magnitude = abs(change_pct)
@@ -428,7 +435,12 @@ def price_history(
         movement = "NORMAL"
 
     series = [
-        {"date": o["observed_on"], "price": o["price"], "data_status": o["data_status"], "source": o["source"]}
+        {
+            "date": o["observed_on"],
+            "price": o["price"],
+            "data_status": o["data_status"],
+            "source": o["source"],
+        }
         for o in ascending
         if o["observed_on"] >= cutoff
     ]
@@ -436,8 +448,16 @@ def price_history(
     return {
         "item_id": item_id,
         "name": material["name"] if material else None,
-        "current": {"price": round(current_price, 4), "unit": price_unit, "observed_on": current["observed_on"]},
-        "baseline": {"price": round(baseline_price, 4), "unit": price_unit, "observed_on": baseline["observed_on"]},
+        "current": {
+            "price": round(current_price, 4),
+            "unit": price_unit,
+            "observed_on": current["observed_on"],
+        },
+        "baseline": {
+            "price": round(baseline_price, 4),
+            "unit": price_unit,
+            "observed_on": baseline["observed_on"],
+        },
         "change_absolute": change_abs,
         "change_percent": change_pct,
         "movement": movement,
@@ -633,7 +653,10 @@ def financial_impact(
             "quantity": quantity,
             "unit": unit or material["unit"],
             "limitations": [
-                _limitation(PRICE_HISTORY_UNAVAILABLE, f"no price observation for {item_id}, so cost cannot be computed")
+                _limitation(
+                    PRICE_HISTORY_UNAVAILABLE,
+                    f"no price observation for {item_id}, so cost cannot be computed",
+                )
             ],
         }
 
@@ -657,7 +680,10 @@ def financial_impact(
             "quantity": quantity,
             "unit": want_unit.value,
             "limitations": [
-                _limitation(CONVERSION_BASIS_REQUIRED, f"cannot price {quantity} {want_unit.value} of {item_id}: {exc}")
+                _limitation(
+                    CONVERSION_BASIS_REQUIRED,
+                    f"cannot price {quantity} {want_unit.value} of {item_id}: {exc}",
+                )
             ],
         }
 
@@ -713,7 +739,9 @@ def production_series(
             "period": period.value,
             "buckets": [],
             "limitations": [
-                _limitation(DATA_UNAVAILABLE, "no production output recorded for the requested filter")
+                _limitation(
+                    DATA_UNAVAILABLE, "no production output recorded for the requested filter"
+                )
             ],
         }
 
@@ -733,7 +761,9 @@ def production_series(
     for row in rows:
         day = date.fromisoformat(str(row["period_start"])[:10])
         key_start, key_end = _bucket(period, day)
-        buckets[(key_start, key_end)] = buckets.get((key_start, key_end), 0.0) + float(row["quantity"])
+        buckets[(key_start, key_end)] = buckets.get((key_start, key_end), 0.0) + float(
+            row["quantity"]
+        )
 
     ordered = sorted(buckets.items(), key=lambda kv: kv[0][0])
     # Period-over-period must compare like with like. The bucket containing today
@@ -765,7 +795,11 @@ def production_series(
             "partial": latest_is_partial,
         },
         "previous": (
-            {"period_start": previous[0][0], "period_end": previous[0][1], "quantity": round(previous[1], 3)}
+            {
+                "period_start": previous[0][0],
+                "period_end": previous[0][1],
+                "quantity": round(previous[1], 3),
+            }
             if previous
             else None
         ),
@@ -773,7 +807,9 @@ def production_series(
         "trend": (
             None
             if change_pct is None
-            else ("INCREASING" if change_pct > 0.5 else "DECREASING" if change_pct < -0.5 else "FLAT")
+            else (
+                "INCREASING" if change_pct > 0.5 else "DECREASING" if change_pct < -0.5 else "FLAT"
+            )
         ),
         "records": len(rows),
         "source": rows[0]["source"],
@@ -825,7 +861,10 @@ def materials_dashboard(store: Any, *, anchor: date | None = None) -> dict[str, 
     for m in materials:
         status = inventory_status(store, m["id"], anchor=anchor)
         positions.append(status)
-        if status.get("status") in (MaterialStatus.CRITICAL.value, MaterialStatus.OUT_OF_STOCK.value):
+        if status.get("status") in (
+            MaterialStatus.CRITICAL.value,
+            MaterialStatus.OUT_OF_STOCK.value,
+        ):
             critical.append(
                 {
                     "material_id": m["id"],
@@ -851,7 +890,11 @@ def materials_dashboard(store: Any, *, anchor: date | None = None) -> dict[str, 
             )
         )
 
-    raw = [p for p in positions if (p.get("material") or {}).get("material_class") == MaterialClass.RAW_MATERIAL.value]
+    raw = [
+        p
+        for p in positions
+        if (p.get("material") or {}).get("material_class") == MaterialClass.RAW_MATERIAL.value
+    ]
     raw_cover = []
     for p in raw:
         # `days_of_cover` is null when no consumption was recorded in the window;
@@ -871,7 +914,8 @@ def materials_dashboard(store: Any, *, anchor: date | None = None) -> dict[str, 
 
     production = production_series(store, period=PeriodType.DAILY, anchor=today)
     finished = [
-        p for p in positions
+        p
+        for p in positions
         if (p.get("material") or {}).get("material_class") == MaterialClass.FINISHED_PRODUCT.value
     ]
 
@@ -938,7 +982,11 @@ def inventory_intelligence(store: Any, *, anchor: date | None = None) -> dict[st
                     "material_id": m["id"],
                     "name": m["name"],
                     "message": f"{m['name']} has no available stock ({status.get('reserved')} {status.get('unit')} reserved).",
-                    "evidence": {"available": available, "reserved": status.get("reserved"), "unit": status.get("unit")},
+                    "evidence": {
+                        "available": available,
+                        "reserved": status.get("reserved"),
+                        "unit": status.get("unit"),
+                    },
                 }
             )
         elif status["status"] == MaterialStatus.CRITICAL.value:
@@ -950,7 +998,11 @@ def inventory_intelligence(store: Any, *, anchor: date | None = None) -> dict[st
                     "material_id": m["id"],
                     "name": m["name"],
                     "message": f"{m['name']} is {shortfall:g} {status.get('unit')} below its safety stock.",
-                    "evidence": {"available": available, "safety_stock": safety, "shortfall": shortfall},
+                    "evidence": {
+                        "available": available,
+                        "safety_stock": safety,
+                        "shortfall": shortfall,
+                    },
                 }
             )
         elif status["status"] == MaterialStatus.DEPLETING.value:
@@ -964,11 +1016,17 @@ def inventory_intelligence(store: Any, *, anchor: date | None = None) -> dict[st
                         f"{m['name']} is at or below its reorder level "
                         f"({available:g} {status.get('unit')} available)."
                     ),
-                    "evidence": {"available": available, "reorder_level": status.get("reorder_level")},
+                    "evidence": {
+                        "available": available,
+                        "reorder_level": status.get("reorder_level"),
+                    },
                 }
             )
         forecast = forecast_inventory(store, m["id"], anchor=anchor)
-        if forecast.get("projected_depletion_date") and forecast.get("days_to_depletion") is not None:
+        if (
+            forecast.get("projected_depletion_date")
+            and forecast.get("days_to_depletion") is not None
+        ):
             if forecast["days_to_depletion"] <= 30:
                 insights.append(
                     {
@@ -1033,7 +1091,9 @@ def procurement_recommendation(
     can only happen after an approval decision, in
     :mod:`backend.materials.approvals`.
     """
-    requirement = material_requirement(store, equipment_id, failure_mode=failure_mode, anchor=anchor)
+    requirement = material_requirement(
+        store, equipment_id, failure_mode=failure_mode, anchor=anchor
+    )
     if requirement.get("limitations"):
         return {
             "equipment_id": equipment_id,
@@ -1051,7 +1111,9 @@ def procurement_recommendation(
 
     for line in requirement["lines"]:
         price = price_history(store, line["item_id"], window_days=30, anchor=anchor)
-        cost = financial_impact(store, line["item_id"], line["required_quantity"], unit=line["unit"], anchor=anchor)
+        cost = financial_impact(
+            store, line["item_id"], line["required_quantity"], unit=line["unit"], anchor=anchor
+        )
         procurable = line["coverage"] == "SHORTFALL"
         if procurable:
             any_shortfall = True
@@ -1068,7 +1130,9 @@ def procurement_recommendation(
                 "coverage": line["coverage"],
                 "available": line["available"],
                 "safety_stock": line["safety_stock"],
-                "surplus_after_requirement_and_safety": line["surplus_after_requirement_and_safety"],
+                "surplus_after_requirement_and_safety": line[
+                    "surplus_after_requirement_and_safety"
+                ],
                 "shortfall_quantity": line["shortfall_quantity"],
                 "purpose": line["purpose"],
                 "schedule": line["schedule"],
@@ -1156,7 +1220,12 @@ def material_graph(store: Any) -> dict[str, Any]:
         edges.append({"source": src, "target": dst, "relation": relation, **extra})
 
     for supplier in store.suppliers():
-        node(supplier["id"], "SUPPLIER", supplier["name"], {"lead_time_days": supplier["lead_time_days"], "status": supplier["status"]})
+        node(
+            supplier["id"],
+            "SUPPLIER",
+            supplier["name"],
+            {"lead_time_days": supplier["lead_time_days"], "status": supplier["status"]},
+        )
 
     materials = store.materials(limit=500)
     for m in materials:
@@ -1187,7 +1256,11 @@ def material_graph(store: Any) -> dict[str, Any]:
 
     for req in store.requirements():
         node(req["equipment_id"], "EQUIPMENT", req["equipment_id"])
-        node(req["item_id"], "MAINTENANCE_SPARE", (store.material(req["item_id"]) or {}).get("name", req["item_id"]))
+        node(
+            req["item_id"],
+            "MAINTENANCE_SPARE",
+            (store.material(req["item_id"]) or {}).get("name", req["item_id"]),
+        )
         edge(
             req["equipment_id"],
             req["item_id"],

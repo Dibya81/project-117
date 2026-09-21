@@ -23,9 +23,7 @@ from backend.security.secrets import redact
 
 logger = logging.getLogger("backend.audit")
 
-APPROVAL_STATES: frozenset[str] = frozenset(
-    {"not_required", "pending", "approved", "rejected"}
-)
+APPROVAL_STATES: frozenset[str] = frozenset({"not_required", "pending", "approved", "rejected"})
 
 #: The canonical outcome vocabulary.
 #:

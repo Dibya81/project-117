@@ -75,7 +75,9 @@ def _record(audit: AuditService, **kwargs) -> None:
 
 @router.get("")
 def list_work_orders(
-    status: str | None = Query(default=None, description="draft|open|in_progress|on_hold|completed|cancelled"),
+    status: str | None = Query(
+        default=None, description="draft|open|in_progress|on_hold|completed|cancelled"
+    ),
     equipmentId: str | None = Query(default=None, max_length=40),
     principal: Principal = Depends(get_principal),
     operations: OperationsStore = Depends(get_operations),
@@ -129,7 +131,9 @@ def get_work_order(
     except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=f"work order {work_order_id} not found") from exc
+        raise HTTPException(
+            status_code=404, detail=f"work order {work_order_id} not found"
+        ) from exc
     return {
         "workOrder": row,
         "equipment": equipment,
@@ -210,7 +214,9 @@ def update_work_order(
     except OperationsDataUnavailable as exc:
         raise unavailable(exc) from exc
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=f"work order {work_order_id} not found") from exc
+        raise HTTPException(
+            status_code=404, detail=f"work order {work_order_id} not found"
+        ) from exc
     except OperationsStateError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     _record(

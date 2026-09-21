@@ -55,7 +55,9 @@ def inventory(
 ) -> dict:
     """Positions for every material, with coverage where it can be computed."""
     limit, offset = _page(limit, offset)
-    materials = store.materials(material_class=material_class, search=search, limit=limit, offset=offset)
+    materials = store.materials(
+        material_class=material_class, search=search, limit=limit, offset=offset
+    )
     rows = [svc.inventory_status(store, m["id"]) for m in materials]
     return {
         "items": rows,
@@ -77,7 +79,10 @@ def inventory_one(
 ) -> dict:
     status = svc.inventory_status(store, material_id)
     if status.get("limitations") and status["limitations"][0]["code"] == svc.MATERIAL_NOT_FOUND:
-        raise HTTPException(status_code=404, detail={"code": svc.MATERIAL_NOT_FOUND, "message": f"unknown material {material_id}"})
+        raise HTTPException(
+            status_code=404,
+            detail={"code": svc.MATERIAL_NOT_FOUND, "message": f"unknown material {material_id}"},
+        )
     return status
 
 
@@ -146,7 +151,9 @@ def price_history(
     item_id: str,
     window_days: int = Query(30, ge=1, le=730, description="7, 30, 90 or 365 typical"),
     unit: str | None = Query(None, description="Re-base the series onto this unit"),
-    abnormal_pct: float | None = Query(None, ge=0, description="Configurable abnormality threshold"),
+    abnormal_pct: float | None = Query(
+        None, ge=0, description="Configurable abnormality threshold"
+    ),
     store: MaterialsStore = Depends(get_materials),
     principal: Principal = Depends(get_principal),
 ) -> dict:
@@ -157,7 +164,10 @@ def price_history(
     if result.get("status") == svc.PRICE_HISTORY_UNAVAILABLE:
         raise HTTPException(
             status_code=404,
-            detail={"code": svc.PRICE_HISTORY_UNAVAILABLE, "message": f"no price history for {item_id}"},
+            detail={
+                "code": svc.PRICE_HISTORY_UNAVAILABLE,
+                "message": f"no price history for {item_id}",
+            },
         )
     return result
 
@@ -189,11 +199,19 @@ def maintenance_requirements(
     principal: Principal = Depends(get_principal),
 ) -> dict:
     """Required quantity vs available stock vs safety stock, with the coverage rule."""
-    result = svc.material_requirement(store, equipment_id, failure_mode=failure_mode, multiplier=multiplier)
-    if result.get("limitations") and result["limitations"][0]["code"] == svc.MAINTENANCE_REQUIREMENT_NOT_FOUND:
+    result = svc.material_requirement(
+        store, equipment_id, failure_mode=failure_mode, multiplier=multiplier
+    )
+    if (
+        result.get("limitations")
+        and result["limitations"][0]["code"] == svc.MAINTENANCE_REQUIREMENT_NOT_FOUND
+    ):
         raise HTTPException(
             status_code=404,
-            detail={"code": svc.MAINTENANCE_REQUIREMENT_NOT_FOUND, "message": f"no requirement for {equipment_id}"},
+            detail={
+                "code": svc.MAINTENANCE_REQUIREMENT_NOT_FOUND,
+                "message": f"no requirement for {equipment_id}",
+            },
         )
     return result
 
@@ -243,7 +261,9 @@ def raise_procurement_request(
             status_code=409,
             detail={
                 "code": "NO_RECOMMENDATION",
-                "message": recommendation.get("recommendation", "no recommendation could be composed"),
+                "message": recommendation.get(
+                    "recommendation", "no recommendation could be composed"
+                ),
             },
         )
 
@@ -402,7 +422,10 @@ def graph_neighbourhood(
 ) -> dict:
     """One material's subgraph — the scoped retrieval an agent should use."""
     if store.material(material_id) is None:
-        raise HTTPException(status_code=404, detail={"code": svc.MATERIAL_NOT_FOUND, "message": f"unknown material {material_id}"})
+        raise HTTPException(
+            status_code=404,
+            detail={"code": svc.MATERIAL_NOT_FOUND, "message": f"unknown material {material_id}"},
+        )
     return svc.material_neighbourhood(store, material_id)
 
 
@@ -418,7 +441,10 @@ def seed(
     if not store.is_empty():
         raise HTTPException(
             status_code=409,
-            detail={"code": "ALREADY_SEEDED", "message": "the materials store already contains data"},
+            detail={
+                "code": "ALREADY_SEEDED",
+                "message": "the materials store already contains data",
+            },
         )
     return seed_materials(store)
 
@@ -441,7 +467,10 @@ def material_detail(
     """
     material = store.material(material_id)
     if material is None:
-        raise HTTPException(status_code=404, detail={"code": svc.MATERIAL_NOT_FOUND, "message": f"unknown material {material_id}"})
+        raise HTTPException(
+            status_code=404,
+            detail={"code": svc.MATERIAL_NOT_FOUND, "message": f"unknown material {material_id}"},
+        )
 
     status = svc.inventory_status(store, material_id)
     supplier = store.supplier(material["supplier_id"]) if material.get("supplier_id") else None

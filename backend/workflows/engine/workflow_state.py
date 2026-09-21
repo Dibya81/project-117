@@ -178,8 +178,7 @@ class WorkflowRunState:
             # ready_steps() from having to reason about steps that may never
             # appear.
             raise ValueError(
-                f"step '{step_id}' depends on step(s) not yet registered: "
-                f"{', '.join(unknown)}"
+                f"step '{step_id}' depends on step(s) not yet registered: {', '.join(unknown)}"
             )
         record = StepRecord(step_id=step_id, kind=kind, name=name)
         self._steps[step_id] = record
@@ -259,23 +258,20 @@ class WorkflowRunState:
             # exited early without saying why. Calling that success would be
             # the exact failure mode this module exists to prevent.
             self.status = "failed"
-            self.error = (
-                "run ended with unfinished step(s): "
-                + ", ".join(sorted(r.step_id for r in unfinished))
+            self.error = "run ended with unfinished step(s): " + ", ".join(
+                sorted(r.step_id for r in unfinished)
             )
         elif blocked:
             self.status = "failed"
             self.error = self.error or (
-                "run ended with blocked step(s): "
-                + ", ".join(sorted(r.step_id for r in blocked))
+                "run ended with blocked step(s): " + ", ".join(sorted(r.step_id for r in blocked))
             )
         elif failed:
             # Every failure was tolerated (otherwise the driver would have
             # blocked the rest), so the run completed - but only partly.
             self.status = "partial"
             self.error = self.error or (
-                "tolerated failure in step(s): "
-                + ", ".join(sorted(r.step_id for r in failed))
+                "tolerated failure in step(s): " + ", ".join(sorted(r.step_id for r in failed))
             )
         else:
             self.status = "succeeded"

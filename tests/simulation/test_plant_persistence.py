@@ -56,8 +56,13 @@ def test_second_init_does_not_duplicate_or_clobber(tmp_path):
     first = SimulationStore(path)
     # A builder plant must survive a re-open...
     builder = Plant(
-        id="builder-x", name="Builder X", industry="custom",
-        areas=[], equipment=[], connections=[], failure_modes=[],
+        id="builder-x",
+        name="Builder X",
+        industry="custom",
+        areas=[],
+        equipment=[],
+        connections=[],
+        failure_modes=[],
     )
     first.save_plant(builder, origin="builder")
     # ...and re-registering a runtime-mutated dataset plant must not rewrite the
@@ -101,7 +106,9 @@ def test_builder_connection_keeps_ports_and_relation(tmp_path):
     st = SimulationStore(path)
     try:
         plant = Plant(
-            id="builder-ports", name="Ports", industry="custom",
+            id="builder-ports",
+            name="Ports",
+            industry="custom",
             areas=[PlantArea(id="a", name="A", x=0, y=0, w=400, h=300)],
             equipment=[
                 Equipment(id="e-A", tag="A-1", name="A", kind="pump", area_id="a", x=0, y=0),
@@ -109,9 +116,14 @@ def test_builder_connection_keeps_ports_and_relation(tmp_path):
             ],
             connections=[
                 Connection(
-                    id="pl-c1", kind=ConnectionKind.PIPE, relation="REDUNDANCY",
-                    source="e-A", target="e-B",
-                    source_port="out", target_port="in", medium="process",
+                    id="pl-c1",
+                    kind=ConnectionKind.PIPE,
+                    relation="REDUNDANCY",
+                    source="e-A",
+                    target="e-B",
+                    source_port="out",
+                    target_port="in",
+                    medium="process",
                 ),
             ],
             failure_modes=[],

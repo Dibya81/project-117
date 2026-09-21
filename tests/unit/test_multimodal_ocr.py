@@ -1,12 +1,11 @@
 """Unit tests for multimodal OCR and vision extraction pipeline."""
 
 import io
-import pytest
 from unittest.mock import MagicMock, patch
-from PIL import Image, ImageDraw
 
-from backend.ingestion.ocr.extractor import OCRExtractor, OCRResult
-from backend.tools.vision.ocr import extract_identifiers, NO_TEXT_MARKER
+from backend.ingestion.ocr.extractor import OCRExtractor
+from backend.tools.vision.ocr import extract_identifiers
+from PIL import Image, ImageDraw
 
 
 def _create_test_image(text: str = "TEST-TAG C-3") -> bytes:
@@ -54,7 +53,9 @@ def test_ocr_extractor_success_with_engine():
 
 
 def test_extract_identifiers_regex():
-    sample = "Found pump P-1042 on line 6-P-1042-A1 during WO-8852 inspection. Temperature was 79 C."
+    sample = (
+        "Found pump P-1042 on line 6-P-1042-A1 during WO-8852 inspection. Temperature was 79 C."
+    )
     found = extract_identifiers(sample)
     assert "P-1042" in found.get("equipment_tag", [])
     assert "WO-8852" in found.get("work_order", [])

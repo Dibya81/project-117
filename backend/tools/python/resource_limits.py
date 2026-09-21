@@ -79,7 +79,9 @@ def resolve(
 
     return EffectiveLimits(
         timeout_seconds=min(
-            _stricter(getattr(base, "timeout_seconds", 60), from_policy("timeout_seconds", "timeout")),
+            _stricter(
+                getattr(base, "timeout_seconds", 60), from_policy("timeout_seconds", "timeout")
+            ),
             HARD_TIMEOUT_SECONDS,
         ),
         max_output_bytes=min(

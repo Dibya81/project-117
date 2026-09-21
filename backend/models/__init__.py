@@ -23,9 +23,7 @@ class ModelRoles:
 
     def __init__(self, settings: Settings) -> None:
         self._roles: dict[str, str] = {
-            role: getattr(settings, key)
-            for role, key in self._ROLE_KEYS
-            if getattr(settings, key)
+            role: getattr(settings, key) for role, key in self._ROLE_KEYS if getattr(settings, key)
         }
 
     def get(self, role: str) -> str | None:

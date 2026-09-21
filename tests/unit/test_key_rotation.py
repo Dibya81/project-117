@@ -1,7 +1,6 @@
 """Unit tests for Ed25519 key rotation."""
 
 import json
-import pytest
 from pathlib import Path
 
 from backend.security.signing import (
@@ -71,4 +70,3 @@ def test_key_rotation_generates_different_key_ids(tmp_path):
     key1 = load_or_create_key(path=_key_path(dir1))
     key2 = load_or_create_key(path=_key_path(dir2))
     assert key1.key_id != key2.key_id
-

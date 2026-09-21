@@ -1,11 +1,10 @@
 """Unit tests for audit log model provenance and parameter tracking."""
 
 import pytest
+from backend.database.models import Base
+from backend.security.audit import AuditService
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from backend.database.models import Base, AuditEvent
-from backend.security.audit import AuditService
 
 
 @pytest.fixture

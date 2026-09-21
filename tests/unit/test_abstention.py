@@ -1,11 +1,11 @@
 """Unit tests for insufficient evidence abstention."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.chat.service import ChatService, ChatTurnResult
-from backend.models.router import ModelRouter, ResolvedModel
+import pytest
+from backend.chat.service import ChatService
 from backend.chat.sessions import ChatSessionStore
+from backend.models.router import ModelRouter, ResolvedModel
 from backend.security.audit import AuditService
 
 

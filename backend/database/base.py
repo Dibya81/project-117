@@ -103,9 +103,7 @@ def apply_additive_migrations(engine: Engine) -> list[str]:
             for name, declaration in columns.items():
                 if name in present:
                     continue
-                connection.execute(
-                    text(f"ALTER TABLE {table} ADD COLUMN {name} {declaration}")
-                )
+                connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {declaration}"))
                 added.append(f"{table}.{name}")
         if "audit_events" in existing_tables:
             connection.execute(
