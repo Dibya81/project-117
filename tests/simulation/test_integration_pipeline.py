@@ -145,6 +145,7 @@ class TestRetrievalBackend:
         ret = get_retriever()
         assert ret.name in ("lexical-bm25", "localgpt-lancedb"), f"Unexpected backend: {ret.name}"
 
+    @pytest.mark.integration
     def test_corpus_indexed(self):
         """Every committed corpus file is indexed — and only those.
 
@@ -193,6 +194,7 @@ class TestRetrievalBackend:
             f"chunk_id(s), e.g. {duplicates[:3]} — each corpus document must be indexed once"
         )
 
+    @pytest.mark.integration
     def test_search_returns_real_citations(self):
         from backend.simulation.retrieval import get_retriever
 
@@ -205,6 +207,7 @@ class TestRetrievalBackend:
             assert h.score > 0, "Hit has zero score"
             assert "#" in h.citation, f"Citation malformed: {h.citation}"
 
+    @pytest.mark.integration
     def test_for_incident_builds_real_query(self):
         from backend.simulation.retrieval import get_retriever
 

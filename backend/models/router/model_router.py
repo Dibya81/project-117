@@ -14,6 +14,7 @@ import time
 
 from backend.models import ModelRoles
 from backend.models.gateway import ModelGateway
+from backend.models.gateway.load_balancer import LoadBalancer
 from backend.models.providers.base import (
     ModelProvider,
     ProviderHttpError,
@@ -48,10 +49,12 @@ class ModelRouter:
         gateway: ModelGateway,
         roles: ModelRoles,
         availability_ttl: float = 60.0,
+        load_balancer: LoadBalancer | None = None,
     ) -> None:
         self._gateway = gateway
         self._roles = roles
         self._ttl = availability_ttl
+        self._load_balancer = load_balancer or LoadBalancer()
         self._lock = threading.Lock()
         self._cache: dict[str, tuple[float, frozenset[str]]] = {}
 
@@ -65,28 +68,46 @@ class ModelRouter:
         if role not in self._ROLES:
             raise ValueError(f"unknown model role '{role}' (known: {', '.join(self._ROLES)})")
 
-        provider_name = self._gateway.names()[0] if self._gateway.names() else ""
-        if not provider_name:
+        names = self._gateway.names()
+        if not names:
             raise ModelUnavailableError("no model provider is configured")
 
         model = (model_override or self._roles.get(role) or "").strip()
         if not model:
+            first_avail = list(await self._available_models(names[0])) if names else []
             raise ModelUnavailableError(
                 f"no model is configured for role '{role}' — set "
                 f"P117_{role.upper()}_MODEL (see .env.example)",
-                available_models=list(await self._available_models(provider_name)),
+                available_models=first_avail,
             )
 
-        available = await self._available_models(provider_name)
-        if model not in available:
+        candidates: list[str] = []
+        all_available: set[str] = set()
+        for p_name in names:
+            try:
+                avail = await self._available_models(p_name)
+                all_available.update(avail)
+                if model in avail:
+                    candidates.append(p_name)
+            except (ProviderUnreachable, ProviderHttpError):
+                if len(names) == 1:
+                    raise
+                continue
+            except Exception:
+                continue
+
+        if not candidates:
             raise ModelUnavailableError(
                 f"model '{model}' (role '{role}') is not served by the local backend — "
                 f"check `ollama list` / GET /api/models",
-                available_models=sorted(available),
+                available_models=sorted(all_available),
             )
 
+        chosen_provider = self._load_balancer.choose(candidates)
         return ResolvedModel(
-            provider_name=provider_name, model=model, provider=self._gateway.provider(provider_name)
+            provider_name=chosen_provider,
+            model=model,
+            provider=self._gateway.provider(chosen_provider),
         )
 
     async def _available_models(self, provider_name: str) -> frozenset[str]:

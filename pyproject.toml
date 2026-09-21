@@ -35,7 +35,8 @@ dependencies = [
     # requires verification to fail. It was already resolved transitively
     # through docling, so declaring it costs nothing and stops `uv sync` from
     # being reproducible only by luck.
-    "cryptography>=42.0",
+    # Alembic database migrations (Phase 17)
+    "alembic>=1.13.0",
 ]
 
 # Opt-in only: `uv sync --extra rerank`.
@@ -91,6 +92,8 @@ addopts = "-q"
 asyncio_mode = "auto"
 markers = [
     "integration: opt-in tests requiring the vendor stack and local Ollama",
+    "eval: golden-set eval harness tests for decision accuracy and latency",
+    "load: performance and load testing markers",
 ]
 
 [tool.pyright]

@@ -1,0 +1,77 @@
+[
+  {
+    "id": "INC-GOLDEN-001",
+    "title": "High Discharge Pressure on Crude Charge Pump P-1001A",
+    "plant_id": "refinery",
+    "equipment_id": "P-1001A",
+    "severity": "critical",
+    "failure_mode": "discharge_blockage",
+    "symptoms": [
+      "Pressure transmitter PT-1001 reads 18.5 bar (normal 12.0 bar)",
+      "Flow transmitter FT-1001 dropped to 45 m3/h (normal 110 m3/h)",
+      "Motor current spiked to 142 A (trip threshold 150 A)"
+    ],
+    "expected_action": "isolate_and_switchover",
+    "expected_target": "P-1001B"
+  },
+  {
+    "id": "INC-GOLDEN-002",
+    "title": "Severe Cavitation on Atmospheric Tower Reflux Pump P-1004B",
+    "plant_id": "refinery",
+    "equipment_id": "P-1004B",
+    "severity": "warning",
+    "failure_mode": "cavitation",
+    "symptoms": [
+      "Vibration transmitter VT-1004 reads 9.8 mm/s RMS (threshold 4.5 mm/s)",
+      "Suction pressure PT-1004S below NPSH minimum",
+      "Acoustic sensor detects high frequency bubble collapse"
+    ],
+    "expected_action": "throttle_suction_or_switchover",
+    "expected_target": "P-1004A"
+  },
+  {
+    "id": "INC-GOLDEN-003",
+    "title": "Tube Leak / Differential Pressure Spike in Heat Exchanger E-101",
+    "plant_id": "refinery",
+    "equipment_id": "E-101",
+    "severity": "critical",
+    "failure_mode": "tube_rupture",
+    "symptoms": [
+      "Secondary side temperature TT-1012 rising rapidly",
+      "Shell/tube differential pressure dPT-101 exceeded 3.2 bar limit",
+      "Hydrocarbon traces detected in cooling water outlet"
+    ],
+    "expected_action": "bypass_and_isolate",
+    "expected_target": "E-101"
+  },
+  {
+    "id": "INC-GOLDEN-004",
+    "title": "Overpressure in Atmospheric Distillation Column C-101",
+    "plant_id": "refinery",
+    "equipment_id": "C-101",
+    "severity": "critical",
+    "failure_mode": "column_flooding",
+    "symptoms": [
+      "Overhead pressure PT-1010 at 4.2 bar (design limit 4.5 bar)",
+      "Tray 14 differential pressure indicates liquid holdup",
+      "Reboiler steam flow CV-1011 hunting"
+    ],
+    "expected_action": "reduce_furnace_duty",
+    "expected_target": "F-101"
+  },
+  {
+    "id": "INC-GOLDEN-005",
+    "title": "Control Valve Sticking on Furnace Fuel Gas Line FCV-1001",
+    "plant_id": "refinery",
+    "equipment_id": "FCV-1001",
+    "severity": "warning",
+    "failure_mode": "valve_stiction",
+    "symptoms": [
+      "Valve position feedback differs from demand by 18%",
+      "Furnace bridge-wall temperature TT-1001 oscillating +/- 25 C",
+      "Air-fuel ratio controller output saturated"
+    ],
+    "expected_action": "switch_to_manual_trim",
+    "expected_target": "FCV-1001"
+  }
+]

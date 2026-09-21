@@ -58,6 +58,10 @@ services:
       OPEN_SANDBOX_DEFAULT_NETWORK_POLICY: deny
       OPEN_SANDBOX_API_KEY: ${P117_SANDBOX_API_KEY:-dev-sandbox-key}
     volumes:
+      # SECURITY TRADE-OFF: /var/run/docker.sock gives this container host-root-
+      # equivalent access. Required for OpenSandbox to spawn execution containers.
+      # For dev this is acceptable; for production see docker-compose.encrypted.yml
+      # comments and consider rootless Docker or a socket proxy.
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
 

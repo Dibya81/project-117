@@ -409,7 +409,12 @@ class IndexingPipeline:
             return []
         try:
             db = self.lancedb_manager.db
-            if hasattr(db, "table_names") and table_name not in db.table_names():
+            tables = (
+                db.list_tables()
+                if hasattr(db, "list_tables")
+                else (db.table_names() if hasattr(db, "table_names") else [])
+            )
+            if table_name not in tables:
                 return []
             tbl = self.lancedb_manager.get_table(table_name)
             arrow = tbl.to_lance().to_table(columns=["document_id"])

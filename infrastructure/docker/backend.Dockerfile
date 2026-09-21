@@ -1,14 +1,14 @@
-# Project 117 — backend image (Phase 1+)
+# Project 117 — backend image
 #
-# Build context is the repo root so that LightRAG-main (editable dep) and
-# localGPT-main (sys.path vendor) are available inside the image.
+# Build context MUST be the repo root so pyproject.toml, uv.lock, and the
+# vendor/localGPT directory are available.
 #
-# docker buildx build -f infrastructure/docker/backend.Dockerfile -t project117-backend .
+#   docker buildx build -f infrastructure/docker/backend.Dockerfile \
+#                        -t project117-backend .
 #
-# Phase 1–4 note: torch/transformers are installed here as part of
-# localGPT's dependency stack. Expect a ~4–6 GB image. If you only
-# need Phase 1–2 (no ingestion/RAG), comment out the LightRAG/localGPT
-# COPY lines and pin lancedb in pyproject.toml without torch.
+# The vendor/localGPT directory is added to PYTHONPATH rather than installed
+# via pip — it ships as a checked-in vendor tree that is imported at runtime.
+# Expect a ~2–3 GB image (FastAPI + SQLAlchemy + LanceDB + sentence-transformers).
 
 FROM python:3.12-slim
 
@@ -16,25 +16,31 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
 
-# Install uv for fast, reproducible installs
+# Add vendored localGPT to Python's module search path so
+#   from rag_system.xxx import ...
+# works inside the container without a pip-editable install.
+ENV PYTHONPATH=/srv/vendor
+
+# Install uv for fast, reproducible, lock-file-faithful installs
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /srv
 
-# Copy dependency manifests first (layer cache friendly)
-COPY backend/pyproject.toml backend/uv.lock backend/
-COPY LightRAG-main/ LightRAG-main/
+# Copy dependency manifests first (maximises Docker layer cache reuse).
+# pyproject.toml and uv.lock live at repo root, not backend/.
+COPY pyproject.toml uv.lock ./
 
-# Install backend + LightRAG editable dep (localGPT is sys.path vendor, not pip)
-RUN uv sync --project backend --frozen --no-dev
+# Install all production dependencies declared in pyproject.toml.
+# --no-dev excludes test / lint extras from the image.
+RUN uv sync --frozen --no-dev
 
-# Copy source
-COPY backend/backend /srv/backend/backend
-COPY backend/README.md /srv/backend/README.md
+# Copy backend application source
+COPY backend/ ./backend/
 
-# Copy vendored libraries used at runtime
-COPY localGPT-main/ localGPT-main/
+# Copy vendored libraries used at runtime (localGPT BM25/LanceDB retriever)
+COPY vendor/ ./vendor/
 
 EXPOSE 8000
 
-CMD ["uv", "run", "--project", "backend", "uvicorn", "backend.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+# The real application factory lives in backend/api/src/main.py.
+CMD ["uv", "run", "uvicorn", "backend.api.src.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]

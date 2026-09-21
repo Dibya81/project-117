@@ -81,6 +81,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         per_minute: int | None = None,
         burst: int | None = None,
         workers: int | None = None,
+        redis_url: str | None = None,
     ) -> None:
         super().__init__(app)
         self.per_minute = (
@@ -90,21 +91,36 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             burst if burst is not None else _int_env("P117_RATE_LIMIT_BURST", self.per_minute)
         )
         self.workers = workers if workers is not None else _int_env("P117_WORKERS", 1)
-        if self.enabled and self.workers > 1:
+        self.redis_url = (
+            redis_url
+            if redis_url is not None
+            else os.getenv("P117_REDIS_URL", "").strip()
+        )
+        if self.enabled and self.workers > 1 and not self.redis_url:
             raise RuntimeError(
                 f"Multi-worker configuration (workers={self.workers}) with in-process rate "
-                f"limiting (per_minute={self.per_minute}) is unsupported. In-process token "
-                "buckets do not share state across workers. Either set P117_RATE_LIMIT_PER_MINUTE=0 "
-                "or deploy with a single worker."
+                f"limiting (per_minute={self.per_minute}) is unsupported without Redis. In-process token "
+                "buckets do not share state across workers. Either set P117_REDIS_URL, "
+                "set P117_RATE_LIMIT_PER_MINUTE=0, or deploy with a single worker."
             )
         self._buckets: dict[str, TokenBucket] = {}
         self._lock = threading.Lock()
+        self._redis_limiter = None
+        if self.enabled and self.redis_url:
+            from backend.security.rate_limit_redis import RedisRateLimiter
+
+            self._redis_limiter = RedisRateLimiter(
+                redis_url=self.redis_url,
+                per_minute=self.per_minute,
+                burst=self.burst,
+            )
         if self.enabled:
+            backend_desc = "Redis distributed" if self._redis_limiter else f"per process, {self.workers} worker(s)"
             logger.info(
-                "rate limiting enabled: %d req/min per caller (burst %d, per process, %d worker(s))",
+                "rate limiting enabled: %d req/min per caller (burst %d, %s)",
                 self.per_minute,
                 self.burst or self.per_minute,
-                self.workers,
+                backend_desc,
             )
 
     @property
@@ -133,8 +149,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not self.enabled or is_public(request.url.path):
             return await call_next(request)
         key = self._key(request)
-        with self._lock:
-            allowed, retry_after = self._bucket(key).take()
+        if self._redis_limiter is not None:
+            allowed, retry_after = self._redis_limiter.take(key)
+        else:
+            with self._lock:
+                allowed, retry_after = self._bucket(key).take()
         if not allowed:
             logger.info("rate limited %s on %s", key, request.url.path)
             return JSONResponse(

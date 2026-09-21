@@ -118,26 +118,14 @@ class Settings(BaseSettings):
     # config change, never a code change.
     llm_backend: str = "openai_compatible"
     llm_base_url: str = "http://localhost:11434/v1"
+    llm_extra_urls: tuple[str, ...] = ()
     llm_api_key: str = ""
     llm_timeout_seconds: float = 120.0
-    #: Context window requested per agent call (``num_ctx``). Ollama's default is
-    #: small, and a small reasoning model can spend its entire budget on hidden
-    #: chain-of-thought — which truncates the reply before any content is
-    #: emitted. A generous window plus an output budget above the reasoning
-    #: reserve is what makes a structured-JSON reply actually arrive.
     llm_num_ctx: int = 4096
-    #: Whether to let a reasoning model emit its hidden chain-of-thought.
-    #:
-    #: Defaults to ``off``. Every caller of the structured simulation agents asks
-    #: for strict JSON, and the trace is charged against the output budget while
-    #: not being part of ``message.content`` — so leaving it on meant qwen3:1.7b
-    #: spent the entire budget thinking and returned an EMPTY reply, on every
-    #: call. This was previously read as ``getattr(settings, "llm_think", "")``,
-    #: which does not exist on Settings, so the flag was never sent at all.
-    #: Set it to ``on`` only for a caller that wants the reasoning text.
     llm_think: str = "off"
-    # How long the router caches the provider's model list before re-checking.
     llm_availability_ttl: float = 60.0
+    semantic_guard: bool = False
+    redis_url: str = ""
     open_sandbox_base_url: str = "http://localhost:8080"
 
     # --- model roles (Phase 2 — model gateway) ---------------------------
@@ -319,6 +307,7 @@ class Settings(BaseSettings):
     # reachable from more than one workstation.
     auth_required: bool = False
     auth_api_key: str = ""
+    auth_keys: dict[str, tuple[str, ...]] = {}
     # Roles granted to any request that presents a valid X-P117-Api-Key.
     # The client-supplied X-P117-Roles header is IGNORED for authenticated
     # callers — roles are bound to the credential server-side, not declared by
@@ -358,6 +347,47 @@ class Settings(BaseSettings):
     # JSON logs are always written to stdout; set json_logs=false for
     # human-readable console output.
     json_logs: bool = False
+
+    @field_validator("auth_keys", mode="before")
+    @classmethod
+    def _parse_auth_keys(cls, value: object) -> object:
+        if isinstance(value, str):
+            if not value.strip():
+                return {}
+            try:
+                import json
+
+                parsed = json.loads(value)
+                if isinstance(parsed, dict):
+                    return {
+                        str(k): tuple(
+                            r.strip().lower()
+                            for r in (v.split(",") if isinstance(v, str) else v)
+                            if str(r).strip()
+                        )
+                        for k, v in parsed.items()
+                    }
+            except Exception:
+                return {}
+        if isinstance(value, dict):
+            return {
+                str(k): tuple(
+                    r.strip().lower()
+                    for r in (v.split(",") if isinstance(v, str) else v)
+                    if str(r).strip()
+                )
+                for k, v in value.items()
+            }
+        return value
+
+    @field_validator("llm_extra_urls", mode="before")
+    @classmethod
+    def _parse_llm_extra_urls(cls, value: object) -> object:
+        if isinstance(value, str):
+            return tuple(u.strip() for u in value.split(",") if u.strip())
+        if isinstance(value, (list, tuple, set)):
+            return tuple(str(u).strip() for u in value if str(u).strip())
+        return value
 
     @field_validator("auth_roles", mode="before")
     @classmethod
@@ -423,12 +453,13 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate_rate_limiting_workers(self) -> "Settings":
-        if self.workers > 1 and self.rate_limit_per_minute > 0:
+        if self.workers > 1 and self.rate_limit_per_minute > 0 and not self.redis_url:
             raise ValueError(
                 f"Multi-worker configuration (P117_WORKERS={self.workers}) with "
                 f"in-process rate limiting (P117_RATE_LIMIT_PER_MINUTE={self.rate_limit_per_minute}) "
-                "is unsupported. In-process token buckets do not share state across workers. "
-                "Either set P117_RATE_LIMIT_PER_MINUTE=0 or deploy with a single worker (P117_WORKERS=1)."
+                "is unsupported without a Redis backend (P117_REDIS_URL). "
+                "In-process token buckets do not share state across workers. "
+                "Either set P117_REDIS_URL, set P117_RATE_LIMIT_PER_MINUTE=0, or deploy with a single worker (P117_WORKERS=1)."
             )
         return self
 

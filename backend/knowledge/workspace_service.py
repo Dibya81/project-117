@@ -17,7 +17,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from backend.database.models import Document, KnowledgeEntity, Workspace

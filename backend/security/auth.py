@@ -108,10 +108,12 @@ def principal_from_request(request: Request, *, settings: Any = None) -> Princip
     settings = _settings_of(request, settings)
     auth_required = bool(getattr(settings, "auth_required", False))
     configured_key = getattr(settings, "auth_api_key", "") or ""
+    raw_keys = getattr(settings, "auth_keys", {})
+    auth_keys = raw_keys if isinstance(raw_keys, dict) else {}
 
-    if auth_required and not configured_key:
+    if auth_required and not configured_key and not auth_keys:
         raise AuthenticationError(
-            "P117_AUTH_REQUIRED=true but P117_AUTH_API_KEY is not set; refusing all "
+            "P117_AUTH_REQUIRED=true but P117_AUTH_API_KEY / P117_AUTH_KEYS is not set; refusing all "
             "requests rather than accepting an unverifiable one"
         )
 
@@ -132,22 +134,32 @@ def principal_from_request(request: Request, *, settings: Any = None) -> Princip
 
         if is_mobile_token(supplied):
             return resolve_mobile_principal(supplied, settings=settings)
-        if not configured_key or not hmac.compare_digest(supplied, configured_key):
+
+        matched_roles: tuple[str, ...] | None = None
+        for key, roles in auth_keys.items():
+            if hmac.compare_digest(supplied, key):
+                matched_roles = roles
+                break
+
+        if matched_roles is None:
+            if configured_key and hmac.compare_digest(supplied, configured_key):
+                matched_roles = getattr(settings, "auth_roles", None) or (DEFAULT_ROLE,)
+
+        if matched_roles is None:
             raise AuthenticationError("the supplied API key is not valid")
 
         # SECURITY: roles come from server-side config, never from the request
         # header. Any X-P117-Roles value the caller sends is ignored here.
-        configured_roles: tuple[str, ...] = getattr(settings, "auth_roles", None) or (DEFAULT_ROLE,)
-        if header_roles and set(header_roles) != set(configured_roles):
+        if header_roles and set(header_roles) != set(matched_roles):
             logger.debug(
                 "authenticated caller supplied X-P117-Roles=%r but server config grants %r; "
                 "header-supplied value ignored (CRIT-1 mitigation)",
                 list(header_roles),
-                list(configured_roles),
+                list(matched_roles),
             )
         return Principal(
             user=user or "authenticated",
-            roles=configured_roles,
+            roles=matched_roles,
             authenticated=True,
         )
 
@@ -194,8 +206,10 @@ def require_permission(permission: Any) -> Callable[[Request], Principal]:
 def describe(settings: Any) -> dict[str, Any]:
     """Diagnostics for ``GET /health``. Never includes the key itself."""
     configured_roles: tuple[str, ...] = getattr(settings, "auth_roles", None) or (DEFAULT_ROLE,)
+    auth_keys = getattr(settings, "auth_keys", {}) or {}
     return {
         "auth_required": bool(getattr(settings, "auth_required", False)),
-        "api_key_configured": bool(getattr(settings, "auth_api_key", "")),
+        "api_key_configured": bool(getattr(settings, "auth_api_key", "") or auth_keys),
+        "multi_key_enabled": bool(auth_keys),
         "authenticated_roles": list(configured_roles),
     }

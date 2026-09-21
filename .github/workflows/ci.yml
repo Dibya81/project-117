@@ -1,17 +1,21 @@
 # Project 117 — Continuous Integration
 #
 # Runs on every push and pull request targeting main/develop.
-# Three parallel jobs:
-#   backend-lint-test   ruff + pytest (unit + materials; integration excluded)
+# Four parallel jobs:
+#   backend-lint-test   ruff + pytest (unit + simulation + materials; integration excluded)
+#   frontend-test       Vitest unit + RTL component tests
 #   frontend-build      pnpm typecheck + lint + next build (apps/web)
+#   docker-build        docker build --no-cache (catches Dockerfile drift)
 #   validate-plant-data scripts/validate_plant_data.py
 #
 # What is deliberately NOT wired into CI:
 #   - Ollama / live model inference (no model server in the runner)
 #   - OpenSandbox (no sandbox service in the runner)
-#   - LanceDB / localGPT ingestion pipeline (requires vendor stack)
+#   - LanceDB / localGPT ingestion pipeline (requires vendor stack; integration marker)
 #   - pyright full typecheck (runs separately via `make typecheck`)
 #   - frontend/ Vite workbench (secondary, not on the canonical build path)
+#   - Playwright E2E (runs on push to main only; see e2e job below)
+#   - Golden-set eval harness (nightly; see .github/workflows/nightly-eval.yml)
 #
 # These match exactly the "offline-provable" subset documented as passing in
 # docs/SIMULATION_COMPLETION_AUDIT.md. Integration tests can still be run
@@ -26,7 +30,7 @@ on:
     branches: [main]
 
 jobs:
-  # ── Backend: lint + unit + materials tests ────────────────────────────────
+  # ── Backend: lint + unit + simulation + materials tests ───────────────────
   backend-lint-test:
     name: Backend (lint + test)
     runs-on: ubuntu-latest
@@ -53,10 +57,58 @@ jobs:
       - name: Security — pip-audit dependency scan
         run: uv run pip-audit --desc
 
-      - name: Test — unit + materials (offline subset)
-        # Excludes the 'integration' marker (requires Ollama / OpenSandbox / LanceDB)
-        # Matches the offline-proven test subset from docs/SIMULATION_COMPLETION_AUDIT.md
-        run: uv run pytest tests/unit/ tests/materials/ -q -m "not integration"
+      - name: Test — unit + simulation + materials (offline subset)
+        # Excludes the 'integration' marker (requires Ollama / OpenSandbox / LanceDB corpus).
+        # tests/simulation/ is included; the 3 corpus-dependent tests are now correctly
+        # marked @pytest.mark.integration and excluded by this filter (H-1 fix).
+        run: uv run pytest tests/unit/ tests/simulation/ tests/materials/ -q -m "not integration"
+
+  # ── Docker: build verification ────────────────────────────────────────────
+  docker-build:
+    name: Docker — backend image build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image (no cache)
+        # Validates that the Dockerfile references real paths. Fails the build
+        # immediately when infra/app layout drift is introduced (catches C-1 class bugs).
+        run: docker build -f infrastructure/docker/backend.Dockerfile --no-cache .
+
+  # ── Frontend: unit tests ──────────────────────────────────────────────────
+  frontend-test:
+    name: Frontend — Vitest unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test — Vitest unit + component tests
+        run: pnpm --filter @project-117/web test
 
   # ── Frontend: typecheck + lint + build (apps/web Next.js console) ─────────
   frontend-build:
@@ -124,3 +176,41 @@ jobs:
 
       - name: Validate plant data
         run: uv run python scripts/validate_plant_data.py
+
+  # ── Playwright E2E (push to main only) ───────────────────────────────────
+  e2e:
+    name: Frontend — Playwright E2E
+    runs-on: ubuntu-latest
+    # Only run on main push to avoid consuming runner minutes on every PR.
+    # Requires a running Next.js dev server; Playwright starts it automatically.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @project-117/web exec playwright install --with-deps chromium
+
+      - name: Run Playwright E2E tests
+        run: pnpm --filter @project-117/web exec playwright test
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7

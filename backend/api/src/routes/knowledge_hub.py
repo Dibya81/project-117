@@ -11,7 +11,6 @@ POST /api/knowledge-hub/rebuild           trigger full graph rebuild for workspa
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from typing import Any
 
@@ -41,6 +40,7 @@ def list_entities(
     a fresh UI load shows something useful without extra query params.
     """
     from sqlalchemy import select
+
     from backend.api.src.deps import get_session_factory
     from backend.database.models import KnowledgeEntity
 
@@ -56,7 +56,6 @@ def list_entities(
             q = q.where(KnowledgeEntity.entity_type == entity_type)
         if search:
             q = q.where(KnowledgeEntity.name.ilike(f"%{search}%"))
-        total_q = q
         rows = session.execute(q.offset(offset).limit(limit)).scalars().all()
         # Deduplicate by name for listing purposes
         seen: dict[str, dict] = {}
@@ -77,6 +76,7 @@ def list_entities(
 @router.get("/entities/{entity_id}")
 def get_entity(entity_id: str, request: Request) -> dict:
     from sqlalchemy import select
+
     from backend.api.src.deps import get_session_factory
     from backend.database.models import KnowledgeEntity
 
@@ -124,8 +124,9 @@ def get_graph(
     ``max_nodes`` caps the response so the browser canvas stays responsive.
     """
     from sqlalchemy import select
+
     from backend.api.src.deps import get_session_factory
-    from backend.database.models import KnowledgeEntity, Document
+    from backend.database.models import Document, KnowledgeEntity
 
     sf = get_session_factory(request)
     if not workspace_id:
@@ -252,10 +253,12 @@ async def rebuild_graph(payload: RebuildRequest, request: Request) -> dict:
     ingestion = get_ingestion(request)
 
     async def _rebuild() -> None:
+        import json as _json
+
         from sqlalchemy import select
+
         from backend.api.src.deps import get_session_factory
         from backend.database.models import Document
-        import json as _json
 
         sf = get_session_factory(request)
         # Purge existing entities first

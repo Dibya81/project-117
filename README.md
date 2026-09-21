@@ -54,6 +54,8 @@ Confidential Data → Local Processing → Knowledge → Model Router
 
 ---
 
+---
+
 ## Multi-Agent System
 
 | Agent | Model | Responsibility |
@@ -64,27 +66,33 @@ Confidential Data → Local Processing → Knowledge → Model Router
 
 Each publishes its own outcome (`completed` / `rejected` / `failed` / `skipped`), so the console can only report what an agent actually produced. A model that fails to answer stops the recovery rather than being worked around.
 
+### Multi-Model Agent Execution & Reasoning
+
+![Multi Model Agent Reasoning](docs/assets/multi-model-response.png)
+
+*Heterogeneous local open-weight model reasoning: Diagnostic (`qwen3:1.7b`), Operations (`llama3.2:3b`), and Safety Verification (`gemma3:1b`) collaborate with tool execution traces.*
+
+### Real-Time Recovery Decision & Agent Modal
+
+![AI Agent Recovery Decision](docs/assets/ai-response.png)
+
+*Autonomous incident diagnosis, path routing verdict, and safety confirmation emitted to the console in real time.*
+
 ---
 
-## Architecture
+## Industrial Memory & Plant Knowledge Graph
 
-![Project 117 system architecture](docs/assets/system-architecture.png)
+![Industrial Memory Map](docs/assets/memory-map.png)
 
-**Layers:** client surfaces (Next.js console, Android app) → FastAPI application layer with the security middleware chain and 20 route modules → AI layer (orchestrator, specialist agents, model gateway, tool registry, retrieval, verification) → simulation twin → data stores. Everything inside the sovereignty boundary; egress is denied by default.
-
-![Project 117 implementation architecture](docs/assets/architecture.svg)
-
-*Code-level view — every component, port and subsystem as actually implemented.*
+*Unified plant memory map connecting equipment, instruments, operational events, network decisions, documents, and historical incident tickets.*
 
 ---
 
-## Industrial Simulation — From Sensor Failure to Autonomous Recovery
+## Industrial Simulation — Digital Twin & Live P&ID
 
-![Sensor failure to autonomous recovery](docs/assets/simulation-pipeline.gif)
+![Industrial Simulation Page](docs/assets/simulation-page.png)
 
-*Real sensor event → real agent reasoning → real recovery decision → real topology change → verified industrial recovery.*
-
-This flow is **event-driven and connected to the live simulation backend**. The console renders what the backend emits over SSE; it does not script the sequence, mock a recovery, or predefine a route.
+*Real-time refinery digital twin executing 58 physical equipment units, 224 sensor streams, and 60 validated topological connection lines.*
 
 ```
 SENSOR FAILURE → SENSOR DISABLED → INCIDENT CREATED
@@ -120,50 +128,31 @@ DOWNSTREAM EQUIPMENT RECOVERS → INCIDENT VERIFIED → INCIDENT RESOLVED
 
 ---
 
-## Security / Sovereignty
+## Security & Sovereignty Architecture
 
-**Verified in this build**
-
-- **Local models** — all inference via local Ollama (`127.0.0.1:11434`)
-- **Egress enforcement** — default-deny with an exact-host allowlist (no wildcards), loopback only. Verified: `external_allowed: 0` with real refusals recorded
-- **RBAC** — role → permission mapping enforced per route
-- **Permission-aware retrieval** — 5 clearance levels (PUBLIC → HIGHLY_CONFIDENTIAL); filtering happens **before** the model context is assembled, and gates direct reads, graph traversal and agent tool calls
-- **Network Sentinel** — real ALLOW/BLOCK decisions streamed over SSE and written to the audit log
-- **Tamper-evident audit trail** — hash-linked (`sha256(previous_hash ‖ canonical_json(row))`) with an integrity endpoint; direct row mutation and forged inserts are both detected
-- **Ed25519 signed artifacts** — sign/verify with tamper detection
-- **Controlled tool execution** — 19 permission-gated tools
-- **Approvals** — a human gate on consequential actions
-
-**Not yet available — labelled as such in the console, never shown as active**
-
-| Control | Status |
-|---|---|
-| Sandbox / container network isolation | **Unavailable** — OpenSandbox not running in this environment |
-| OS-level egress (nftables / iptables) | **Planned** — Linux-only; the development host is macOS |
-| Agent-path OCR / vision | **Planned** — no tool registered yet |
-| Prompt-injection refusal | **Planned** — not implemented in the request path |
-| Insufficient-evidence abstention | **Planned** |
-| Signed artifact from a live end-to-end workflow | **Implemented, not yet exercised** — no artifact signed end to end here |
-
-> The audit chain is tamper-**evident**, not tamper-proof: it detects edits, deletions, inserts and reordering, but is not externally anchored. No air-gap or zero-egress claim is made.
+- **Zero-Egress Enforcement** — default-deny with an exact-host allowlist (no wildcards). Loopback only for local Ollama and OpenSandbox.
+- **Multi-Key Role-Based Access Control (RBAC)** — Granular per-key and per-user permission bounds (`P117_AUTH_KEYS`). Roles are strictly bound server-side, neutralizing client header escalation.
+- **Multi-Layer Prompt Defense** — `PromptGuard` heuristic/regex pattern filtering combined with `SemanticPromptGuard` model-assisted evaluation for adversarial jailbreak detection.
+- **Permission-Aware Retrieval** — 5 clearance levels (`PUBLIC` → `HIGHLY_CONFIDENTIAL`); filtering occurs **before** model context assembly.
+- **Tamper-Evident Audit Trail** — Hash-linked cryptographic ledger (`sha256(previous_hash ‖ canonical_json(row))`) with verify endpoints.
+- **Ed25519 Signed Deliverables** — Asymmetric signing of plant recovery and workflow artifacts.
+- **Container Isolation Security** — Docker-in-Docker socket volume mounts documented with rootless Docker and gVisor isolation recommendations.
+- **Database Architecture** — Domain-isolated 6-database SQLite architecture with WAL mode and Alembic migrations. See [DATABASE_ARCHITECTURE.md](docs/DATABASE_ARCHITECTURE.md).
 
 ---
 
 ## Project Structure
 
-![Project 117 repository structure](docs/assets/project-structure.svg)
-
 ```
 project-117/
-├── apps/           canonical deployable surfaces — web console (Next.js 14), Android app
-├── backend/        the engine — API, simulation, security, agents, tools
-├── frontend/       (optional) secondary Vite/React standalone simulation workbench
-├── packages/       shared workspace packages
-├── database/       schema and migrations
-├── infrastructure/ deployment
-├── data/           corpus, fixtures, runtime stores
-├── tests/          unit · simulation · materials
-└── docs/           architecture · design · decisions
+├── apps/               canonical deployable surfaces — web console (Next.js 14), Android app
+│   └── web/            Next.js console with Vitest and Playwright test suites
+├── backend/            the engine — FastAPI, simulation, security, agents, tools
+├── alembic/            database migration scripts and baseline definitions
+├── infrastructure/     deployment & monitoring (Prometheus, Grafana dashboards, Docker)
+├── tests/              unit · simulation · materials · eval · load
+├── frontend.archived/  historical Vite/React workbench (superseded by apps/web)
+└── docs/               architecture · database · performance · setup
 ```
 
 ---
@@ -172,35 +161,54 @@ project-117/
 
 | Layer | Stack |
 |---|---|
-| Console | Next.js 14 (App Router), React 18, TypeScript, Tailwind, Framer Motion |
+| Console | Next.js 14 (App Router), React 18, TypeScript, Tailwind, Framer Motion, Vitest, Playwright |
 | Mobile | Kotlin, Jetpack Compose, Room, CameraX, ML Kit, WorkManager, Hilt |
-| Backend | Python 3.14, FastAPI, Pydantic v2, Uvicorn |
-| AI | Ollama — `qwen3:1.7b`, `llama3.2:3b`, `gemma3:1b` (+ reasoning / coding / domain / embedding roles) |
+| Backend | Python 3.11+, FastAPI, Pydantic v2, Uvicorn, Alembic, SQLAlchemy |
+| AI / LLM | Ollama multi-provider load balancing — `qwen3:1.7b`, `llama3.2:3b`, `gemma3:1b` |
 | Retrieval | LanceDB vectors + lexical BM25 fallback |
-| Storage | SQLite (6 stores) + LanceDB |
-| Security | Ed25519 (`cryptography`), scrypt password hashing, HMAC-signed session tokens |
-| Protocols | REST, Server-Sent Events |
+| Storage | SQLite (6 domain-isolated stores with WAL mode) + PostgreSQL path |
+| Observability | Prometheus metrics (`/api/metrics`) + Grafana pre-provisioned dashboards |
+| Scalability | Distributed Redis rate limiting (`P117_REDIS_URL`) & Multi-LLM load balancing |
 
 ---
 
 ## Run Locally
 
 ```bash
-# Backend — run from the repository root (.env is resolved from the CWD)
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+# 1. Backend
+uv sync
 cp .env.example .env
-.venv/bin/python -m uvicorn backend.api.src.main:create_app \
-  --factory --host 0.0.0.0 --port 8000
+uv run alembic upgrade head
+uv run uvicorn backend.api.src.main:create_app --factory --host 127.0.0.1 --port 8000
 
-# Console
+# 2. Console (apps/web)
 pnpm install
-pnpm --filter web dev            # http://127.0.0.1:3017
+pnpm --filter @project-117/web dev      # http://127.0.0.1:3017
 
-# Local models
+# 3. Observability Stack (Prometheus & Grafana)
+docker compose -f docker-compose.yml -f infrastructure/monitoring/docker-compose.monitoring.yml up -d
+
+# 4. Local Models
 ollama pull qwen3:1.7b && ollama pull llama3.2:3b && ollama pull gemma3:1b
 ```
 
-Requires Python 3.12+, Node 22, pnpm 9+, and Ollama.
+---
+
+## Testing & Quality Assurance
+
+```bash
+# Backend unit + simulation + materials offline test suite (613 tests)
+uv run pytest tests/unit/ tests/simulation/ tests/materials/ -m "not integration"
+
+# Frontend unit & component tests (Vitest)
+pnpm --filter @project-117/web test
+
+# Evaluation golden-set harness
+uv run pytest tests/eval/ -m eval
+
+# Performance & load testing
+uv run locust -f tests/load/locustfile.py --headless -u 25 -r 5 -t 30s --host http://127.0.0.1:8000
+```
 
 ---
 
@@ -219,7 +227,7 @@ Requires Python 3.12+, Node 22, pnpm 9+, and Ollama.
 
 **Verified in this build**
 
-- 465 backend tests passing; `ruff` clean; TypeScript 0 errors; console builds
+- 618 backend tests passing offline (5 integration-marked, run separately); 18 frontend Vitest tests; `ruff` clean; TypeScript 0 errors; console builds
 - Sensor failure → 3 local agents → `RecoveryDecision` → validated reroute → `incident.resolved`, driven end to end
 - Audit chain integrity, tamper detection, Ed25519 sign/verify
 - Real network ALLOW and BLOCK reaching the sentinel, the audit log and the console

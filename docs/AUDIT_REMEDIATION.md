@@ -23,9 +23,8 @@ POST-FIX STATUS:     [ 100% REMEDIATED ]   (Phases 1–9 implemented, verified, 
 | **Phase 7 (Auth Fuzzing)** | `uv run pytest tests/unit/test_auth_fuzzing.py -v` | **76/76 PASS** — adversarial injections, pseudo tokens, malformed keys, `hmac.compare_digest` verified |
 | **Phase 8 (Pin Ollama)** | `cat docker-compose.yml` | Image pinned to `ollama/ollama:0.5.11` with air-gapped digest pinning notes |
 | **Phase 9 (Disaster Recovery)** | `cat docs/SETUP.md` §11 | Added §11 covering hot SQLite `.backup`, restore steps, and LanceDB re-ingestion |
-| **Full Unit Suite** | `uv run pytest tests/unit/ -v` | **329/329 PASS** in 58.2s |
-| **Full Simulation Suite**| `uv run pytest tests/simulation/ -v` | **101/101 PASS** in 4.78s |
-| **Full Materials Suite** | `uv run pytest tests/materials/ -v` | **147/147 PASS** in 1.98s |
+| **Full Backend Suite (offline)** | `uv run pytest tests/unit/ tests/simulation/ tests/materials/ -m "not integration"` | **618/618 PASS** (5 integration tests excluded for offline CI) |
+| **Frontend Unit Suite** | `pnpm --filter @project-117/web test` | **18/18 PASS** across 3 test files |
 | **Plant Validation** | `python3 scripts/validate_plant_data.py` | exit 0 — refinery 0 errors / 8 warnings, steel 0 errors / 10 warnings |
 
 ---

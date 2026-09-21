@@ -239,6 +239,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             egress=egress,
         )
     }
+    for idx, extra_url in enumerate(settings.llm_extra_urls):
+        replica_name = f"{settings.llm_backend}_replica_{idx + 1}"
+        providers[replica_name] = OpenAICompatibleProvider(
+            base_url=extra_url,
+            api_key=settings.llm_api_key or None,
+            timeout_seconds=settings.llm_timeout_seconds,
+            egress=egress,
+        )
     gateway = ModelGateway(providers=providers, default_provider=settings.llm_backend)
     router = ModelRouter(gateway, model_roles, availability_ttl=settings.llm_availability_ttl)
     # Phase 4: hybrid retrieval + citations over the same LanceDB table the
@@ -464,8 +472,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     # Phase KW: workspace management + knowledge-graph entity extraction.
-    from backend.knowledge.workspace_service import WorkspaceService
     from backend.knowledge.graph_extractor import GraphExtractor
+    from backend.knowledge.workspace_service import WorkspaceService
 
     workspace_service = WorkspaceService(session_factory=session_factory)
     graph_extractor = GraphExtractor(
@@ -501,6 +509,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         per_minute=settings.rate_limit_per_minute,
         burst=settings.rate_limit_burst,
         workers=settings.workers,
+        redis_url=settings.redis_url,
     )
     app.add_middleware(RequestAuditMiddleware)
     app.add_middleware(PrincipalMiddleware)

@@ -173,7 +173,12 @@ class VectorIndexer:
 
         db = self.db_manager.db  # underlying LanceDB connection
         db_path = getattr(self.db_manager, "db_path", None)
-        table_exists = bool(hasattr(db, "table_names") and table_name in db.table_names())
+        known_tables = (
+            db.list_tables()
+            if hasattr(db, "list_tables")
+            else (db.table_names() if hasattr(db, "table_names") else [])
+        )
+        table_exists = bool(table_name in known_tables)
 
         # ------------------------------------------------------------------
         # Decide, before touching the vectors, which table this is:
