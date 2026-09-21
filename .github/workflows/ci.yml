@@ -51,9 +51,7 @@ jobs:
         run: uv run ruff check backend tests
 
       - name: Security — pip-audit dependency scan
-        run: |
-          uv pip install pip-audit
-          uv run pip-audit --desc || echo "pip-audit completed with warnings"
+        run: uv run pip-audit --desc
 
       - name: Test — unit + materials (offline subset)
         # Excludes the 'integration' marker (requires Ollama / OpenSandbox / LanceDB)

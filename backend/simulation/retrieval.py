@@ -130,8 +130,9 @@ def _load_lancedb_rows(db_path: Path, table_name: str) -> list[dict[str, Any]]:
     except Exception:  # ImportError or a broken native wheel
         return []
     try:
+        from backend.storage.lancedb import has_table  # noqa: PLC0415
         db = lancedb.connect(str(db_path))
-        if table_name not in db.table_names():
+        if not has_table(db, table_name):
             return []
         return db.open_table(table_name).to_arrow().to_pylist()
     except Exception:  # missing table, corrupt index, unreadable directory
@@ -165,16 +166,62 @@ def _chunk_from_row(row: dict[str, Any]) -> RetrievedChunk:
     )
 
 
+def _extract_file_text(path: Path) -> str:
+    """Extract plain text from PDF, DOCX, PPTX, XLSX, TXT, MD files."""
+    suf = path.suffix.lower()
+    try:
+        if suf == ".pdf":
+            import pymupdf  # noqa: PLC0415
+            doc = pymupdf.open(str(path))
+            return "\n".join(page.get_text() for page in doc)
+        elif suf == ".docx":
+            import xml.etree.ElementTree as ET  # noqa: PLC0415
+            import zipfile  # noqa: PLC0415
+            with zipfile.ZipFile(path) as z:
+                tree = ET.fromstring(z.read("word/document.xml"))
+                return " ".join(tree.itertext())
+        elif suf == ".pptx":
+            import xml.etree.ElementTree as ET  # noqa: PLC0415
+            import zipfile  # noqa: PLC0415
+            texts = []
+            with zipfile.ZipFile(path) as z:
+                for name in sorted(z.namelist()):
+                    if name.startswith("ppt/slides/slide") and name.endswith(".xml"):
+                        tree = ET.fromstring(z.read(name))
+                        texts.append(" ".join(tree.itertext()))
+            return "\n".join(texts)
+        elif suf == ".xlsx":
+            import xml.etree.ElementTree as ET  # noqa: PLC0415
+            import zipfile  # noqa: PLC0415
+            texts = []
+            with zipfile.ZipFile(path) as z:
+                if "xl/sharedStrings.xml" in z.namelist():
+                    tree = ET.fromstring(z.read("xl/sharedStrings.xml"))
+                    texts.append(" ".join(tree.itertext()))
+            return "\n".join(texts)
+        elif suf in (".txt", ".md"):
+            return path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return ""
+    return ""
+
+
 class LexicalCorpusBackend:
-    """BM25 over the ingested LanceDB corpus. Deterministic and offline."""
+    """BM25 over the ingested LanceDB corpus or directly over data/corpus/refinery. Deterministic and offline."""
 
     name = "lexical-bm25"
     k1 = 1.5
     b = 0.75
 
-    def __init__(self, db_path: Path | None = None, table_name: str | None = None) -> None:
+    def __init__(
+        self,
+        db_path: Path | None = None,
+        table_name: str | None = None,
+        corpus_dir: Path | None = None,
+    ) -> None:
         self.db_path = Path(db_path) if db_path else LANCEDB_DIR
         self.table_name = table_name or LANCEDB_TABLE
+        self.corpus_dir = Path(corpus_dir) if corpus_dir else Path("data/corpus/refinery")
         self.chunks: list[RetrievedChunk] = []
         self._tokens: list[Counter] = []
         self._lengths: list[int] = []
@@ -185,22 +232,57 @@ class LexicalCorpusBackend:
     # -- indexing
 
     def _index(self) -> None:
-        for row in _load_lancedb_rows(self.db_path, self.table_name):
-            text = str(row.get("text") or "").strip()
-            if not text:
-                continue
-            chunk = _chunk_from_row(row)
-            self._docs.add(chunk.document_id)
-            toks = Counter(
-                _tokenize(
-                    f"{chunk.title} {text} {' '.join(str(v) for v in chunk.metadata.values())}"
+        rows = _load_lancedb_rows(self.db_path, self.table_name)
+        if rows:
+            for row in rows:
+                text = str(row.get("text") or "").strip()
+                if not text:
+                    continue
+                chunk = _chunk_from_row(row)
+                self._docs.add(chunk.document_id)
+                toks = Counter(
+                    _tokenize(
+                        f"{chunk.title} {text} {' '.join(str(v) for v in chunk.metadata.values())}"
+                    )
                 )
-            )
-            self.chunks.append(chunk)
-            self._tokens.append(toks)
-            self._lengths.append(sum(toks.values()) or 1)
-            for term in toks:
-                self._df[term] += 1
+                self.chunks.append(chunk)
+                self._tokens.append(toks)
+                self._lengths.append(sum(toks.values()) or 1)
+                for term in toks:
+                    self._df[term] += 1
+        elif self.corpus_dir.is_dir():
+            chunk_words = 120
+            step = 90
+            for path in sorted(self.corpus_dir.iterdir()):
+                if not path.is_file() or path.name.startswith("."):
+                    continue
+                text = _extract_file_text(path).strip()
+                if not text:
+                    continue
+                doc_id = path.name
+                title = path.stem.replace("_", " ")
+                self._docs.add(doc_id)
+                words = text.split()
+                for i in range(0, max(1, len(words)), step):
+                    window = words[i : i + chunk_words]
+                    if not window:
+                        continue
+                    c_text = " ".join(window)
+                    chunk = RetrievedChunk(
+                        document_id=doc_id,
+                        chunk_id=f"c{i // step:03d}",
+                        source=str(path),
+                        title=title,
+                        text=c_text,
+                        score=0.0,
+                        metadata={"filename": path.name, "source": str(path)},
+                    )
+                    toks = Counter(_tokenize(f"{title} {c_text} {path.name}"))
+                    self.chunks.append(chunk)
+                    self._tokens.append(toks)
+                    self._lengths.append(sum(toks.values()) or 1)
+                    for term in toks:
+                        self._df[term] += 1
         self._avgdl = (sum(self._lengths) / len(self._lengths)) if self._lengths else 1.0
 
     # -- query
